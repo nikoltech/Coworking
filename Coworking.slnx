@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="Coworking/src/Coworking.API/Coworking.API.csproj" />
+    <Project Path="Coworking/src/Coworking.Application/Coworking.Application.csproj" />
+    <Project Path="Coworking/src/Coworking.Domain/Coworking.Domain.csproj" />
+    <Project Path="Coworking/src/Coworking.Infrastructure.Persistence/Coworking.Infrastructure.Persistence.csproj" Id="89f0ad2d-6fb7-4e7d-b195-08be033e4c4d" />
+    <Project Path="Coworking/src/Coworking.Infrastructure/Coworking.Infrastructure.csproj" />
+  </Folder>
+</Solution>
