@@ -2,9 +2,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 using Microsoft.Extensions.Configuration;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace Coworking.Infrastructure.Persistence.Factories
 {
@@ -35,7 +32,7 @@ namespace Coworking.Infrastructure.Persistence.Factories
                 .AddEnvironmentVariables()
                 .Build();
 
-            return configuration.GetConnectionString("DefaultConnection") 
+            return configuration.GetConnectionString("DefaultConnection")
                 ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
         }
     }
