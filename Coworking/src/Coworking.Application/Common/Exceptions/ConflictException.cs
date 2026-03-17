@@ -1,4 +1,4 @@
-﻿namespace Coworking.Application.Features.Bookings;
+﻿namespace Coworking.Application.Common.Exceptions;
 
 internal class ConflictException : Exception
 {

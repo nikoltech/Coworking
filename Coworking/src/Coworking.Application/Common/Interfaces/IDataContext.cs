@@ -4,10 +4,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Coworking.Application.Common.Interfaces;
 
-public interface IUnitOfWork
+public interface IDataContext
 {
-    DbSet<TEntity> Set<TEntity>() where TEntity : class;
-
     Task<int> SaveChangesAsync(CancellationToken ct = default);
 
     Task<ITransaction> BeginTransactionAsync(CancellationToken ct = default);

@@ -1,4 +1,5 @@
-﻿using Coworking.Infrastructure.Persistence.Contexts;
+﻿using Coworking.Application.Common.Interfaces;
+using Coworking.Infrastructure.Persistence.Contexts;
 using Coworking.Infrastructure.Persistence.Interceptors;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -21,6 +22,8 @@ namespace Coworking.Infrastructure.Persistence
                     .UseSnakeCaseNamingConvention()
                     .AddInterceptors(auditInterceptor);
             });
+
+            services.AddScoped<IDataContext>(sp => sp.GetRequiredService<AppDbContext>());
 
             return services;
         }

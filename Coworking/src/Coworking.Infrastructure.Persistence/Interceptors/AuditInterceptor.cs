@@ -27,6 +27,7 @@ public sealed class AuditInterceptor : SaveChangesInterceptor
             {
                 entry.Entity.CreatedAt = now;
                 entry.Entity.UpdatedAt = now;
+                continue;
             }
 
             if (entry.State == EntityState.Modified)

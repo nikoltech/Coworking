@@ -1,4 +1,6 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using Coworking.Application.Common.Interfaces;
+using Coworking.Infrastructure.Repositories;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Coworking.Infrastructure
@@ -7,6 +9,7 @@ namespace Coworking.Infrastructure
     {
         public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
         {
+            services.AddScoped<IBookingRepository, BookingRepository>();
 
             return services;
         }

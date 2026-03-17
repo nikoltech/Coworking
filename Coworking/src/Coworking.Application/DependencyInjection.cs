@@ -1,4 +1,7 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using Coworking.Application.Common.Behaviors;
+using Coworking.Application.Features.Bookings.Commands.CreateBooking;
+using FluentValidation;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Coworking.Application
@@ -20,7 +23,12 @@ namespace Coworking.Application
 
         private static void AddMediatR(this IServiceCollection services)
         {
-            services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(DependencyInjection).Assembly));
+            services.AddMediatR(cfg => {
+                cfg.RegisterServicesFromAssembly(typeof(DependencyInjection).Assembly);
+                cfg.AddOpenBehavior(typeof(ValidationBehavior<,>));
+            });
+
+            services.AddValidatorsFromAssemblyContaining<CreateBookingCommand>();
         }
     }
 }
