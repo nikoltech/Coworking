@@ -13,18 +13,15 @@ public static class ModelBuilderExtensions
 
             if (typeof(ITrackEntity).IsAssignableFrom(type))
             {
-                modelBuilder.ConfigureTrackEntity(type);
+                modelBuilder.ConfigureTrackEntities(type);
             }
         }
     }
 
-    private static void ConfigureTrackEntity(this ModelBuilder modelBuilder, Type entityType)
+    private static void ConfigureTrackEntities(this ModelBuilder modelBuilder, Type entityType)
     {
         modelBuilder.Entity(entityType)
             .Property(nameof(ITrackEntity.CreatedAt))
             .IsRequired();
-
-        modelBuilder.Entity(entityType).HasIndex(nameof(ITrackEntity.CreatedAt));
-        //modelBuilder.Entity(entityType).HasIndex(nameof(ITrackEntity.UpdatedAt));
     }
 }

@@ -4,14 +4,13 @@ using Coworking.Application.Common.Interfaces;
 using Coworking.Domain.Entities;
 using MediatR;
 
-namespace Coworking.Application.Features.Bookings.Commands.CreateBooking;
+namespace Coworking.Application.Features.Bookings.Commands.Create;
 
 internal class CreateBookingCommandHandler(IDataContext dataContext, IBookingRepository repo) : IRequestHandler<CreateBookingCommand, Guid>
 {
     public async Task<Guid> Handle(CreateBookingCommand request, CancellationToken cancellationToken)
     {
-        // TODO: Wrap transaction with behaviors?
-        using var transaction = await dataContext.BeginTransactionAsync(TransactionIsolationLevel.Serializable); // with auto Range Locks
+        using var transaction = await dataContext.BeginTransactionAsync(TransactionIsolationLevel.Serializable);
 
         try
         {

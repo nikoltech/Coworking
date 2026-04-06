@@ -11,7 +11,7 @@ internal class BookingRepository(AppDbContext uow) : IBookingRepository
     {
         return await uow.Set<Booking>()
             .AsNoTracking()
-            .AnyAsync(b => b.DeskId == deskId && b.StartTime < end && b.EndTime > start, cancellationToken);
+            .AnyAsync(BookingSpecifications.OverlappingWith(deskId, start, end), cancellationToken);
     }
 
     public async Task AddAsync(Booking booking, CancellationToken cancellationToken)

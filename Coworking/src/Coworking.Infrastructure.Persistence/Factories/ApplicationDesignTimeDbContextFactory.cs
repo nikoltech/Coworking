@@ -20,9 +20,12 @@ namespace Coworking.Infrastructure.Persistence.Factories
 
         private static string GetConnectionString()
         {
-            // 1. Ищем путь к appsettings.json в проекте Api
-            // Поднимаемся на уровень выше от текущей папки и заходим в Api
-            var basePath = Path.Combine(Directory.GetCurrentDirectory(), "..", "API"); // TODO: rewrite this to be more robust
+            var basePath = Path.Combine(Directory.GetCurrentDirectory(), "..", "Coworking.API"); // TODO: rewrite this to be more robust
+
+            if (Directory.Exists(basePath) is false)
+            {
+                throw new DirectoryNotFoundException($"The directory '{basePath}' was not found. Ensure that the path to the API project is correct.");
+            }
 
             IConfigurationRoot configuration = new ConfigurationBuilder()
                 .SetBasePath(basePath)

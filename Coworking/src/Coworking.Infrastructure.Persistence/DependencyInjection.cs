@@ -1,6 +1,8 @@
 ﻿using Coworking.Application.Common.Interfaces;
+using Coworking.Application.Common.Interfaces.Transactions;
 using Coworking.Infrastructure.Persistence.Contexts;
 using Coworking.Infrastructure.Persistence.Interceptors;
+using Coworking.Infrastructure.Persistence.Transactions.Conflicts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -12,6 +14,7 @@ namespace Coworking.Infrastructure.Persistence
         public static IServiceCollection AddPersistence(this IServiceCollection services, IConfiguration configuration)
         {
             services.AddSingleton<AuditInterceptor>();
+            services.AddSingleton<IDbConflictDetector, PostgresConflictDetector>();
 
             services.AddDbContext<AppDbContext>((sp, options) =>
             {

@@ -1,5 +1,5 @@
 ﻿using Coworking.Application.Common.Behaviors;
-using Coworking.Application.Features.Bookings.Commands.CreateBooking;
+using Coworking.Application.Features.Bookings.Commands.Create;
 using FluentValidation;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -26,6 +26,7 @@ namespace Coworking.Application
             services.AddMediatR(cfg => {
                 cfg.RegisterServicesFromAssembly(typeof(DependencyInjection).Assembly);
                 cfg.AddOpenBehavior(typeof(ValidationBehavior<,>));
+                cfg.AddOpenBehavior(typeof(TransactionRetryBehavior<,>));
             });
 
             services.AddValidatorsFromAssemblyContaining<CreateBookingCommand>();

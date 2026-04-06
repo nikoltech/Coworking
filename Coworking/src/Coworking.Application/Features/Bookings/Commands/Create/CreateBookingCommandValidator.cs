@@ -1,9 +1,10 @@
 ﻿using FluentValidation;
 
-namespace Coworking.Application.Features.Bookings.Commands.CreateBooking;
+namespace Coworking.Application.Features.Bookings.Commands.Create;
 
 /// <summary>
-/// Start < End and not in past
+/// Start < End && not in past
+/// 
 /// </summary>
 public class CreateBookingValidator : AbstractValidator<CreateBookingCommand>
 {

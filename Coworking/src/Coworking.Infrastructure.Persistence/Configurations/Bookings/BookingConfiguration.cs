@@ -1,7 +1,8 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Coworking.Domain.Entities;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-namespace Coworking.Infrastructure.Persistence.Configurations.Booking;
+namespace Coworking.Infrastructure.Persistence.Configurations.Bookings;
 
 public class BookingConfiguration : IEntityTypeConfiguration<Booking>
 {
@@ -13,11 +14,17 @@ public class BookingConfiguration : IEntityTypeConfiguration<Booking>
         builder.Property(x => x.EndTime).IsRequired();
         builder.Property(x => x.TimeZoneId).IsRequired();
 
-        // for overlaps
+        /* indexes */
+
+        // overlaps checking
         builder.HasIndex(x => new { x.DeskId, x.StartTime, x.EndTime })
                .HasDatabaseName("ix_bookings_overlap_check");
 
-        // Связи (если они будут в домене)
+        builder.HasIndex(nameof(Booking.CreatedAt));
+
+        /* relationships */
+        // TODO: add properties and relationships when needed
+
         // builder.HasOne<Desk>().WithMany().HasForeignKey(x => x.DeskId);
     }
 }

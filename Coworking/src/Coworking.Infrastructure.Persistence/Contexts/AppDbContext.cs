@@ -4,8 +4,6 @@ using Coworking.Application.Common.Interfaces.Transactions;
 using Coworking.Infrastructure.Persistence.Extensions;
 using Coworking.Infrastructure.Persistence.Transactions;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Storage;
-using System.Data;
 
 namespace Coworking.Infrastructure.Persistence.Contexts;
 

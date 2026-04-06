@@ -15,18 +15,18 @@ public class Booking : ITrackEntity
 
     public DateTimeOffset EndTime { get; set; }
 
-    public int TimeZoneId { get; set; }
+    public string TimeZoneId { get; set; }
 
     public DateTime CreatedAt { get; set; }
 
     public DateTime? UpdatedAt { get; set; }
 
-    public static Booking Create(Guid deskId, Guid userId, DateTimeOffset startTime, DateTimeOffset endTime, int timeZoneId)
+    public static Booking Create(Guid deskId, Guid userId, DateTimeOffset startTime, DateTimeOffset endTime, string timeZoneId)
     {
         if (startTime >= endTime)
             throw new DomainException("The start time must be before the end time.");
 
-        if (startTime < DateTimeOffset.Now)
+        if (startTime < DateTimeOffset.UtcNow)
             throw new DomainException("Cannot book in the past.");
 
         return new Booking
