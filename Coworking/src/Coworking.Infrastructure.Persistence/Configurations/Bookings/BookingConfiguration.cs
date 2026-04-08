@@ -20,6 +20,7 @@ public class BookingConfiguration : IEntityTypeConfiguration<Booking>
         builder.HasIndex(x => new { x.DeskId, x.StartTime, x.EndTime })
                .HasDatabaseName("ix_bookings_overlap_check");
 
+        // queries optimization
         builder.HasIndex(nameof(Booking.CreatedAt));
 
         /* relationships */

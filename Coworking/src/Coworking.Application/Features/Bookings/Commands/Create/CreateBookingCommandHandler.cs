@@ -8,29 +8,36 @@ namespace Coworking.Application.Features.Bookings.Commands.Create;
 
 internal class CreateBookingCommandHandler(IDataContext dataContext, IBookingRepository repo) : IRequestHandler<CreateBookingCommand, Guid>
 {
-    public async Task<Guid> Handle(CreateBookingCommand request, CancellationToken cancellationToken)
+    public async Task<Guid> Handle(CreateBookingCommand request, CancellationToken ct)
     {
-        using var transaction = await dataContext.BeginTransactionAsync(TransactionIsolationLevel.Serializable);
+        // Somethimes Deadlocks
+        using var transaction = await dataContext.BeginTransactionAsync(
+            TransactionIsolationLevel.Serializable, ct);
 
         try
         {
-            var isOccupied = await repo.AnyOverlapAsync(request.DeskId, request.StartTime, request.EndTime, cancellationToken);
+            // RangeS-S
+            var isOccupied = await repo
+                .AnyOverlapAsync(request.DeskId, request.StartTime, request.EndTime, ct);
 
             if (isOccupied)
                 throw new ConflictException("Space is already booked for this time.");
 
-            var booking = Booking.Create(request.DeskId, request.UserId, request.StartTime, request.EndTime, request.TimeZoneId);
+            var booking = Booking
+                .Create(request.DeskId, request.UserId, request.StartTime, request.EndTime, request.TimeZoneId);
 
-            await repo.AddAsync(booking, cancellationToken);
-            await dataContext.SaveChangesAsync(cancellationToken);
+            // RangeS-U
+            await repo.AddAsync(booking, ct);
 
-            await transaction.CommitAsync(cancellationToken);
+            await dataContext.SaveChangesAsync(ct);
+
+            await transaction.CommitAsync(ct);
 
             return booking.Id;
         }
         catch
         {
-            await transaction.RollbackAsync(cancellationToken);
+            await transaction.RollbackAsync(ct);
             throw;
         }
     }

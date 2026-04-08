@@ -1,14 +1,14 @@
 ﻿using Coworking.Application.Common.Behaviors;
+using Coworking.Application.Common.Behaviors.Performance;
 using Coworking.Application.Features.Bookings.Commands.Create;
 using FluentValidation;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Coworking.Application
 {
     public static class DependencyInjection
     {
-        public static IServiceCollection AddApplication(this IServiceCollection services, IConfiguration configuration)
+        public static IServiceCollection AddApplication(this IServiceCollection services)
         {
             services.AddAutoMapper();
             services.AddMediatR();
@@ -25,10 +25,24 @@ namespace Coworking.Application
         {
             services.AddMediatR(cfg => {
                 cfg.RegisterServicesFromAssembly(typeof(DependencyInjection).Assembly);
-                cfg.AddOpenBehavior(typeof(ValidationBehavior<,>));
-                cfg.AddOpenBehavior(typeof(TransactionRetryBehavior<,>));
+
+                AddBehaviorsPipeline(cfg);
             });
 
+            services.AddFluentValidators();
+        }
+
+        private static void AddBehaviorsPipeline(MediatRServiceConfiguration cfg)
+        {
+            cfg.AddOpenBehavior(typeof(PerformanceBehavior<,>));
+
+            cfg.AddOpenBehavior(typeof(ValidationBehavior<,>));
+            cfg.AddOpenBehavior(typeof(LoggingBehavior<,>));
+            cfg.AddOpenBehavior(typeof(TransactionRetryBehavior<,>));
+        }
+
+        private static void AddFluentValidators(this IServiceCollection services)
+        {
             services.AddValidatorsFromAssemblyContaining<CreateBookingCommand>();
         }
     }
