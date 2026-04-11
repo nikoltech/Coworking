@@ -6,6 +6,8 @@ namespace Coworking.Application.Common.Interfaces;
 
 public interface IDataContext
 {
+    int SaveChanges();
+
     Task<int> SaveChangesAsync(CancellationToken ct = default);
 
     Task<ITransaction> BeginTransactionAsync(CancellationToken ct = default);

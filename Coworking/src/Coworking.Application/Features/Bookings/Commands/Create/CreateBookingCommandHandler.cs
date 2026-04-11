@@ -6,11 +6,14 @@ using MediatR;
 
 namespace Coworking.Application.Features.Bookings.Commands.Create;
 
-internal class CreateBookingCommandHandler(IDataContext dataContext, IBookingRepository repo) : IRequestHandler<CreateBookingCommand, Guid>
+internal class CreateBookingCommandHandler(IDataContext dataContext, IBookingRepository repo)
+    : IRequestHandler<CreateBookingCommand, Guid>
 {
+
+    // TODO: rewrite using slots for optimized range locks
     public async Task<Guid> Handle(CreateBookingCommand request, CancellationToken ct)
     {
-        // Somethimes Deadlocks
+        // Deadlocks as guarantee in overlaps. Indexes for boosting + retry policy. 
         using var transaction = await dataContext.BeginTransactionAsync(
             TransactionIsolationLevel.Serializable, ct);
 
@@ -23,7 +26,7 @@ internal class CreateBookingCommandHandler(IDataContext dataContext, IBookingRep
             if (isOccupied)
                 throw new ConflictException("Space is already booked for this time.");
 
-            var booking = Booking
+            Booking booking = Booking
                 .Create(request.DeskId, request.UserId, request.StartTime, request.EndTime, request.TimeZoneId);
 
             // RangeS-U

@@ -15,7 +15,7 @@ public class Booking : ITrackEntity
 
     public DateTimeOffset EndTime { get; set; }
 
-    public string TimeZoneId { get; set; }
+    public string? TimeZoneId { get; set; }
 
     public DateTime CreatedAt { get; set; }
 

@@ -34,4 +34,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     {
         return base.SaveChangesAsync(ct);
     }
+
+    public override int SaveChanges()
+    {
+        return base.SaveChanges();
+    }
 }

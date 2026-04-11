@@ -38,7 +38,7 @@ namespace Coworking.Application
 
             cfg.AddOpenBehavior(typeof(ValidationBehavior<,>));
             cfg.AddOpenBehavior(typeof(LoggingBehavior<,>));
-            cfg.AddOpenBehavior(typeof(TransactionRetryBehavior<,>));
+            cfg.AddOpenBehavior(typeof(TransactionConflictRetryBehavior<,>));
         }
 
         private static void AddFluentValidators(this IServiceCollection services)
