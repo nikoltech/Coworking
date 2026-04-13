@@ -1,8 +1,8 @@
 ﻿using Coworking.Application.Common.Interfaces;
 using Coworking.Application.Common.Synchronization;
 using Coworking.Infrastructure.Repositories;
-using Coworking.Infrastructure.Synchronization;
-using Coworking.Infrastructure.Synchronization.Background;
+using Coworking.Infrastructure.Synchronization.InMemory;
+using Coworking.Infrastructure.Synchronization.InMemory.Background;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 

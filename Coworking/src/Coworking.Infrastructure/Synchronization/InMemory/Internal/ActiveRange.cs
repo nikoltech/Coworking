@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Coworking.Infrastructure.Synchronization;
+namespace Coworking.Infrastructure.Synchronization.InMemory;
 
 internal sealed record ActiveRange(
     Guid DeskId,

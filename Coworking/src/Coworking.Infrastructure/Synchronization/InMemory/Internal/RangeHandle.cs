@@ -1,7 +1,6 @@
-﻿// Infrastructure/Synchronization/RangeHandle.cs
-using Nito.AsyncEx;
+﻿using Nito.AsyncEx;
 
-namespace Coworking.Infrastructure.Synchronization;
+namespace Coworking.Infrastructure.Synchronization.InMemory.Internal;
 
 internal sealed class RangeHandle(
     Dictionary<RangeKey, ActiveRange> active,

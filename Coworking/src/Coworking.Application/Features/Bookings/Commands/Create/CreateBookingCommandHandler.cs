@@ -11,8 +11,6 @@ internal class CreateBookingCommandHandler(IDataContext dataContext, IBookingRep
     IBookingSynchronizer synchronizer)
     : IRequestHandler<CreateBookingCommand, Guid>
 {
-
-    // TODO: rewrite using slots for optimized range locks
     public async Task<Guid> Handle(CreateBookingCommand request, CancellationToken ct)
     {
         await using var handle = await synchronizer
