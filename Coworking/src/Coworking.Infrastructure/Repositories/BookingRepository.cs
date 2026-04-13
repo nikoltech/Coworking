@@ -1,5 +1,6 @@
 using Coworking.Application.Common.Interfaces;
 using Coworking.Domain.Entities;
+using Coworking.Domain.Specifications;
 using Coworking.Infrastructure.Persistence.Contexts;
 using Microsoft.EntityFrameworkCore;
 

@@ -1,18 +1,23 @@
 using Coworking.Application.Common.Enums;
 using Coworking.Application.Common.Exceptions;
 using Coworking.Application.Common.Interfaces;
+using Coworking.Application.Common.Synchronization;
 using Coworking.Domain.Entities;
 using MediatR;
 
 namespace Coworking.Application.Features.Bookings.Commands.Create;
 
-internal class CreateBookingCommandHandler(IDataContext dataContext, IBookingRepository repo)
+internal class CreateBookingCommandHandler(IDataContext dataContext, IBookingRepository repo,
+    IBookingSynchronizer synchronizer)
     : IRequestHandler<CreateBookingCommand, Guid>
 {
 
     // TODO: rewrite using slots for optimized range locks
     public async Task<Guid> Handle(CreateBookingCommand request, CancellationToken ct)
     {
+        await using var handle = await synchronizer
+            .AcquireAsync(request.DeskId, request.StartTime, request.EndTime, ct);
+
         // Deadlocks as guarantee in overlaps. Indexes for boosting + retry policy. 
         using var transaction = await dataContext.BeginTransactionAsync(
             TransactionIsolationLevel.Serializable, ct);

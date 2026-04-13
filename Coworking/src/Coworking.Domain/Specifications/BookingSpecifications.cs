@@ -1,6 +1,8 @@
 ﻿using Coworking.Domain.Entities;
 using System.Linq.Expressions;
 
+namespace Coworking.Domain.Specifications;
+
 public static class BookingSpecifications
 {
     /// <summary>
