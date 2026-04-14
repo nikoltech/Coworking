@@ -5,7 +5,7 @@ using System.Text;
 namespace Coworking.Infrastructure.Synchronization.InMemory;
 
 internal sealed record ActiveRange(
-    Guid DeskId,
+    int DeskId,
     DateTimeOffset Start,
     DateTimeOffset End,
     SemaphoreSlim Semaphore,

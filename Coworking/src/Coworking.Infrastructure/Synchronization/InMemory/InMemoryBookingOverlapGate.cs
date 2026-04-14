@@ -5,26 +5,30 @@ using Nito.AsyncEx;
 
 namespace Coworking.Infrastructure.Synchronization.InMemory;
 
-public sealed class InMemoryBookingSynchronizer : IBookingSynchronizer
+/// <summary>
+/// “soft fairness queue + optimistic contention reducer”
+/// </summary>
+public sealed class InMemoryBookingOverlapGate : IBookingOverlapGate
 {
-    private readonly Dictionary<RangeKey, ActiveRange> _active = [];
+    private readonly Dictionary<RangeKey, ActiveRange> _activeRanges = [];
     private readonly AsyncLock _lock = new();
     private readonly TimeProvider _timeProvider;
 
-    private static readonly TimeSpan DefaultAcquireTimeout = TimeSpan.FromSeconds(30);
     private static readonly TimeSpan BufferLifeTime = TimeSpan.FromMinutes(1);
 
-    public InMemoryBookingSynchronizer(TimeProvider? timeProvider = null)
+    public InMemoryBookingOverlapGate(TimeProvider? timeProvider = null)
     {
         _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
+    public static readonly TimeSpan DefaultAcquireTimeout = TimeSpan.FromSeconds(30);
+
     public async Task<IAsyncDisposable> AcquireAsync(
-        Guid deskId, DateTimeOffset start, DateTimeOffset end, CancellationToken ct) =>
+        int deskId, DateTimeOffset start, DateTimeOffset end, CancellationToken ct) =>
         await AcquireAsync(DefaultAcquireTimeout, deskId, start, end, ct);
 
     public async Task<IAsyncDisposable> AcquireAsync(TimeSpan? ttl,
-        Guid deskId, DateTimeOffset start, DateTimeOffset end, CancellationToken ct)
+        int deskId, DateTimeOffset start, DateTimeOffset end, CancellationToken ct)
     {
         while (true)
         {
@@ -34,7 +38,7 @@ public sealed class InMemoryBookingSynchronizer : IBookingSynchronizer
 
             using (await _lock.LockAsync(ct))
             {
-                var overlapping = _active.Values
+                var overlapping = _activeRanges.Values
                     .Where(r => r.DeskId == deskId
                              && DateRangeOverlap.Check(start, end, r.Start, r.End))
                     .Select(r => r.Semaphore)
@@ -46,14 +50,14 @@ public sealed class InMemoryBookingSynchronizer : IBookingSynchronizer
 
                     var expiresAt = _timeProvider.GetUtcNow().Add(ttl ?? DefaultAcquireTimeout + BufferLifeTime);
 
-                    _active[key] = new ActiveRange(
+                    _activeRanges[key] = new ActiveRange(
                         deskId,
                         start,
                         end,
                         new SemaphoreSlim(0, 1),
                         expiresAt);
 
-                    return new RangeHandle(_active, _lock, key);
+                    return new RangeHandle(_activeRanges, _lock, key);
                 }
 
                 tasksToWait = overlapping
@@ -71,15 +75,15 @@ public sealed class InMemoryBookingSynchronizer : IBookingSynchronizer
     {
         using (await _lock.LockAsync())
         {
-            var expired = _active
-                .Where(kvp => kvp.Value.ExpiresAt <= DateTimeOffset.UtcNow)
+            var expired = _activeRanges
+                .Where(kvp => kvp.Value.ExpiresAt <= _timeProvider.GetUtcNow())
                 .Select(kvp => kvp.Key)
                 .ToList();
 
             foreach (var key in expired)
             {
-                _active[key].Semaphore.Release();
-                _active.Remove(key);
+                _activeRanges[key].Semaphore.Release();
+                _activeRanges.Remove(key);
             }
         }
     }
@@ -87,6 +91,6 @@ public sealed class InMemoryBookingSynchronizer : IBookingSynchronizer
     //private static string MakeKey(Guid deskId, DateTimeOffset start, DateTimeOffset end) =>
     //    $"{deskId}:{start:O}:{end:O}";
 
-    private static RangeKey MakeKey(Guid deskId, DateTimeOffset start, DateTimeOffset end) =>
+    private static RangeKey MakeKey(int deskId, DateTimeOffset start, DateTimeOffset end) =>
         new(deskId, start, end);
 }

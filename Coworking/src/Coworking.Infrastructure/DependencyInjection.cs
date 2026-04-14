@@ -1,5 +1,6 @@
 ﻿using Coworking.Application.Common.Interfaces;
 using Coworking.Application.Common.Synchronization;
+using Coworking.Domain.Policies.Rounding;
 using Coworking.Infrastructure.Repositories;
 using Coworking.Infrastructure.Synchronization.InMemory;
 using Coworking.Infrastructure.Synchronization.InMemory.Background;
@@ -12,13 +13,16 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
+        services.AddSingleton<IBookingRoundingPolicy, DefaultRoundingPolicy>();
+
         services.AddScoped<IBookingRepository, BookingRepository>();
+        services.AddScoped<ICoworkingRepository, CoworkingRepository>();
 
-        services.AddSingleton<InMemoryBookingSynchronizer>();
-        services.AddSingleton<IBookingSynchronizer>(sp =>
-            sp.GetRequiredService<InMemoryBookingSynchronizer>());
+        services.AddSingleton<InMemoryBookingOverlapGate>();
+        services.AddSingleton<IBookingOverlapGate>(sp =>
+            sp.GetRequiredService<InMemoryBookingOverlapGate>());
 
-        services.AddHostedService<ActiveRangeCleaner>();
+        services.AddHostedService<BookingLockExpiryCleaner>();
 
         return services;
     }

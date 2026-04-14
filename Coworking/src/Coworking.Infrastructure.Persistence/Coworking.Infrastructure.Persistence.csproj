@@ -28,6 +28,7 @@
 
   <ItemGroup>
     <Folder Include="Configurations\Common\" />
+    <Folder Include="Configurations\Coworkings\" />
   </ItemGroup>
 
 </Project>

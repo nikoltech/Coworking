@@ -3,11 +3,11 @@
 namespace Coworking.Application.Features.Bookings.Commands.Create;
 
 public record CreateBookingCommand(
-    Guid DeskId,
+    int DeskId,
     Guid UserId,
     DateTimeOffset StartTime,
     DateTimeOffset EndTime,
-    string TimeZoneId) : IRequest<Guid>
+    string? UserTimeZoneId) : IRequest<int>
 {
     // TODO: add more properties if needed
 }

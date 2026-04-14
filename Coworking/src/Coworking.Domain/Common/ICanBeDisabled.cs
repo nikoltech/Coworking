@@ -2,4 +2,5 @@
 
 public interface ICanBeDisabled
 {
+    public DateTime? DisabledAt { get; set; }
 }

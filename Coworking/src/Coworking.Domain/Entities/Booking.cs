@@ -1,13 +1,14 @@
 ﻿using Coworking.Domain.Common;
 using Coworking.Domain.Exceptions;
+using Coworking.Domain.ValueObjects;
 
 namespace Coworking.Domain.Entities;
 
 public class Booking : ITrackEntity
 {
-    public Guid Id { get; set; }
+    public int Id { get; set; }
 
-    public Guid DeskId { get; set; }
+    public int DeskId { get; set; }
 
     public Guid UserId { get; set; }
 
@@ -15,13 +16,18 @@ public class Booking : ITrackEntity
 
     public DateTimeOffset EndTime { get; set; }
 
-    public string? TimeZoneId { get; set; }
+    public string? UserTimeZoneId { get; set; }
 
     public DateTime CreatedAt { get; set; }
 
     public DateTime? UpdatedAt { get; set; }
 
-    public static Booking Create(Guid deskId, Guid userId, DateTimeOffset startTime, DateTimeOffset endTime, string timeZoneId)
+    public static Booking Create(
+        int deskId,
+        Guid userId,
+        DateTimeOffset startTime,
+        DateTimeOffset endTime,
+        SlotSize slotSize)
     {
         if (startTime >= endTime)
             throw new DomainException("The start time must be before the end time.");
@@ -34,8 +40,7 @@ public class Booking : ITrackEntity
             DeskId = deskId,
             UserId = userId,
             StartTime = startTime,
-            EndTime = endTime,
-            TimeZoneId = timeZoneId
+            EndTime = endTime
         };
     }
 

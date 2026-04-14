@@ -8,7 +8,7 @@ namespace Coworking.Infrastructure.Repositories;
 
 internal class BookingRepository(AppDbContext uow) : IBookingRepository
 {
-    public virtual async Task<bool> AnyOverlapAsync(Guid deskId, DateTimeOffset start, DateTimeOffset end, CancellationToken cancellationToken)
+    public virtual async Task<bool> AnyOverlapAsync(int deskId, DateTimeOffset start, DateTimeOffset end, CancellationToken cancellationToken)
     {
         return await uow.Set<Booking>()
             .AsNoTracking()

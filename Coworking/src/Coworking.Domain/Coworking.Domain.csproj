@@ -7,7 +7,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Folder Include="ValueObjects\" />
+    <Folder Include="Policies\Cancellation\" />
+    <Folder Include="Policies\Pricing\" />
   </ItemGroup>
 
 </Project>
