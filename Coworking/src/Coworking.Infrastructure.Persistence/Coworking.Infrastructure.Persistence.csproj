@@ -26,9 +26,4 @@
     <ProjectReference Include="..\Coworking.Domain\Coworking.Domain.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Configurations\Common\" />
-    <Folder Include="Configurations\Coworkings\" />
-  </ItemGroup>
-
 </Project>

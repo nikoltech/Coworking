@@ -8,8 +8,21 @@ public class DeskConfiguration : IEntityTypeConfiguration<Desk>
 {
     public void Configure(EntityTypeBuilder<Desk> builder)
     {
+        builder.ToTable("Desks");
+
         builder.HasKey(x => x.Id);
 
-        // TODO: Add more configuration later
+        builder.Property(x => x.Name)
+            .IsRequired()
+            .HasMaxLength(100);
+
+        builder.Property(x => x.Description)
+            .HasMaxLength(500)
+            .IsRequired(false);
+
+        builder.HasMany(x => x.Bookings)
+            .WithOne(c => c.Desk)
+            .HasForeignKey(x => x.DeskId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }

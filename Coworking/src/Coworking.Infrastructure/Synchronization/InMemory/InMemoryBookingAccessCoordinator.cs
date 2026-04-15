@@ -8,7 +8,7 @@ namespace Coworking.Infrastructure.Synchronization.InMemory;
 /// <summary>
 /// “soft fairness queue + optimistic contention reducer”
 /// </summary>
-public sealed class InMemoryBookingOverlapGate : IBookingOverlapGate
+public sealed class InMemoryBookingAccessCoordinator : IBookingAccessCoordinator
 {
     private readonly Dictionary<RangeKey, ActiveRange> _activeRanges = [];
     private readonly AsyncLock _lock = new();
@@ -16,18 +16,21 @@ public sealed class InMemoryBookingOverlapGate : IBookingOverlapGate
 
     private static readonly TimeSpan BufferLifeTime = TimeSpan.FromMinutes(1);
 
-    public InMemoryBookingOverlapGate(TimeProvider? timeProvider = null)
+    public InMemoryBookingAccessCoordinator(TimeProvider? timeProvider = null)
     {
         _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
     public static readonly TimeSpan DefaultAcquireTimeout = TimeSpan.FromSeconds(30);
 
-    public async Task<IAsyncDisposable> AcquireAsync(
-        int deskId, DateTimeOffset start, DateTimeOffset end, CancellationToken ct) =>
-        await AcquireAsync(DefaultAcquireTimeout, deskId, start, end, ct);
+    public async Task<IAsyncDisposable> WaitIfOverlappingAsync(
+        int deskId,
+        DateTimeOffset start,
+        DateTimeOffset end,
+        CancellationToken ct) =>
+        await WaitIfOverlappingAsync(DefaultAcquireTimeout, deskId, start, end, ct);
 
-    public async Task<IAsyncDisposable> AcquireAsync(TimeSpan? ttl,
+    public async Task<IAsyncDisposable> WaitIfOverlappingAsync(TimeSpan? ttl,
         int deskId, DateTimeOffset start, DateTimeOffset end, CancellationToken ct)
     {
         while (true)
@@ -57,7 +60,7 @@ public sealed class InMemoryBookingOverlapGate : IBookingOverlapGate
                         new SemaphoreSlim(0, 1),
                         expiresAt);
 
-                    return new RangeHandle(_activeRanges, _lock, key);
+                    return new RangeLease(_activeRanges, _lock, key);
                 }
 
                 tasksToWait = overlapping

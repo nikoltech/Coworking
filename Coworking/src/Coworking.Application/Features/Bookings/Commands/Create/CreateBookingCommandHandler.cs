@@ -15,7 +15,7 @@ internal class CreateBookingCommandHandler(
     IBookingRepository bookingRepo,
     ICoworkingRepository coworkingRepo,
     IBookingRoundingPolicy roundingPolicy,
-    IBookingOverlapGate gate)
+    IBookingAccessCoordinator bookingAccessCoordinator)
     : IRequestHandler<CreateBookingCommand, int>
 {
     public async Task<int> Handle(CreateBookingCommand request, CancellationToken ct)
@@ -27,10 +27,16 @@ internal class CreateBookingCommandHandler(
 
         ValidateWorkingHours(start, end, coworking);
 
-        await using var lease = await gate.AcquireAsync(request.DeskId, start, end, ct);
+        await using var lease = 
+            await bookingAccessCoordinator.WaitIfOverlappingAsync(
+                request.DeskId,
+                start,
+                end,
+                ct);
 
         // Deadlocks as a guarantee in overlaps. Indexes for boosting + retry policy. 
-        await using var transaction = await dataContext.BeginTransactionAsync(TransactionIsolationLevel.Serializable, ct);
+        await using var transaction = 
+            await dataContext.BeginTransactionAsync(TransactionIsolationLevel.Serializable, ct);
 
         try
         {

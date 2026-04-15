@@ -1,5 +1,4 @@
-﻿using System;
-using Coworking.Domain.Common;
+﻿using Coworking.Domain.Common;
 
 namespace Coworking.Domain.Entities;
 
@@ -20,4 +19,6 @@ public class Desk : ITrackEntity, ICanBeDisabled
     public DateTime? UpdatedAt { get; set; }
 
     public DateTime? DisabledAt { get; set; }
+
+    public ICollection<Booking> Bookings { get; set; } = [];
 }

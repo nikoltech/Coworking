@@ -2,10 +2,10 @@
 
 namespace Coworking.Infrastructure.Synchronization.InMemory.Background;
 
-internal sealed class BookingLockExpiryCleaner(InMemoryBookingOverlapGate synchronizer)
+internal sealed class BookingLockExpiryCleaner(InMemoryBookingAccessCoordinator synchronizer)
     : BackgroundService
 {
-    private static readonly TimeSpan Interval = InMemoryBookingOverlapGate.DefaultAcquireTimeout * 2;
+    private static readonly TimeSpan Interval = InMemoryBookingAccessCoordinator.DefaultAcquireTimeout * 2;
 
     protected override async Task ExecuteAsync(CancellationToken ct)
     {

@@ -18,9 +18,9 @@ public static class DependencyInjection
         services.AddScoped<IBookingRepository, BookingRepository>();
         services.AddScoped<ICoworkingRepository, CoworkingRepository>();
 
-        services.AddSingleton<InMemoryBookingOverlapGate>();
-        services.AddSingleton<IBookingOverlapGate>(sp =>
-            sp.GetRequiredService<InMemoryBookingOverlapGate>());
+        services.AddSingleton<InMemoryBookingAccessCoordinator>();
+        services.AddSingleton<IBookingAccessCoordinator>(sp =>
+            sp.GetRequiredService<InMemoryBookingAccessCoordinator>());
 
         services.AddHostedService<BookingLockExpiryCleaner>();
 

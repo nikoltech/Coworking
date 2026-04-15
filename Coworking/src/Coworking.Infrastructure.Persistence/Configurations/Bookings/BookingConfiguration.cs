@@ -10,22 +10,20 @@ public class BookingConfiguration : IEntityTypeConfiguration<Booking>
     {
         builder.HasKey(x => x.Id);
 
-        builder.Property(x => x.StartTime).IsRequired();
-        builder.Property(x => x.EndTime).IsRequired();
-        builder.Property(x => x.TimeZoneId).IsRequired();
+        builder.Property(x => x.StartTime)
+            .IsRequired();
 
-        /* indexes */
+        builder.Property(x => x.EndTime)
+            .IsRequired();
 
-        // overlaps checking
+        builder.Property(x => x.UserTimeZoneId)
+            .IsRequired()
+            .HasMaxLength(100);
+
+        // indexes
         builder.HasIndex(x => new { x.DeskId, x.StartTime, x.EndTime })
                .HasDatabaseName("ix_bookings_overlap_check");
 
-        // queries optimization
-        builder.HasIndex(nameof(Booking.CreatedAt));
-
-        /* relationships */
-        // TODO: add properties and relationships when needed
-
-        // builder.HasOne<Desk>().WithMany().HasForeignKey(x => x.DeskId);
+        builder.HasIndex(x => x.CreatedAt);
     }
 }

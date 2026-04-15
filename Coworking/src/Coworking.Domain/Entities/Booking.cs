@@ -8,8 +8,6 @@ public class Booking : ITrackEntity
 {
     public int Id { get; set; }
 
-    public int DeskId { get; set; }
-
     public Guid UserId { get; set; }
 
     public DateTimeOffset StartTime { get; set; }
@@ -17,6 +15,10 @@ public class Booking : ITrackEntity
     public DateTimeOffset EndTime { get; set; }
 
     public string? UserTimeZoneId { get; set; }
+
+    public int DeskId { get; set; }
+
+    public Desk Desk { get; set; } = null!;
 
     public DateTime CreatedAt { get; set; }
 
@@ -27,7 +29,7 @@ public class Booking : ITrackEntity
         Guid userId,
         DateTimeOffset startTime,
         DateTimeOffset endTime,
-        SlotSize slotSize)
+        SlotSize slotSize) // added parameter
     {
         if (startTime >= endTime)
             throw new DomainException("The start time must be before the end time.");

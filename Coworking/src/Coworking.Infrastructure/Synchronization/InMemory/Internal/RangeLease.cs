@@ -2,7 +2,7 @@
 
 namespace Coworking.Infrastructure.Synchronization.InMemory.Internal;
 
-internal sealed class RangeHandle(
+internal sealed class RangeLease(
     Dictionary<RangeKey, ActiveRange> active,
     AsyncLock lockObj,
     RangeKey key) : IAsyncDisposable

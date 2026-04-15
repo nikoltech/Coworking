@@ -1,5 +1,4 @@
-﻿// Domain/Entities/Coworking.cs
-using Coworking.Domain.Common;
+﻿using Coworking.Domain.Common;
 using Coworking.Domain.Exceptions;
 using Coworking.Domain.ValueObjects;
 
@@ -18,7 +17,7 @@ public class Coworking : ITrackEntity, ICanBeDisabled
     /// <summary>
     /// IANA ID
     /// </summary>
-    public string TimeZoneId { get; set; }
+    public required string TimeZoneId { get; set; }
 
     public TimeOnly CloseTime { get; set; }
 
@@ -28,17 +27,22 @@ public class Coworking : ITrackEntity, ICanBeDisabled
 
     public DateTime? DisabledAt { get; set; }
 
-    private Coworking() { }
+    public ICollection<Desk> Desks { get; set; } = [];
 
-    public static Coworking Create(string name, SlotSize slotSize)
+    /// <param name="timeZoneId">IANA time zone identifier</param>
+    public static Coworking Create(string name, SlotSize slotSize, string timeZoneId)
     {
         if (string.IsNullOrWhiteSpace(name))
             throw new DomainException("Coworking name cannot be empty.");
 
+        if (string.IsNullOrWhiteSpace(timeZoneId))
+            throw new DomainException("TimeZoneId cannot be empty.");
+
         return new Coworking
         {
             Name = name,
-            SlotSize = slotSize
+            SlotSize = slotSize,
+            TimeZoneId = timeZoneId
         };
     }
 }
