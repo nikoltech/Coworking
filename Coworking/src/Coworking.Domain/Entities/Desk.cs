@@ -20,5 +20,7 @@ public class Desk : ITrackEntity, ICanBeDisabled
 
     public DateTime? DisabledAt { get; set; }
 
+    public byte[]? RowVersion { get; set; }
+
     public ICollection<Booking> Bookings { get; set; } = [];
 }

@@ -18,6 +18,16 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
     }
 
+    public override Task<int> SaveChangesAsync(CancellationToken ct = default)
+    {
+        return base.SaveChangesAsync(ct);
+    }
+
+    public override int SaveChanges()
+    {
+        return base.SaveChanges();
+    }
+
     public async Task<ITransaction> BeginTransactionAsync(CancellationToken ct = default)
     {
         var efTransaction = await Database.BeginTransactionAsync(ct);
@@ -28,15 +38,5 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     {
         var efTransaction = await Database.BeginTransactionAsync(isolationLevel.ToSqlType(), ct);
         return new EfTransactionWrapper(efTransaction);
-    }
-
-    public override Task<int> SaveChangesAsync(CancellationToken ct = default)
-    {
-        return base.SaveChangesAsync(ct);
-    }
-
-    public override int SaveChanges()
-    {
-        return base.SaveChanges();
     }
 }

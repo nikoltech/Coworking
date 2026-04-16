@@ -41,14 +41,15 @@ internal class CreateBookingCommandHandler(
         try
         {
             // RangeS-S
-            var isOccupied = await bookingRepo.AnyOverlapAsync(request.DeskId, start, end, ct);
+            var isOccupied = await bookingRepo
+                .AnyOverlapAsync(request.DeskId, start, end, ct);
 
             if (isOccupied)
                 throw new ConflictException("Space is already booked for this time.");
 
             var booking = CreateAndInitializeBooking(request, coworking, start, end);
 
-            // RangeS-U
+            // RangeS-U (level-up locking)
             await bookingRepo.AddAsync(booking, ct);
             await dataContext.SaveChangesAsync(ct);
 

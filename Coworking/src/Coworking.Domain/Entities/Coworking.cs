@@ -27,6 +27,8 @@ public class Coworking : ITrackEntity, ICanBeDisabled
 
     public DateTime? DisabledAt { get; set; }
 
+    public byte[]? Version { get; set; }
+
     public ICollection<Desk> Desks { get; set; } = [];
 
     /// <param name="timeZoneId">IANA time zone identifier</param>

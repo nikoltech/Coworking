@@ -13,12 +13,12 @@ namespace Coworking.Infrastructure.Persistence
     {
         public static IServiceCollection AddPersistence(this IServiceCollection services, IConfiguration configuration)
         {
-            services.AddSingleton<AuditInterceptor>();
+            services.AddSingleton<TrackEntityInterceptor>();
             services.AddSingleton<IDbConflictDetector, PostgresConflictDetector>();
 
             services.AddDbContext<AppDbContext>((sp, options) =>
             {
-                var auditInterceptor = sp.GetRequiredService<AuditInterceptor>();
+                var auditInterceptor = sp.GetRequiredService<TrackEntityInterceptor>();
 
                 options
                     .UseNpgsql(configuration.GetConnectionString("DefaultConnection"))

@@ -12,6 +12,10 @@ public class DeskConfiguration : IEntityTypeConfiguration<Desk>
 
         builder.HasKey(x => x.Id);
 
+        builder.Property(c => c.RowVersion)
+            .IsRowVersion();
+            //.IsConcurrencyToken();
+
         builder.Property(x => x.Name)
             .IsRequired()
             .HasMaxLength(100);

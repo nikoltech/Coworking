@@ -20,17 +20,21 @@ namespace Coworking.Infrastructure.Persistence.Factories
 
         private static string GetConnectionString()
         {
-            var basePath = Path.Combine(Directory.GetCurrentDirectory(), "..", "Coworking.API"); // TODO: rewrite this to be more robust
+            var apiPath = FindProjectDirectory("Coworking.API");
 
-            if (Directory.Exists(basePath) is false)
-            {
-                throw new DirectoryNotFoundException($"The directory '{basePath}' was not found. Ensure that the path to the API project is correct.");
-            }
+            if (Directory.Exists(apiPath) is false)
+                throw new DirectoryNotFoundException($"API project not found: {apiPath}");
+
+            var environment =
+                Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")
+                ?? "Development";
 
             IConfigurationRoot configuration = new ConfigurationBuilder()
-                .SetBasePath(basePath)
-                .AddJsonFile("appsettings.json", false, true)
-                .AddJsonFile("appsettings.Development.json", true)
+                .SetBasePath(apiPath)
+                .AddJsonFile("appsettings.json", optional: false)
+                .AddJsonFile(
+                    $"appsettings.{environment}.json",
+                    optional: true)
                 //.AddJsonFile("appsettings.Local.json", true)
                 .AddEnvironmentVariables()
                 .Build();
@@ -38,5 +42,37 @@ namespace Coworking.Infrastructure.Persistence.Factories
             return configuration.GetConnectionString("DefaultConnection")
                 ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
         }
+        private static string FindProjectDirectory(string projectName)
+        {
+            var root = GetSolutionRoot();
+
+            var dir = Directory
+                .GetDirectories(root, projectName, SearchOption.AllDirectories)
+                .FirstOrDefault();
+
+            return dir ?? throw new DirectoryNotFoundException(projectName);
+        }
+
+        private static string GetSolutionRoot()
+        {
+            var current = new DirectoryInfo(Directory.GetCurrentDirectory());
+
+            while (current is not null)
+            {
+                var hasSolution =
+                    current.GetFiles("*.slnx").Any() ||
+                    current.GetFiles("*.sln").Any();
+
+                if (hasSolution)
+                    return current.FullName;
+
+                current = current.Parent;
+            }
+
+            throw new DirectoryNotFoundException(
+                "Solution file (.slnx or .sln) not found.");
+        }
+
+
     }
 }

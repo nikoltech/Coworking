@@ -14,13 +14,15 @@ public sealed record SlotSize
 
     private SlotSize(int minutes) => Minutes = minutes;
 
+    const int BaseStep = 5;
+
     public static SlotSize From(int minutes)
     {
         if (minutes <= 0)
             throw new DomainException("Slot size must be positive.");
 
-        if (60 % minutes != 0)
-            throw new DomainException("Slot size must be a divisor of 60 (e.g. 10, 15, 20, 30, 60).");
+        if (minutes % BaseStep != 0)
+            throw new DomainException($"Slot size must be a multiple of {BaseStep} (e.g. {BaseStep}, {BaseStep * 2}, {BaseStep * 3}, ...).");
 
         return minutes switch
         {

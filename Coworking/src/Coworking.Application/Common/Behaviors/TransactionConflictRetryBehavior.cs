@@ -7,6 +7,7 @@ using System.Data.Common;
 
 namespace Coworking.Application.Common.Behaviors
 {
+    // Note: metrics for future
     public class TransactionConflictRetryBehavior<TRequest, TResponse>(
         IDbConflictDetector dbConflictDetector, 
         ILogger<TransactionConflictRetryBehavior<TRequest, TResponse>> logger)

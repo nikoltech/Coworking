@@ -6,6 +6,7 @@ using System.Text;
 namespace Coworking.Domain.Policies.Rounding;
 
 /// <summary> 
+/// The policy operates on the principle of "expanding" the interval.
 /// Rounds start down (floor) and end up (ceil). 
 /// </summary>
 public class DefaultRoundingPolicy : IBookingRoundingPolicy
