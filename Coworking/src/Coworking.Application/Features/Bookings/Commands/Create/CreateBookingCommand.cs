@@ -1,4 +1,5 @@
-﻿using MediatR;
+﻿using Coworking.Application.Features.Bookings.Commands.Create.Requests;
+using MediatR;
 
 namespace Coworking.Application.Features.Bookings.Commands.Create;
 
@@ -7,7 +8,4 @@ public record CreateBookingCommand(
     Guid UserId,
     DateTimeOffset StartTime,
     DateTimeOffset EndTime,
-    string? UserTimeZoneId) : IRequest<int>
-{
-    // TODO: add more properties if needed
-}
+    BookingMetadata? Metadata) : IRequest<int>;

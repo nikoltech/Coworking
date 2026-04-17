@@ -21,8 +21,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Features\Bookings\Queries\GetSlots\" />
-    <Folder Include="FluentValidation\" />
+    <Folder Include="Features\Coworkings\" />
   </ItemGroup>
 
 </Project>

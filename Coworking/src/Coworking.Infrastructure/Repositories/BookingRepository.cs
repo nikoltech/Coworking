@@ -6,17 +6,17 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Coworking.Infrastructure.Repositories;
 
-internal class BookingRepository(AppDbContext uow) : IBookingRepository
+internal class BookingRepository(AppDbContext context) : IBookingRepository
 {
     public virtual async Task<bool> AnyOverlapAsync(int deskId, DateTimeOffset start, DateTimeOffset end, CancellationToken cancellationToken)
     {
-        return await uow.Set<Booking>()
+        return await context.Set<Booking>()
             .AsNoTracking()
-            .AnyAsync(BookingSpecifications.OverlappingWith(deskId, start, end), cancellationToken);
+            .AnyAsync(BookingSpecifications.OverlappingWith(deskId, start.ToUniversalTime(), end.ToUniversalTime()), cancellationToken);
     }
 
     public async Task AddAsync(Booking booking, CancellationToken cancellationToken)
     {
-        await uow.Set<Booking>().AddAsync(booking, cancellationToken);
+        await context.Set<Booking>().AddAsync(booking, cancellationToken);
     }
 }

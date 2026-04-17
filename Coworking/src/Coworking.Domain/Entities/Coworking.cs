@@ -14,12 +14,12 @@ public class Coworking : ITrackEntity, ICanBeDisabled
 
     public TimeOnly OpenTime { get; set; }
 
+    public TimeOnly CloseTime { get; set; }
+
     /// <summary>
     /// IANA ID
     /// </summary>
     public required string TimeZoneId { get; set; }
-
-    public TimeOnly CloseTime { get; set; }
 
     public DateTime CreatedAt { get; set; }
 

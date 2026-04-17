@@ -28,21 +28,23 @@ public class Booking : ITrackEntity
         int deskId,
         Guid userId,
         DateTimeOffset startTime,
-        DateTimeOffset endTime,
-        SlotSize slotSize) // added parameter
+        DateTimeOffset endTime)
     {
-        if (startTime >= endTime)
+        var utcStartTime = startTime.ToUniversalTime();
+        var utcEndTime = endTime.ToUniversalTime();
+
+        if (utcStartTime >= utcEndTime)
             throw new DomainException("The start time must be before the end time.");
 
-        if (startTime < DateTimeOffset.UtcNow)
+        if (utcStartTime < DateTimeOffset.UtcNow)
             throw new DomainException("Cannot book in the past.");
 
         return new Booking
         {
             DeskId = deskId,
             UserId = userId,
-            StartTime = startTime,
-            EndTime = endTime
+            StartTime = utcStartTime,
+            EndTime = utcEndTime
         };
     }
 

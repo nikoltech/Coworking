@@ -9,27 +9,30 @@ public sealed record SlotSize
     public static readonly SlotSize ThirtyMinutes = new(30);
     public static readonly SlotSize SixtyMinutes = new(60);
 
+    const int BaseStepInMinutes = 5;
+
     public int Minutes { get; }
+
     public TimeSpan Value => TimeSpan.FromMinutes(Minutes);
 
     private SlotSize(int minutes) => Minutes = minutes;
 
-    const int BaseStep = 5;
 
     public static SlotSize From(int minutes)
     {
         if (minutes <= 0)
             throw new DomainException("Slot size must be positive.");
 
-        if (minutes % BaseStep != 0)
-            throw new DomainException($"Slot size must be a multiple of {BaseStep} (e.g. {BaseStep}, {BaseStep * 2}, {BaseStep * 3}, ...).");
+        if (minutes % BaseStepInMinutes != 0)
+            throw new DomainException($"Slot size must be a multiple of {BaseStepInMinutes}");
 
         return minutes switch
         {
-            15 => FifteenMinutes, // More common slot size
-            30 => ThirtyMinutes,  // More common slot size
-            10 => TenMinutes,
+            // slot size in order of prevalence
             60 => SixtyMinutes,
+            15 => FifteenMinutes,
+            30 => ThirtyMinutes,
+            10 => TenMinutes,
             _ => new SlotSize(minutes)
         };
     }

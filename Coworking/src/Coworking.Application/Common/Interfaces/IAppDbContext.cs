@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Coworking.Application.Common.Interfaces;
 
-public interface IDataContext
+public interface IAppDbContext
 {
     int SaveChanges();
 

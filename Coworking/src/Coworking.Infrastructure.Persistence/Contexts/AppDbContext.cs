@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Coworking.Infrastructure.Persistence.Contexts;
 
-public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options), IDataContext
+public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options), IAppDbContext
 {
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

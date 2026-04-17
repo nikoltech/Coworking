@@ -26,7 +26,7 @@ namespace Coworking.Infrastructure.Persistence
                     .AddInterceptors(auditInterceptor);
             });
 
-            services.AddScoped<IDataContext>(sp => sp.GetRequiredService<AppDbContext>());
+            services.AddScoped<IAppDbContext>(sp => sp.GetRequiredService<AppDbContext>());
 
             return services;
         }

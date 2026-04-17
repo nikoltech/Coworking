@@ -7,11 +7,12 @@ using Coworking.Domain.Entities;
 using Coworking.Domain.Policies.Rounding;
 using Coworking.Domain.Specifications;
 using MediatR;
+using System.Collections;
 
 namespace Coworking.Application.Features.Bookings.Commands.Create;
 
 internal class CreateBookingCommandHandler(
-    IDataContext dataContext,
+    IAppDbContext dataContext,
     IBookingRepository bookingRepo,
     ICoworkingRepository coworkingRepo,
     IBookingRoundingPolicy roundingPolicy,
@@ -20,12 +21,11 @@ internal class CreateBookingCommandHandler(
 {
     public async Task<int> Handle(CreateBookingCommand request, CancellationToken ct)
     {
-        var coworking = await coworkingRepo.GetByDeskIdAsync(request.DeskId, ct)
+        var coworking = await coworkingRepo.FetchAsync(request.DeskId, ct)
             ?? throw new NotFoundException($"Coworking or desk by desk {request.DeskId} not found.");
 
-        var (start, end) = PrepareBookingInterval(request, coworking);
-
-        ValidateWorkingHours(start, end, coworking);
+        var (start, end) = LocalizeAndRoundInterval(request, coworking);
+        ValidateWithinWorkingHours(start, end, coworking);
 
         await using var lease = 
             await bookingAccessCoordinator.WaitIfOverlappingAsync(
@@ -47,7 +47,7 @@ internal class CreateBookingCommandHandler(
             if (isOccupied)
                 throw new ConflictException("Space is already booked for this time.");
 
-            var booking = CreateAndInitializeBooking(request, coworking, start, end);
+            var booking = CreateAndInitializeBooking(request, start, end);
 
             // RangeS-U (level-up locking)
             await bookingRepo.AddAsync(booking, ct);
@@ -64,7 +64,7 @@ internal class CreateBookingCommandHandler(
         }
     }
 
-    private (DateTimeOffset Start, DateTimeOffset End) PrepareBookingInterval(
+    private (DateTimeOffset Start, DateTimeOffset End) LocalizeAndRoundInterval(
         CreateBookingCommand request,
         Domain.Entities.Coworking coworking)
     {
@@ -76,24 +76,25 @@ internal class CreateBookingCommandHandler(
         return roundingPolicy.RoundInterval(startLocal, endLocal, coworking.SlotSize);
     }
 
-    private void ValidateWorkingHours(DateTimeOffset start, DateTimeOffset end, Domain.Entities.Coworking coworking)
-    {
-        if (BookingSpecifications.IsWithinWorkingHours(start, end, coworking.OpenTime, coworking.CloseTime) is false)
-            throw new InvalidOperationException("Booking is outside of working hours.");
-    }
-
-    private Booking CreateAndInitializeBooking(
+    private static Booking CreateAndInitializeBooking(
         CreateBookingCommand request,
-        Domain.Entities.Coworking coworking,
         DateTimeOffset start,
         DateTimeOffset end)
     {
-        var booking = Booking.Create(request.DeskId, request.UserId, start, end, coworking.SlotSize);
+        var booking = Booking.Create(request.DeskId, request.UserId, start, end);
 
-        if (request.UserTimeZoneId is not null
-            && TimeZoneInfo.FindSystemTimeZoneById(request.UserTimeZoneId) is TimeZoneInfo userZone)
+        if (request.Metadata?.UserTimeZoneId is not null
+            && TimeZoneInfo.FindSystemTimeZoneById(request.Metadata.UserTimeZoneId) is TimeZoneInfo userZone)
             booking.UserTimeZoneId = userZone.Id;
 
         return booking;
+    }
+
+    private static void ValidateWithinWorkingHours(
+        DateTimeOffset start,
+        DateTimeOffset end,
+        Domain.Entities.Coworking coworking)
+    {
+        BookingSpecifications.ValidateAccessPeriod(start, end, coworking);
     }
 }

@@ -1,4 +1,7 @@
 ﻿using Coworking.Domain.Entities;
+using Coworking.Domain.Enums;
+using Coworking.Domain.Exceptions;
+using System.Collections;
 using System.Linq.Expressions;
 
 namespace Coworking.Domain.Specifications;
@@ -17,25 +20,73 @@ public static class BookingSpecifications
     }
 
     /// <summary>
-    /// Supports 24/7 coworking (open == close) and midnight crossing hours
+    /// Represents access entitlement during coworking working hours.
     /// </summary>
-    public static bool IsWithinWorkingHours(DateTimeOffset start, DateTimeOffset end, TimeOnly coworkingOpenTime, TimeOnly coworkingCloseTime)
+    public static void ValidateAccessPeriod(
+        DateTimeOffset start,
+        DateTimeOffset end,
+        Domain.Entities.Coworking coworking)
     {
-        // for 24/7
-        if (coworkingOpenTime == coworkingCloseTime)
-            return true;
+        if (start >= end)
+        {
+            throw new DomainException(
+                "Booking start time must be earlier than end time.");
+        }
 
-        var startT = TimeOnly.FromDateTime(start.DateTime);
-        var endT = TimeOnly.FromDateTime(end.DateTime);
-        var open = coworkingOpenTime;
-        var close = coworkingCloseTime;
+        if (IsNonStopWorkingHours(coworking))
+        {
+            return;
+        }
 
-        // daytime hours (e.g. 08:00 - 18:00)
-        if (open < close)
-            return startT >= open && endT <= close;
+        var startTime = TimeOnly.FromDateTime(start.DateTime);
+        var endTime = TimeOnly.FromDateTime(end.DateTime);
 
-        // midnight crossing open > close (e.g. 22:00 - 06:00)
-        return (startT >= open || startT < close)
-            && (endT > open || endT <= close);
+        if (IsWithinWorkingWindow(
+                startTime,
+                coworking.OpenTime,
+                coworking.CloseTime) is false)
+        {
+            throw new DomainException(
+                "Booking start time is outside working hours.");
+        }
+
+        if (IsWithinWorkingWindow(
+                endTime,
+                coworking.OpenTime,
+                coworking.CloseTime) is false)
+        {
+            throw new DomainException(
+                "Booking end time is outside working hours.");
+        }
     }
+
+    public static bool IsWithinWorkingWindow(
+        TimeOnly time,
+        TimeOnly openTime,
+        TimeOnly closeTime)
+    {
+        if (openTime == closeTime)
+        {
+            return true;
+        }
+
+        var isDaySchedule = openTime < closeTime;
+
+        if (isDaySchedule)
+        {
+            return time >= openTime &&
+                   time <= closeTime;
+        }
+
+        return time >= openTime ||
+               time <= closeTime;
+    }
+
+    public static bool IsNonStopWorkingHours(
+        Domain.Entities.Coworking coworking)
+    {
+        return coworking.OpenTime ==
+               coworking.CloseTime;
+    }
+
 }
