@@ -21,7 +21,7 @@ internal class CreateBookingCommandHandler(
 {
     public async Task<int> Handle(CreateBookingCommand request, CancellationToken ct)
     {
-        var coworking = await coworkingRepo.FetchAsync(request.DeskId, ct)
+        var coworking = await coworkingRepo.GetByDeskIdAsync(request.DeskId, ct)
             ?? throw new NotFoundException($"Coworking or desk by desk {request.DeskId} not found.");
 
         var (start, end) = LocalizeAndRoundInterval(request, coworking);

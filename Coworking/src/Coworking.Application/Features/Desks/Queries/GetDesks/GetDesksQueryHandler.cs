@@ -15,7 +15,7 @@ public class GetDesksQueryHandler(ICoworkingRepository repository, IMapper mappe
 {
     public async Task<IReadOnlyList<DeskDto>> Handle(GetDesksQuery request, CancellationToken ct)
     {
-        var entities = await repository.FetchDesksAsync(request.coworkingId, ct);
+        var entities = await repository.ListDesksAsync(request.coworkingId, ct);
         return mapper.Map<IReadOnlyList<DeskDto>>(entities);
     }
 }

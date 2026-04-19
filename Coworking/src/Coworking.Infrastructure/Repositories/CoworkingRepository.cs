@@ -3,35 +3,62 @@ using Coworking.Domain.Entities;
 using Coworking.Infrastructure.Persistence.Contexts;
 using Microsoft.EntityFrameworkCore;
 using Polly;
+using System.Linq.Expressions;
 
 namespace Coworking.Infrastructure.Repositories;
 
 internal sealed class CoworkingRepository(AppDbContext context) : ICoworkingRepository
 {
-    public async Task<Domain.Entities.Coworking> FetchAsync(int deskId, CancellationToken ct) =>
+    public async Task<Domain.Entities.Coworking> GetByDeskIdAsync(int deskId, CancellationToken cancellationToken = default) =>
         await context.Set<Desk>()
-            .AsNoTracking()
             .Where(d => d.Id == deskId)
             .Select(d => d.Coworking)
-            .SingleAsync(ct)
+            .SingleAsync(cancellationToken)
             .ConfigureAwait(false);
 
-    public Task<List<Desk>> FetchDesksAsync(int coworkingId, CancellationToken ct)
+    public async Task<List<Desk>> ListDesksAsync(
+        int coworkingId,
+        Expression<Func<Desk, bool>>? predicate = null,
+        CancellationToken ct = default)
     {
-        return context.Set<Desk>()
-            .AsNoTracking()
-            .Where(d => d.CoworkingId == coworkingId)
+        var query = context.Set<Desk>()
+            .Where(d => d.CoworkingId == coworkingId);
+
+        if (predicate is { } filter)
+            query = query.Where(filter);
+
+        return await query.ToListAsync(ct);
+    }
+
+    public async Task<List<Domain.Entities.Coworking>> ListAsync(
+        Expression<Func<Domain.Entities.Coworking, bool>>? predicate = null,
+        CancellationToken ct = default)
+    {
+        var query = context.Set<Domain.Entities.Coworking>().AsQueryable();
+
+        if (predicate is { } filter)
+            query = query.Where(filter);
+
+        return await query
+            .OrderBy(c => c.Name)
             .ToListAsync(ct);
     }
 
-    public async Task<Desk?> FetchDeskWithBookingsAsync(int deskId, DateTimeOffset targetDate, CancellationToken ct)
+    public async Task<Desk?> FetchDeskWithBookingsAsync(
+        int deskId,
+        DateTimeOffset startUtc,
+        DateTimeOffset endUtc,
+        CancellationToken ct = default)
     {
-        var utcTargetDate = targetDate.UtcDateTime;
+        var start = startUtc.ToUniversalTime();
+        var end = endUtc.ToUniversalTime();
 
         return await context.Set<Desk>()
             .AsNoTracking()
-            .Include(d => d.Coworking)
-            .Include(d => d.Bookings.Where(b => b.StartTime.Date == utcTargetDate.Date || b.EndTime.Date == utcTargetDate.Date))
+            //.Include(d => d.Coworking) // TODO: ??
+            .Include(d => d.Bookings.Where(b => 
+                b.StartTime < end && 
+                b.EndTime > start))
             .AsSplitQuery()
             .FirstOrDefaultAsync(d => d.Id == deskId, ct);
     }

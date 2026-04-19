@@ -5,4 +5,4 @@ namespace Coworking.Application.Features.Bookings.Queries.GetDeskAvailability;
 
 public record GetDeskAvailabilityQuery(
     int DeskId,
-    DateTimeOffset TargetDate) : IRequest<DeskAvailabilityResponse>;
+    DateOnly TargetDate) : IRequest<DeskAvailabilityResponse>;

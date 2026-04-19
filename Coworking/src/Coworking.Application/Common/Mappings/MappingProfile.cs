@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using Coworking.Application.Features.Coworkings.Queries.GetCoworkings.Dtos;
 using Coworking.Application.Features.Desks.Queries.GetDesks.Dtos;
 using Coworking.Domain.Entities;
 
@@ -8,6 +9,7 @@ public class MappingProfile : Profile
 {
     public MappingProfile()
     {
+        CreateMap<Domain.Entities.Coworking, CoworkingDto>();
         CreateMap<Desk, DeskDto>();
     }
 }

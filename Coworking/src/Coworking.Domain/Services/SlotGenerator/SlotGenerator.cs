@@ -78,10 +78,9 @@ public sealed class SlotGenerator : ISlotGenerator
     {
         slot = default;
 
-        if (timeZone.IsInvalidTime(localStart))
-            return false;
-
-        if (timeZone.IsInvalidTime(localEnd))
+        // Slots overlapping DST transitions are skipped entirely.
+        // This is a known limitation — partial slots during DST gaps are not supported.
+        if (timeZone.IsInvalidTime(localStart) || timeZone.IsInvalidTime(localEnd))
             return false;
 
         var zonedStart = CreateOffsetDateTime(timeZone, localStart);

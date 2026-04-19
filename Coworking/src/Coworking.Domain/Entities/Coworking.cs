@@ -10,6 +10,8 @@ public class Coworking : ITrackEntity, ICanBeDisabled
 
     public string Name { get; set; } = string.Empty;
 
+    public string Address { get; set; } = string.Empty;
+
     public SlotSize SlotSize { get; set; } = SlotSize.ThirtyMinutes;
 
     public TimeOnly OpenTime { get; set; }
