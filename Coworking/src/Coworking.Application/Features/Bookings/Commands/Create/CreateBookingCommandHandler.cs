@@ -66,6 +66,7 @@ internal class CreateBookingCommandHandler(
         CreateBookingCommand request,
         Domain.Entities.Coworking coworking)
     {
+        // TODO: think about user time zone. Now it supposing that user sends time in coworking local time zone.
         var zone = TimeZoneInfo.FindSystemTimeZoneById(coworking.TimeZoneId);
 
         var startLocal = TimeZoneInfo.ConvertTime(request.StartTime, zone);

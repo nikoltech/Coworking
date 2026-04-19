@@ -6,4 +6,4 @@ public record CoworkingDto(
     string Address,
     TimeOnly OpenTime,
     TimeOnly CloseTime,
-    string TimeZoneId);
+    string TimeZone);

@@ -9,7 +9,9 @@ public class MappingProfile : Profile
 {
     public MappingProfile()
     {
-        CreateMap<Domain.Entities.Coworking, CoworkingDto>();
+        CreateMap<Domain.Entities.Coworking, CoworkingDto>()
+            .ForMember(dest => dest.TimeZone, opt => opt.MapFrom(src => src.TimeZoneId));
+
         CreateMap<Desk, DeskDto>();
     }
 }
