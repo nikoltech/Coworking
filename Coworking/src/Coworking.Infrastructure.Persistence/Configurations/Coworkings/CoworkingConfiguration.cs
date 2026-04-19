@@ -1,9 +1,6 @@
-﻿using Coworking.Domain.Entities;
-using Coworking.Domain.ValueObjects;
-using Coworking.Infrastructure.Persistence.Configurations.Common;
+﻿using Coworking.Infrastructure.Persistence.Configurations.Common;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace Coworking.Infrastructure.Persistence.Configurations.Coworkings;
 
@@ -17,7 +14,7 @@ public class CoworkingConfiguration : IEntityTypeConfiguration<Domain.Entities.C
 
         builder.Property(c => c.Version)
             .IsRowVersion();
-            //.IsConcurrencyToken();
+        //.IsConcurrencyToken();
 
         builder.Property(c => c.Name)
             .IsRequired()

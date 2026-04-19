@@ -1,7 +1,4 @@
 ﻿using Coworking.Domain.ValueObjects;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace Coworking.Domain.Policies.Rounding;
 
@@ -16,7 +13,7 @@ public static class DateTimeRounding
         long slotTicks = slotSize.Value.Ticks;
 
         // If the value is already aligned to the slot, return it as is
-        if (ticks % slotTicks == 0) 
+        if (ticks % slotTicks == 0)
             return value;
 
         // Use UtcTicks to ensure linear calculations
@@ -31,7 +28,7 @@ public static class DateTimeRounding
         long slotTicks = slotSize.Value.Ticks;
 
         // If the value is already aligned to the slot, return it as is
-        if (ticks % slotTicks == 0) 
+        if (ticks % slotTicks == 0)
             return value;
 
         // Mathing trick for rounding up without if/else:

@@ -1,9 +1,9 @@
 ﻿namespace Coworking.Domain.Enums;
 
-public enum BookingType 
+public enum BookingType
 {
     Hourly,
-    Daily 
+    Daily
 }
 
 

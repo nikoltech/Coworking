@@ -1,6 +1,6 @@
 ﻿using Coworking.Application.Features.Bookings.Queries.GetDeskAvailability.Dtos;
 
-namespace Coworking.Application.Features.Bookings.Queries.GetDeskAvailability.Responces;
+namespace Coworking.Application.Features.Bookings.Queries.GetDeskAvailability.Responses;
 
 public record DeskAvailabilityResponse
 {

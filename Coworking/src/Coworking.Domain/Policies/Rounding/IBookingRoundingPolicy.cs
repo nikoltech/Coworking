@@ -1,7 +1,4 @@
 ﻿using Coworking.Domain.ValueObjects;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace Coworking.Domain.Policies.Rounding;
 

@@ -2,12 +2,10 @@ using Coworking.Application.Common.Enums;
 using Coworking.Application.Common.Exceptions;
 using Coworking.Application.Common.Interfaces;
 using Coworking.Application.Common.Synchronization;
-using Coworking.Domain.Common;
 using Coworking.Domain.Entities;
 using Coworking.Domain.Policies.Rounding;
 using Coworking.Domain.Specifications;
 using MediatR;
-using System.Collections;
 
 namespace Coworking.Application.Features.Bookings.Commands.Create;
 
@@ -27,7 +25,7 @@ internal class CreateBookingCommandHandler(
         var (start, end) = LocalizeAndRoundInterval(request, coworking);
         ValidateWithinWorkingHours(start, end, coworking);
 
-        await using var lease = 
+        await using var lease =
             await bookingAccessCoordinator.WaitIfOverlappingAsync(
                 request.DeskId,
                 start,
@@ -35,7 +33,7 @@ internal class CreateBookingCommandHandler(
                 ct);
 
         // Deadlocks as a guarantee in overlaps. Indexes for boosting + retry policy. 
-        await using var transaction = 
+        await using var transaction =
             await dataContext.BeginTransactionAsync(TransactionIsolationLevel.Serializable, ct);
 
         try

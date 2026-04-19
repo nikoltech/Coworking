@@ -4,5 +4,5 @@ public record DeskDto(
     int Id,
     string Name,
     string Description
-    //bool IsAvailable
+//bool IsAvailable
 );

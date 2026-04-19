@@ -9,7 +9,7 @@ namespace Coworking.Application.Common.Behaviors
 {
     // Note: metrics for future
     public class TransactionConflictRetryBehavior<TRequest, TResponse>(
-        IDbConflictDetector dbConflictDetector, 
+        IDbConflictDetector dbConflictDetector,
         ILogger<TransactionConflictRetryBehavior<TRequest, TResponse>> logger)
         : IPipelineBehavior<TRequest, TResponse> where TRequest : IRequest<TResponse>
     {

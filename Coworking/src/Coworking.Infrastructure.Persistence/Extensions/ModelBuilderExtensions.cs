@@ -1,6 +1,6 @@
-﻿using System.Linq.Expressions;
-using Coworking.Domain.Common;
+﻿using Coworking.Domain.Common;
 using Microsoft.EntityFrameworkCore;
+using System.Linq.Expressions;
 
 namespace Coworking.Infrastructure.Persistence.Extensions;
 
@@ -11,7 +11,6 @@ public static class ModelBuilderExtensions
     /// </summary>
     public static void ApplyGlobalConfiguration(this ModelBuilder modelBuilder)
     {
-        // Получаем типы один раз, чтобы код читался как простое предложение
         var entityTypes = modelBuilder.Model.GetEntityTypes().Select(e => e.ClrType);
 
         foreach (var type in entityTypes)

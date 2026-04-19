@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace Coworking.Domain.Common;
+﻿namespace Coworking.Domain.Common;
 
 public interface IVersionedEntity
 {

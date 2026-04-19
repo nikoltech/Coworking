@@ -14,7 +14,7 @@ public class DeskConfiguration : IEntityTypeConfiguration<Desk>
 
         builder.Property(c => c.RowVersion)
             .IsRowVersion();
-            //.IsConcurrencyToken();
+        //.IsConcurrencyToken();
 
         builder.Property(x => x.Name)
             .IsRequired()

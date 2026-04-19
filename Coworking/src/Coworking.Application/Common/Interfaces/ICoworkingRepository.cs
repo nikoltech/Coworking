@@ -1,8 +1,5 @@
 ﻿using Coworking.Domain.Entities;
-using System;
-using System.Collections.Generic;
 using System.Linq.Expressions;
-using System.Text;
 
 namespace Coworking.Application.Common.Interfaces;
 

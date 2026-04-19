@@ -1,6 +1,5 @@
 ﻿using Coworking.Domain.Common;
 using Coworking.Domain.Exceptions;
-using Coworking.Domain.ValueObjects;
 
 namespace Coworking.Domain.Entities;
 

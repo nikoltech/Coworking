@@ -2,7 +2,6 @@
 using Coworking.Domain.Entities;
 using Coworking.Infrastructure.Persistence.Contexts;
 using Microsoft.EntityFrameworkCore;
-using Polly;
 using System.Linq.Expressions;
 
 namespace Coworking.Infrastructure.Repositories;
@@ -55,9 +54,8 @@ internal sealed class CoworkingRepository(AppDbContext context) : ICoworkingRepo
 
         return await context.Set<Desk>()
             .AsNoTracking()
-            //.Include(d => d.Coworking) // TODO: ??
-            .Include(d => d.Bookings.Where(b => 
-                b.StartTime < end && 
+            .Include(d => d.Bookings.Where(b =>
+                b.StartTime < end &&
                 b.EndTime > start))
             .AsSplitQuery()
             .FirstOrDefaultAsync(d => d.Id == deskId, ct);

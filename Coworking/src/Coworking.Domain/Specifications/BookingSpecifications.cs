@@ -1,7 +1,5 @@
 ﻿using Coworking.Domain.Entities;
-using Coworking.Domain.Enums;
 using Coworking.Domain.Exceptions;
-using System.Collections;
 using System.Linq.Expressions;
 
 namespace Coworking.Domain.Specifications;

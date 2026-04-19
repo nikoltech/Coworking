@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace Coworking.Application.Common.Synchronization;
+﻿namespace Coworking.Application.Common.Synchronization;
 
 public interface IBookingAccessCoordinator
 {

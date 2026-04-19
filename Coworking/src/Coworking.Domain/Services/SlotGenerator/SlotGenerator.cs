@@ -4,9 +4,11 @@ namespace Coworking.Domain.Services.SlotGenerator;
 
 public sealed class SlotGenerator : ISlotGenerator
 {
-    // TODO: generated with many iterations. Revise manually again to ensure correctness.
-    // 
-    // may be issues with cross-season transition periods.
+    /// <summary>
+    /// Generates time slots for a given date in the coworking's local timezone.
+    /// DST gaps are skipped entirely — slots overlapping invalid times are excluded.
+    /// DST folds use standard (winter) UTC offset for ambiguous times.
+    /// </summary>
     public IReadOnlyList<TimeSlot> GenerateSlots(
         DateOnly targetDate,
         TimeOnly openTime,
@@ -15,62 +17,45 @@ public sealed class SlotGenerator : ISlotGenerator
         string timeZoneId)
     {
         var timeZone = TimeZoneInfo.FindSystemTimeZoneById(timeZoneId);
+        var slotLength = slotSize.Value;
+        var periodEnd = ResolvePeriodEnd(targetDate, openTime, closeTime);
 
-        var openingLocalTime = targetDate.ToDateTime(openTime);
-        var closingLocalTime = ResolveClosingBoundary(
-            targetDate,
-            openTime,
-            closeTime);
+        var slots = new List<TimeSlot>();
+        var current = targetDate.ToDateTime(openTime);
 
-        var generatedSlots = new List<TimeSlot>();
-
-        var currentSlotStart = openingLocalTime;
-        var slotDuration = slotSize.Value;
-
-        while (currentSlotStart + slotDuration <= closingLocalTime)
+        while (current + slotLength <= periodEnd)
         {
-            var currentSlotEnd = currentSlotStart + slotDuration;
+            var next = current + slotLength;
 
-            if (TryCreateSlot(
-                timeZone,
-                currentSlotStart,
-                currentSlotEnd,
-                out var slot))
-            {
-                generatedSlots.Add(slot);
-            }
+            if (TryBuildSlot(timeZone, current, next, out var slot))
+                slots.Add(slot);
 
-            currentSlotStart = currentSlotEnd;
+            current = next;
         }
 
-        return generatedSlots;
+        return slots;
     }
 
-    private static DateTime ResolveClosingBoundary(
-        DateOnly targetDate,
-        TimeOnly openTime,
-        TimeOnly closeTime)
+    // ── period boundary ─────────────────────────────────────────────────────
+
+    private static DateTime ResolvePeriodEnd(
+        DateOnly date, TimeOnly openTime, TimeOnly closeTime)
     {
-        var openingDateTime = targetDate.ToDateTime(openTime);
+        // 24/7 mode
+        if (openTime == closeTime)
+            return date.ToDateTime(openTime).AddDays(1);
 
-        var isTwentyFourHoursMode = openTime == closeTime;
-        if (isTwentyFourHoursMode)
-        {
-            return openingDateTime.AddDays(1);
-        }
+        // midnight crossing (e.g. 22:00 – 06:00)
+        if (closeTime < openTime)
+            return date.AddDays(1).ToDateTime(closeTime);
 
-        var closesNextDay = closeTime < openTime;
-        if (closesNextDay)
-        {
-            return targetDate
-                .AddDays(1)
-                .ToDateTime(closeTime);
-        }
-
-        return targetDate.ToDateTime(closeTime);
+        // regular hours (e.g. 08:00 – 20:00)
+        return date.ToDateTime(closeTime);
     }
 
-    private static bool TryCreateSlot(
+    // ── slot construction ────────────────────────────────────────────────────
+
+    private static bool TryBuildSlot(
         TimeZoneInfo timeZone,
         DateTime localStart,
         DateTime localEnd,
@@ -78,26 +63,28 @@ public sealed class SlotGenerator : ISlotGenerator
     {
         slot = default;
 
-        // Slots overlapping DST transitions are skipped entirely.
-        // This is a known limitation — partial slots during DST gaps are not supported.
+        // DST gap — these local times do not exist, skip the slot
         if (timeZone.IsInvalidTime(localStart) || timeZone.IsInvalidTime(localEnd))
             return false;
 
-        var zonedStart = CreateOffsetDateTime(timeZone, localStart);
-        var zonedEnd = CreateOffsetDateTime(timeZone, localEnd);
+        slot = new TimeSlot(
+            ToZonedOffset(timeZone, localStart),
+            ToZonedOffset(timeZone, localEnd));
 
-        slot = new TimeSlot(zonedStart, zonedEnd);
         return true;
     }
 
-    private static DateTimeOffset CreateOffsetDateTime(
-        TimeZoneInfo timeZone,
-        DateTime localDateTime)
+    /// <summary>
+    /// Converts a local DateTime to DateTimeOffset using the timezone's UTC offset.
+    /// For ambiguous times (DST fold), uses the standard (winter) offset
+    /// to avoid non-deterministic results.
+    /// </summary>
+    private static DateTimeOffset ToZonedOffset(TimeZoneInfo timeZone, DateTime local)
     {
-        var utcOffset = timeZone.GetUtcOffset(localDateTime);
+        var offset = timeZone.IsAmbiguousTime(local)
+            ? timeZone.BaseUtcOffset
+            : timeZone.GetUtcOffset(local);
 
-        return new DateTimeOffset(
-            localDateTime,
-            utcOffset);
+        return new DateTimeOffset(local, offset);
     }
 }

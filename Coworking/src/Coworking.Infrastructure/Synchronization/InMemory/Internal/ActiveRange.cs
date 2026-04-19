@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace Coworking.Infrastructure.Synchronization.InMemory;
+﻿namespace Coworking.Infrastructure.Synchronization.InMemory.Internal;
 
 internal sealed record ActiveRange(
     int DeskId,

@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace Coworking.Application.Common.Interfaces.Transactions
+﻿namespace Coworking.Application.Common.Interfaces.Transactions
 {
     public interface IDbConflictDetector
     {

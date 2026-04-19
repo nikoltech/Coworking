@@ -23,7 +23,8 @@ namespace Coworking.Application
 
         private static void AddMediatR(this IServiceCollection services)
         {
-            services.AddMediatR(cfg => {
+            services.AddMediatR(cfg =>
+            {
                 cfg.RegisterServicesFromAssembly(typeof(DependencyInjection).Assembly);
 
                 AddBehaviorsPipeline(cfg);

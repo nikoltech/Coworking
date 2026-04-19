@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace Coworking.Domain.Specifications;
+﻿namespace Coworking.Domain.Specifications;
 
 public static class DateRangeOverlap
 {

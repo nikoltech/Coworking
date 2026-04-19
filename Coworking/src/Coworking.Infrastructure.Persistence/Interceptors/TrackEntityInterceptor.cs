@@ -12,7 +12,7 @@ public sealed class TrackEntityInterceptor : SaveChangesInterceptor
         CancellationToken ct = default)
     {
         var context = eventData.Context;
-        if (context == null) 
+        if (context == null)
             return base.SavingChangesAsync(eventData, result, ct);
 
         var now = DateTime.UtcNow;

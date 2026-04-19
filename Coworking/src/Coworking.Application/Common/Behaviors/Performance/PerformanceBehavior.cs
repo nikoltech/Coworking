@@ -1,9 +1,6 @@
 ﻿using MediatR;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Text;
 
 namespace Coworking.Application.Common.Behaviors.Performance;
 
@@ -14,7 +11,7 @@ public class PerformanceBehavior<TRequest, TResponse>(
 {
     public async Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken ct)
     {
-        if (settings.Enabled is false) 
+        if (settings.Enabled is false)
             return await next(ct);
 
         long start = Stopwatch.GetTimestamp();
