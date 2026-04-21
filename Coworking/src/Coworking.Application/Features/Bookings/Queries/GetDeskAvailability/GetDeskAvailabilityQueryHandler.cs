@@ -1,5 +1,5 @@
-﻿using Coworking.Application.Common.Exceptions;
-using Coworking.Application.Common.Interfaces;
+﻿using Coworking.Application.Abstractions;
+using Coworking.Application.Common.Exceptions;
 using Coworking.Application.Features.Bookings.Queries.GetDeskAvailability.Dtos;
 using Coworking.Application.Features.Bookings.Queries.GetDeskAvailability.Responses;
 using Coworking.Domain.Entities;

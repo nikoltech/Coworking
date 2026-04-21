@@ -1,6 +1,6 @@
 ﻿namespace Coworking.Application.Common.Exceptions;
 
-internal class ConflictException : Exception
+public class ConflictException : Exception
 {
     public ConflictException()
     {

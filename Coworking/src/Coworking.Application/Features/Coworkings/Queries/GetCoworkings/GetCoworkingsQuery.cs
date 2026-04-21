@@ -1,6 +1,6 @@
 ﻿using AutoMapper;
 using AutoMapper.QueryableExtensions;
-using Coworking.Application.Common.Interfaces;
+using Coworking.Application.Abstractions;
 using Coworking.Application.Features.Coworkings.Queries.GetCoworkings.Dtos;
 using MediatR;
 using Microsoft.EntityFrameworkCore;

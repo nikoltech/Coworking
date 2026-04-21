@@ -21,6 +21,9 @@
 
   <ItemGroup>
     <Folder Include="Controllers\" />
+    <Folder Include="Infrastructure\Swagger\" />
+    <Folder Include="Models\Responces\" />
+    <Folder Include="Models\Requests\" />
   </ItemGroup>
 
 </Project>

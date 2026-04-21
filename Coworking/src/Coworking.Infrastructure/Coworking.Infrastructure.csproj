@@ -7,10 +7,14 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Handlebars.Net" Version="2.1.6" />
+    <PackageReference Include="MailKit" Version="4.16.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="10.0.3" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.3" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.3" />
+    <PackageReference Include="MimeKit" Version="4.16.0" />
     <PackageReference Include="Nito.AsyncEx" Version="5.1.2" />
+    <PackageReference Include="Polly" Version="8.6.6" />
   </ItemGroup>
 
   <ItemGroup>
@@ -21,7 +25,6 @@
 
   <ItemGroup>
     <Folder Include="Authentication\" />
-    <Folder Include="Services\Email\" />
   </ItemGroup>
 
 </Project>

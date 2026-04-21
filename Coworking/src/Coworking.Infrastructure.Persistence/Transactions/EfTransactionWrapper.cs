@@ -1,4 +1,4 @@
-﻿using Coworking.Application.Common.Interfaces.Transactions;
+﻿using Coworking.Application.Abstractions.Transactions;
 using Microsoft.EntityFrameworkCore.Storage;
 using System.Data;
 

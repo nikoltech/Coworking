@@ -1,4 +1,4 @@
-﻿using Coworking.Application.Common.Synchronization;
+﻿using Coworking.Application.Abstractions.Synchronization;
 using Coworking.Domain.Specifications;
 using Coworking.Infrastructure.Synchronization.InMemory.Internal;
 using Nito.AsyncEx;

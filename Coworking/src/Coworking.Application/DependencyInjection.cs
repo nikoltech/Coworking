@@ -1,5 +1,5 @@
-﻿using Coworking.Application.Common.Behaviors;
-using Coworking.Application.Common.Behaviors.Performance;
+﻿using Coworking.Application.Behaviors;
+using Coworking.Application.Behaviors.Performance;
 using Coworking.Application.Features.Bookings.Commands.Create;
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
@@ -39,6 +39,8 @@ namespace Coworking.Application
 
             cfg.AddOpenBehavior(typeof(ValidationBehavior<,>));
             cfg.AddOpenBehavior(typeof(LoggingBehavior<,>));
+            cfg.AddOpenBehavior(typeof(DomainExceptionBehavior<,>));
+
             cfg.AddOpenBehavior(typeof(TransactionConflictRetryBehavior<,>));
         }
 

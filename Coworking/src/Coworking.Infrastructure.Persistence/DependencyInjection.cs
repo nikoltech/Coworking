@@ -1,5 +1,5 @@
-﻿using Coworking.Application.Common.Interfaces;
-using Coworking.Application.Common.Interfaces.Transactions;
+﻿using Coworking.Application.Abstractions;
+using Coworking.Application.Abstractions.Transactions;
 using Coworking.Infrastructure.Persistence.Contexts;
 using Coworking.Infrastructure.Persistence.Interceptors;
 using Coworking.Infrastructure.Persistence.Transactions.Conflicts;

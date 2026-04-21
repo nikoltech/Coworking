@@ -1,8 +1,10 @@
+using Coworking.Application.Abstractions;
+using Coworking.Application.Abstractions.Synchronization;
 using Coworking.Application.Common.Enums;
 using Coworking.Application.Common.Exceptions;
-using Coworking.Application.Common.Interfaces;
-using Coworking.Application.Common.Synchronization;
+using Coworking.Application.Features.Bookings.Commands.Create.Notifications;
 using Coworking.Domain.Entities;
+using Coworking.Domain.Enums;
 using Coworking.Domain.Policies.Rounding;
 using Coworking.Domain.Specifications;
 using MediatR;
@@ -10,6 +12,7 @@ using MediatR;
 namespace Coworking.Application.Features.Bookings.Commands.Create;
 
 internal class CreateBookingCommandHandler(
+    IMediator mediator,
     IAppDbContext dataContext,
     IBookingRepository bookingRepo,
     ICoworkingRepository coworkingRepo,
@@ -19,8 +22,11 @@ internal class CreateBookingCommandHandler(
 {
     public async Task<int> Handle(CreateBookingCommand request, CancellationToken ct)
     {
-        var coworking = await coworkingRepo.GetByDeskIdAsync(request.DeskId, ct)
-            ?? throw new NotFoundException($"Coworking or desk by desk {request.DeskId} not found.");
+        var desk = await coworkingRepo.GetDeskWithCoworkingAsync(request.DeskId, ct)
+            ?? throw new NotFoundException($"Desk with id {request.DeskId} not found.");
+
+        var coworking = desk.Coworking
+            ?? throw new NotFoundException($"Coworking for desk {request.DeskId} not found.");
 
         var (start, end) = LocalizeAndRoundInterval(request, coworking);
         ValidateWithinWorkingHours(start, end, coworking);
@@ -60,13 +66,33 @@ internal class CreateBookingCommandHandler(
             await transaction.RollbackAsync(ct);
             throw;
         }
+
+        await PublishBookingCreatedAsync(request, desk, start, end, ct);
     }
+
+    private Task PublishBookingCreatedAsync(
+        CreateBookingCommand request,
+        Desk desk,
+        DateTimeOffset start,
+        DateTimeOffset end,
+        CancellationToken ct)
+    {
+        return mediator.Publish(new BookingCreatedNotification(
+            UserEmail: request.UserEmail,
+            UserName: request.UserName,
+            DeskName: desk.Name,
+            CoworkingName: desk.Coworking.Name,
+            Start: start,
+            End: end,
+            TimeZoneId: desk.Coworking.TimeZoneId), ct);
+    }
+        
 
     private (DateTimeOffset Start, DateTimeOffset End) LocalizeAndRoundInterval(
         CreateBookingCommand request,
         Domain.Entities.Coworking coworking)
     {
-        // TODO: think about user time zone. Now it supposing that user sends time in coworking local time zone.
+        // Note: think about user time zone. Now it supposing that user books time in coworking local time zone.
         var zone = TimeZoneInfo.FindSystemTimeZoneById(coworking.TimeZoneId);
 
         var startLocal = TimeZoneInfo.ConvertTime(request.StartTime, zone);
@@ -80,7 +106,9 @@ internal class CreateBookingCommandHandler(
         DateTimeOffset start,
         DateTimeOffset end)
     {
-        var booking = Booking.Create(request.DeskId, request.UserId, start, end);
+        var booking = Booking.Create(request.DeskId, request.UserName, request.UserEmail, start, end);
+
+        booking.SetStatus(BookingStatus.PendingPayment);
 
         if (request.Metadata?.UserTimeZoneId is not null
             && TimeZoneInfo.FindSystemTimeZoneById(request.Metadata.UserTimeZoneId) is TimeZoneInfo userZone)

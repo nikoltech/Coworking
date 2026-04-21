@@ -1,4 +1,4 @@
-﻿using Coworking.Application.Common.Interfaces;
+﻿using Coworking.Application.Abstractions;
 using Coworking.Domain.Entities;
 using Coworking.Infrastructure.Persistence.Contexts;
 using Microsoft.EntityFrameworkCore;
@@ -8,10 +8,10 @@ namespace Coworking.Infrastructure.Repositories;
 
 internal sealed class CoworkingRepository(AppDbContext context) : ICoworkingRepository
 {
-    public async Task<Domain.Entities.Coworking> GetByDeskIdAsync(int deskId, CancellationToken cancellationToken = default) =>
+    public async Task<Desk> GetDeskWithCoworkingAsync(int deskId, CancellationToken cancellationToken = default) =>
         await context.Set<Desk>()
             .Where(d => d.Id == deskId)
-            .Select(d => d.Coworking)
+            .Include(d => d.Coworking)
             .SingleAsync(cancellationToken)
             .ConfigureAwait(false);
 

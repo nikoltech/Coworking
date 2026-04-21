@@ -1,4 +1,4 @@
-﻿using Coworking.Application.Common.Interfaces.Transactions;
+﻿using Coworking.Application.Abstractions.Transactions;
 
 namespace Coworking.Infrastructure.Persistence.Transactions.Conflicts
 {

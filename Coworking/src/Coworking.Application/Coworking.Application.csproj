@@ -20,4 +20,9 @@
     <ProjectReference Include="..\Coworking.Domain\Coworking.Domain.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Abstractions\Email\" />
+    <Folder Include="Ports\Squidex\" />
+  </ItemGroup>
+
 </Project>

@@ -16,6 +16,11 @@ public class BookingConfiguration : IEntityTypeConfiguration<Booking>
         builder.Property(x => x.EndTime)
             .IsRequired();
 
+        builder.Property(x => x.Status)
+            .IsRequired()
+            .HasConversion<string>()
+            .HasMaxLength(50);
+
         builder.Property(x => x.UserTimeZoneId)
             .IsRequired()
             .HasMaxLength(100);

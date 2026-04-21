@@ -1,4 +1,5 @@
 ﻿using Coworking.Domain.Common;
+using Coworking.Domain.Enums;
 using Coworking.Domain.Exceptions;
 
 namespace Coworking.Domain.Entities;
@@ -7,17 +8,24 @@ public class Booking : ITrackEntity
 {
     public int Id { get; set; }
 
-    public Guid UserId { get; set; }
-
     public DateTimeOffset StartTime { get; set; }
 
     public DateTimeOffset EndTime { get; set; }
 
-    public string? UserTimeZoneId { get; set; }
+    public BookingStatus Status { get; set; }
 
     public int DeskId { get; set; }
 
     public Desk Desk { get; set; } = null!;
+
+
+    //public Guid UserId { get; set; }
+
+    public string UserName { get; set; } = null!;
+
+    public string UserEmail { get; set; } = null!;
+
+    public string? UserTimeZoneId { get; set; }
 
     public DateTime CreatedAt { get; set; }
 
@@ -25,7 +33,8 @@ public class Booking : ITrackEntity
 
     public static Booking Create(
         int deskId,
-        Guid userId,
+        string userName, // ValueObject?
+        string userEmail,  // ValueObject?
         DateTimeOffset startTime,
         DateTimeOffset endTime)
     {
@@ -41,10 +50,18 @@ public class Booking : ITrackEntity
         return new Booking
         {
             DeskId = deskId,
-            UserId = userId,
+            UserName = userName,
+            UserEmail = userEmail,
             StartTime = utcStartTime,
             EndTime = utcEndTime
         };
     }
 
+    public void SetStatus(BookingStatus pendingPayment)
+    {
+        if (Status == BookingStatus.Cancelled || Status == BookingStatus.Expired)
+            throw new DomainException("Cannot change status of a cancelled or expired booking.");
+
+        Status = pendingPayment;
+    }
 }
