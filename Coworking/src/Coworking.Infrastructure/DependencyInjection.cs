@@ -1,12 +1,13 @@
 ﻿using Coworking.Application.Abstractions;
-using Coworking.Application.Abstractions.Messaging;
+using Coworking.Application.Abstractions.Email;
 using Coworking.Application.Abstractions.Synchronization;
-using Coworking.Application.Notifications.Email;
+using Coworking.Application.Behaviors.Performance;
 using Coworking.Domain.Policies.Rounding;
 using Coworking.Domain.Services.SlotGenerator;
 using Coworking.Infrastructure.Repositories;
 using Coworking.Infrastructure.Services.Email.Messaging;
 using Coworking.Infrastructure.Services.Email.Messaging.Background;
+using Coworking.Infrastructure.Services.Email.Messaging.Interfaces;
 using Coworking.Infrastructure.Services.Email.Options;
 using Coworking.Infrastructure.Services.Email.Senders;
 using Coworking.Infrastructure.Services.Email.Services;
@@ -19,9 +20,12 @@ namespace Coworking.Infrastructure;
 
 public static class DependencyInjection
 {
-    public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddInfrastructure(
+        this IServiceCollection services,
+        IConfiguration configuration)
     {
         services
+            .AddOptions(configuration)
             .AddRepositories()
             .AddDomainServices()
             .AddSynchronization()
@@ -30,21 +34,19 @@ public static class DependencyInjection
         return services;
     }
 
-    private static IServiceCollection AddRepositories(this IServiceCollection services)
-    {
-        services.AddScoped<IBookingRepository, BookingRepository>();
-        services.AddScoped<ICoworkingRepository, CoworkingRepository>();
+    private static IServiceCollection AddOptions(this IServiceCollection services, IConfiguration configuration) =>
+        services
+            .Configure<PerformanceSettings>(configuration.GetSection("MediatR:Performance"));
 
-        return services;
-    }
+    private static IServiceCollection AddRepositories(this IServiceCollection services) =>
+        services
+            .AddScoped<IBookingRepository, BookingRepository>()
+            .AddScoped<ICoworkingRepository, CoworkingRepository>();
 
-    private static IServiceCollection AddDomainServices(this IServiceCollection services)
-    {
-        services.AddSingleton<IBookingRoundingPolicy, DefaultRoundingPolicy>();
-        services.AddSingleton<ISlotGenerator, SlotGenerator>();
-
-        return services;
-    }
+    private static IServiceCollection AddDomainServices(this IServiceCollection services) =>
+        services
+            .AddSingleton<IBookingRoundingPolicy, DefaultRoundingPolicy>()
+            .AddSingleton<ISlotGenerator, SlotGenerator>();
 
     private static IServiceCollection AddSynchronization(this IServiceCollection services)
     {
@@ -57,20 +59,25 @@ public static class DependencyInjection
         return services;
     }
 
-    private static IServiceCollection AddEmailMessaging(this IServiceCollection services, IConfiguration configuration)
+    private static IServiceCollection AddEmailMessaging(
+        this IServiceCollection services,
+        IConfiguration configuration)
     {
+        //services.AddMemoryCache();
+        services.AddLazyCache();
+
         services.AddOptions<SmtpOptions>()
             .Bind(configuration.GetSection($"Services:{SmtpOptions.SectionName}"))
-            //.ValidateDataAnnotations()
+            .ValidateDataAnnotations()
             .ValidateOnStart();
 
         services.AddSingleton<EmailChannel>();
         services.AddSingleton<IEmailChannel>(sp => sp.GetRequiredService<EmailChannel>());
 
-        services.AddSingleton<IEmailTemplateService, EmailTemplateService>();
-        services.AddScoped<IEmailNotificationService, EmailNotificationService>();
-
-        services.AddTransient<IEmailSender, SmtpEmailSender>();
+        services
+            .AddSingleton<IEmailTemplateService, EmailTemplateService>()
+            .AddScoped<IEmailNotificationService, EmailNotificationService>()
+            .AddTransient<IEmailSender, SmtpEmailSender>();
 
         services.AddHostedService<EmailBackgroundWorker>();
 

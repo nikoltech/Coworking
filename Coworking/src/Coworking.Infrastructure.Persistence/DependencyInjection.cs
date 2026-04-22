@@ -7,29 +7,26 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Coworking.Infrastructure.Persistence
+namespace Coworking.Infrastructure.Persistence;
+
+public static class DependencyInjection
 {
-    public static class DependencyInjection
+    public static IServiceCollection AddPersistence(
+        this IServiceCollection services,
+        IConfiguration configuration)
     {
-        public static IServiceCollection AddPersistence(this IServiceCollection services, IConfiguration configuration)
-        {
-            services.AddSingleton<TrackEntityInterceptor>();
-            services.AddSingleton<IDbConflictDetector, PostgresConflictDetector>();
+        services
+            .AddSingleton<TrackEntityInterceptor>()
+            .AddSingleton<IDbConflictDetector, PostgresConflictDetector>();
 
-            services.AddDbContext<AppDbContext>((sp, options) =>
-            {
-                var auditInterceptor = sp.GetRequiredService<TrackEntityInterceptor>();
+        services.AddDbContext<AppDbContext>((sp, options) =>
+            options
+                .UseNpgsql(configuration.GetConnectionString("DefaultConnection"))
+                .UseSnakeCaseNamingConvention()
+                .AddInterceptors(sp.GetRequiredService<TrackEntityInterceptor>()));
 
-                options
-                    .UseNpgsql(configuration.GetConnectionString("DefaultConnection"))
-                    .UseSnakeCaseNamingConvention()
-                    .AddInterceptors(auditInterceptor);
-            });
+        services.AddScoped<IAppDbContext>(sp => sp.GetRequiredService<AppDbContext>());
 
-            services.AddScoped<IAppDbContext>(sp => sp.GetRequiredService<AppDbContext>());
-
-            return services;
-        }
-
+        return services;
     }
 }

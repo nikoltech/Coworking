@@ -1,7 +1,7 @@
 ﻿using Coworking.Application.Features.Bookings.Commands.Cancel.Notifications.Models;
 using Coworking.Application.Features.Bookings.Commands.Create.Notifications.Models;
 
-namespace Coworking.Application.Notifications.Email;
+namespace Coworking.Application.Abstractions.Email;
 
 public interface IEmailNotificationService
 {

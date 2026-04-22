@@ -1,4 +1,4 @@
-﻿using Coworking.Application.Notifications.Email;
+﻿using Coworking.Application.Abstractions.Email;
 using Coworking.Infrastructure.Services.Email.Options;
 using Coworking.Infrastructure.Services.Email.Senders.Helpers;
 using MailKit.Net.Smtp;
@@ -6,6 +6,7 @@ using MailKit.Security;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MimeKit;
+using System.Net;
 
 namespace Coworking.Infrastructure.Services.Email.Senders;
 
@@ -18,6 +19,10 @@ internal sealed class SmtpEmailSender : IEmailSender
     {
         _options = options?.Value ?? throw new ArgumentNullException(nameof(options));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+
+        #if DEBUG
+        ServicePointManager.ServerCertificateValidationCallback = (s, c, ch, e) => true;
+        #endif
     }
 
     public async Task SendRawEmailAsync(

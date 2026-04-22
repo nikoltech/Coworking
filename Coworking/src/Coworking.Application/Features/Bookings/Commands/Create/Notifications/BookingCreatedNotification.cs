@@ -1,6 +1,6 @@
 ﻿using Coworking.Application.Abstractions;
+using Coworking.Application.Abstractions.Email;
 using Coworking.Application.Features.Bookings.Commands.Create.Notifications.Models;
-using Coworking.Application.Notifications.Email;
 using Coworking.Domain.Entities;
 using MediatR;
 using Microsoft.EntityFrameworkCore;

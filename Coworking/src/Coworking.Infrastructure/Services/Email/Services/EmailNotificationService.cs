@@ -1,7 +1,8 @@
-﻿using Coworking.Application.Abstractions.Messaging;
+﻿using Coworking.Application.Abstractions.Email;
 using Coworking.Application.Features.Bookings.Commands.Cancel.Notifications.Models;
 using Coworking.Application.Features.Bookings.Commands.Create.Notifications.Models;
-using Coworking.Application.Notifications.Email;
+using Coworking.Application.Ports.Email.Messaging.Dtos;
+using Coworking.Infrastructure.Services.Email.Messaging.Interfaces;
 using Coworking.Infrastructure.Services.Email.Templates.Models;
 
 namespace Coworking.Infrastructure.Services.Email.Services;
@@ -21,7 +22,7 @@ internal sealed class EmailNotificationService(
                 FormattedEnd: model.FormattedEnd,
                 TimeZoneId: model.TimeZoneId));
 
-        return channel.WriteAsync(new EmailNotification(
+        return channel.WriteAsync(new EmailMessageChannelDto(
             To: model.To,
             Subject: $"Booking confirmed — {model.CoworkingName}",
             Body: body), ct).AsTask();
@@ -39,7 +40,7 @@ internal sealed class EmailNotificationService(
                 TimeZoneId: model.TimeZoneId,
                 CancellationReason: model.CancellationReason));
 
-        return channel.WriteAsync(new EmailNotification(
+        return channel.WriteAsync(new EmailMessageChannelDto(
             To: model.To,
             Subject: $"Booking cancelled — {model.CoworkingName}",
             Body: body), ct).AsTask();

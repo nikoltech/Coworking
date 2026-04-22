@@ -1,5 +1,5 @@
-﻿using Coworking.Application.Features.Bookings.Commands.Cancel.Notifications.Models;
-using Coworking.Application.Notifications.Email;
+﻿using Coworking.Application.Abstractions.Email;
+using Coworking.Application.Features.Bookings.Commands.Cancel.Notifications.Models;
 using MediatR;
 
 namespace Coworking.Application.Features.Bookings.Commands.Cancel;

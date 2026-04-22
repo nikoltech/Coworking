@@ -4,6 +4,7 @@ using MediatR;
 
 namespace Coworking.Application.Features.Bookings.Commands.Cancel;
 
+// TODO: fill the missing users  and etc. properties
 public record CancelBookingCommand(
     int DeskId,
     Guid UserId,
@@ -33,6 +34,15 @@ internal class CancelBookingCommandHandler(
             throw;
         }
 
-        await mediator.Publish(new BookingCancelledNotification(...), ct);
+        // TODO: fix
+        await mediator.Publish(new BookingCancelledNotification(
+            UserEmail: default, 
+            UserName: default, 
+            DeskName: default,
+            CoworkingName: default,
+            Start: default,
+            End: default,
+            TimeZoneId: default,
+            CancellationReason: default), ct);
     }
 }

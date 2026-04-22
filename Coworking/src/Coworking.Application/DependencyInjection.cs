@@ -1,52 +1,48 @@
-﻿using Coworking.Application.Behaviors;
+﻿// Application/DependencyInjection.cs
+using Coworking.Application.Behaviors;
 using Coworking.Application.Behaviors.Performance;
 using Coworking.Application.Features.Bookings.Commands.Create;
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Coworking.Application
+namespace Coworking.Application;
+
+public static class DependencyInjection
 {
-    public static class DependencyInjection
+    public static IServiceCollection AddApplication(this IServiceCollection services)
     {
-        public static IServiceCollection AddApplication(this IServiceCollection services)
+        services
+            .AddAutoMapper()
+            .AddMediatR();
+
+        return services;
+    }
+
+    private static IServiceCollection AddAutoMapper(this IServiceCollection services)
+    {
+        services.AddAutoMapper(_ => { }, typeof(DependencyInjection).Assembly);
+        return services;
+    }
+
+    private static IServiceCollection AddMediatR(this IServiceCollection services)
+    {
+        services.AddMediatR(cfg =>
         {
-            services.AddAutoMapper();
-            services.AddMediatR();
+            cfg.RegisterServicesFromAssembly(typeof(DependencyInjection).Assembly);
+            cfg.AddBehaviorsPipeline();
+        });
 
-            return services;
-        }
+        services.AddValidatorsFromAssemblyContaining<CreateBookingCommand>();
 
-        private static void AddAutoMapper(this IServiceCollection services)
-        {
-            services.AddAutoMapper(_ => { }, typeof(DependencyInjection).Assembly);
-        }
+        return services;
+    }
 
-        private static void AddMediatR(this IServiceCollection services)
-        {
-            services.AddMediatR(cfg =>
-            {
-                cfg.RegisterServicesFromAssembly(typeof(DependencyInjection).Assembly);
-
-                AddBehaviorsPipeline(cfg);
-            });
-
-            services.AddFluentValidators();
-        }
-
-        private static void AddBehaviorsPipeline(MediatRServiceConfiguration cfg)
-        {
-            cfg.AddOpenBehavior(typeof(PerformanceBehavior<,>));
-
-            cfg.AddOpenBehavior(typeof(ValidationBehavior<,>));
-            cfg.AddOpenBehavior(typeof(LoggingBehavior<,>));
-            cfg.AddOpenBehavior(typeof(DomainExceptionBehavior<,>));
-
-            cfg.AddOpenBehavior(typeof(TransactionConflictRetryBehavior<,>));
-        }
-
-        private static void AddFluentValidators(this IServiceCollection services)
-        {
-            services.AddValidatorsFromAssemblyContaining<CreateBookingCommand>();
-        }
+    private static void AddBehaviorsPipeline(this MediatRServiceConfiguration cfg)
+    {
+        cfg.AddOpenBehavior(typeof(PerformanceBehavior<,>));
+        cfg.AddOpenBehavior(typeof(ValidationBehavior<,>));
+        cfg.AddOpenBehavior(typeof(LoggingBehavior<,>));
+        cfg.AddOpenBehavior(typeof(DomainExceptionBehavior<,>));
+        cfg.AddOpenBehavior(typeof(TransactionConflictRetryBehavior<,>));
     }
 }

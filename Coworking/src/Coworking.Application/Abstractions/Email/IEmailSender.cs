@@ -1,4 +1,4 @@
-﻿namespace Coworking.Application.Notifications.Email;
+﻿namespace Coworking.Application.Abstractions.Email;
 
 public interface IEmailSender
 {
