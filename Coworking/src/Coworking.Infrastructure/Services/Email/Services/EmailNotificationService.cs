@@ -1,7 +1,7 @@
 ﻿using Coworking.Application.Abstractions.Email;
 using Coworking.Application.Features.Bookings.Commands.Cancel.Notifications.Models;
 using Coworking.Application.Features.Bookings.Commands.Create.Notifications.Models;
-using Coworking.Application.Ports.Email.Messaging.Dtos;
+using Coworking.Infrastructure.Services.Email.Messaging.Dtos;
 using Coworking.Infrastructure.Services.Email.Messaging.Interfaces;
 using Coworking.Infrastructure.Services.Email.Templates.Models;
 
@@ -11,26 +11,31 @@ internal sealed class EmailNotificationService(
     IEmailTemplateService templateService,
     IEmailChannel channel) : IEmailNotificationService
 {
-    public Task SendBookingCreatedAsync(BookingCreatedEmailModel model, CancellationToken ct)
+    public async Task SendBookingCreatedAsync(BookingCreatedEmailModel model, CancellationToken ct)
     {
-        var body = templateService.RenderTemplateFromHbsFile("booking-created.hbs", new BookingCreatedTemplateModel(
+        var body = await templateService.RenderTemplateFromHbsFileAsync(
+            "booking-created.hbs",
+            new BookingCreatedTemplateModel(
                 To: model.To,
                 UserName: model.UserName,
                 DeskName: model.DeskName,
                 CoworkingName: model.CoworkingName,
                 FormattedStart: model.FormattedStart,
                 FormattedEnd: model.FormattedEnd,
-                TimeZoneId: model.TimeZoneId));
+                TimeZoneId: model.TimeZoneId
+                ));
 
-        return channel.WriteAsync(new EmailMessageChannelDto(
+        await channel.WriteAsync(new EmailMessageChannelDto(
             To: model.To,
-            Subject: $"Booking confirmed — {model.CoworkingName}",
-            Body: body), ct).AsTask();
+            Subject: $"Booking created — {model.CoworkingName}. Waiting for payment confirmation.",
+            Body: body), ct);
     }
 
-    public Task SendBookingCancelledAsync(BookingCancelledEmailModel model, CancellationToken ct)
+    public async Task SendBookingCancelledAsync(BookingCancelledEmailModel model, CancellationToken ct)
     {
-        var body = templateService.RenderTemplateFromHbsFile("booking-cancelled.hbs", new BookingCancelledTemplateModel(
+        var body = await templateService.RenderTemplateFromHbsFileAsync(
+            "booking-cancelled.hbs",
+            new BookingCancelledTemplateModel(
                 To: model.To,
                 UserName: model.UserName,
                 DeskName: model.DeskName,
@@ -38,11 +43,12 @@ internal sealed class EmailNotificationService(
                 FormattedStart: model.FormattedStart,
                 FormattedEnd: model.FormattedEnd,
                 TimeZoneId: model.TimeZoneId,
-                CancellationReason: model.CancellationReason));
+                CancellationReason: model.CancellationReason
+                ));
 
-        return channel.WriteAsync(new EmailMessageChannelDto(
+        await channel.WriteAsync(new EmailMessageChannelDto(
             To: model.To,
             Subject: $"Booking cancelled — {model.CoworkingName}",
-            Body: body), ct).AsTask();
+            Body: body), ct);
     }
 }

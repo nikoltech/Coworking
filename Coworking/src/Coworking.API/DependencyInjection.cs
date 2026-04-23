@@ -1,8 +1,4 @@
-﻿using Coworking.API.ExceptionHandlers;
-using Coworking.API.Infrastructure.Extensions;
-using Coworking.Application.Common.Exceptions;
-using FluentValidation;
-using Microsoft.AspNetCore.Diagnostics;
+﻿using Coworking.API.Infrastructure.Extensions;
 
 namespace Coworking.API;
 
@@ -20,7 +16,10 @@ public static class DependencyInjection
 
         //services.AddHttpContextAccessor();
 
-        services.AddServices(configuration);
+        //services.AddServices(configuration);
+        services.AddApiServices();
+
+
 
         return services;
     }

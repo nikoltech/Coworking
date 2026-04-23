@@ -31,30 +31,42 @@ public static class DependencyInjection
             .AddSynchronization()
             .AddEmailMessaging(configuration);
 
+        services.AddHostedServices();
+
         return services;
     }
 
-    private static IServiceCollection AddOptions(this IServiceCollection services, IConfiguration configuration) =>
+    private static IServiceCollection AddOptions(this IServiceCollection services, IConfiguration configuration)
+    {
         services
             .Configure<PerformanceSettings>(configuration.GetSection("MediatR:Performance"));
 
-    private static IServiceCollection AddRepositories(this IServiceCollection services) =>
+        return services;
+    }
+
+    private static IServiceCollection AddRepositories(this IServiceCollection services)
+    {
         services
             .AddScoped<IBookingRepository, BookingRepository>()
             .AddScoped<ICoworkingRepository, CoworkingRepository>();
 
-    private static IServiceCollection AddDomainServices(this IServiceCollection services) =>
+        return services;
+    }
+
+    private static IServiceCollection AddDomainServices(this IServiceCollection services)
+    {
         services
             .AddSingleton<IBookingRoundingPolicy, DefaultRoundingPolicy>()
             .AddSingleton<ISlotGenerator, SlotGenerator>();
+
+        return services;
+    }
 
     private static IServiceCollection AddSynchronization(this IServiceCollection services)
     {
         services.AddSingleton<InMemoryBookingAccessCoordinator>();
         services.AddSingleton<IBookingAccessCoordinator>(sp =>
             sp.GetRequiredService<InMemoryBookingAccessCoordinator>());
-
-        services.AddHostedService<BookingLockExpiryCleaner>();
 
         return services;
     }
@@ -79,6 +91,12 @@ public static class DependencyInjection
             .AddScoped<IEmailNotificationService, EmailNotificationService>()
             .AddTransient<IEmailSender, SmtpEmailSender>();
 
+        return services;
+    }
+
+    private static IServiceCollection AddHostedServices(this IServiceCollection services)
+    {
+        services.AddHostedService<BookingLockExpiryCleaner>();
         services.AddHostedService<EmailBackgroundWorker>();
 
         return services;

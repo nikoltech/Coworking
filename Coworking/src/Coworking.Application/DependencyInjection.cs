@@ -1,5 +1,4 @@
-﻿// Application/DependencyInjection.cs
-using Coworking.Application.Behaviors;
+﻿using Coworking.Application.Behaviors;
 using Coworking.Application.Behaviors.Performance;
 using Coworking.Application.Features.Bookings.Commands.Create;
 using FluentValidation;
@@ -20,7 +19,10 @@ public static class DependencyInjection
 
     private static IServiceCollection AddAutoMapper(this IServiceCollection services)
     {
-        services.AddAutoMapper(_ => { }, typeof(DependencyInjection).Assembly);
+        services.AddAutoMapper(cfg =>
+        {
+            cfg.AddMaps(typeof(DependencyInjection).Assembly);
+        });
         return services;
     }
 

@@ -4,7 +4,8 @@ using LazyCache;
 
 namespace Coworking.Infrastructure.Services.Email.Services;
 
-internal sealed class EmailTemplateService(IAppCache cache) : IEmailTemplateService
+internal sealed class EmailTemplateService(IAppCache cache)
+    : IEmailTemplateService
 {
     private const string FileTemplateCachePrefix = "email-template:file:";
     private const string RawTemplateCachePrefix = "email-template:raw:";
@@ -21,9 +22,8 @@ internal sealed class EmailTemplateService(IAppCache cache) : IEmailTemplateServ
 
         var sanitizedFileName = SanitizeFileName(templateFileName);
         var cacheKey = FileTemplateCachePrefix + sanitizedFileName;
-        var localCache = cache;
+        var localCache = cache; // Capture the cache reference for use in the factory method to avoid potential issues with closures.
 
-        // Используем асинхронную версию кэша
         var template = await cache.GetOrAddAsync(cacheKey, async entry =>
         {
             entry.AbsoluteExpirationRelativeToNow = CacheLifetime;

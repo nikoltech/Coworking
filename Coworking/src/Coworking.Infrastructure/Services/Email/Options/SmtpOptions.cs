@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace Coworking.Infrastructure.Services.Email.Options;
+﻿namespace Coworking.Infrastructure.Services.Email.Options;
 
 public sealed class SmtpOptions
 {

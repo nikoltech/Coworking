@@ -6,27 +6,22 @@ using Coworking.Infrastructure.Persistence;
 
 var builder = WebApplication.CreateBuilder(args);
 
-/// TODO:
-/// Models
-/// Mappings
-/// Swagger
-/// 
-/// controllers
-/// rate limiting
-/// 
-/// finish configs
-
 var config = builder.Configuration;
 
-builder.Services.AddApi(builder.Configuration);
+// API layer
+builder.Services.AddApi(config);
+
+// Core layers
 builder.Services.AddApplication();
 builder.Services.AddPersistence(config);
 builder.Services.AddInfrastructure(config);
 
-builder.Services.AddOpenApi(); // does it need
+// OpenAPI (modern Swagger replacement in .NET 10)
+builder.Services.AddOpenApi();
 
 var app = builder.Build();
 
+// Global error handling
 app.UseExceptionHandler();
 app.UseStatusCodePages();
 
@@ -37,12 +32,12 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-//app.UseRouting(); // for middlewares?
-
 app.UseCors(CorsExtensions.DefaultCorsPolicyName);
+
+app.UseRateLimiter();
 
 app.UseAuthorization();
 
-app.MapControllers(); // here is uses UseRouting
+app.MapControllers();
 
 app.Run();

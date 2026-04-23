@@ -34,7 +34,9 @@ internal sealed class GetDeskAvailabilityQueryHandler(
         };
     }
 
-    // ── helpers ────────────────────────────────────────────────────────────
+    /****************************************************************
+     * Helpers
+     *******************************************************/
 
     private async Task<CoworkingMeta> GetCoworkingMetaAsync(int deskId, CancellationToken ct)
     {

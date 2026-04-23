@@ -1,4 +1,6 @@
-﻿using FluentValidation;
+﻿using Coworking.Application.Features.Bookings.Commands.Create.Requests;
+using FluentValidation;
+using System.Reflection;
 
 namespace Coworking.Application.Features.Bookings.Commands.Create;
 
@@ -28,5 +30,14 @@ public class CreateBookingValidator : AbstractValidator<CreateBookingCommand>
             .GreaterThan(x => x.StartTime)
             .WithMessage("End time must be after the start time.");
 
+        RuleFor(x => x.Metadata)
+            .Must(HaveAnyValue!)
+            .WithMessage("Metadata object cannot be empty if provided.")
+            .When(x => x.Metadata is not null);
+    }
+
+    private static bool HaveAnyValue(BookingMetadata metadata)
+    {
+        return !string.IsNullOrWhiteSpace(metadata.UserTimeZoneId);
     }
 }

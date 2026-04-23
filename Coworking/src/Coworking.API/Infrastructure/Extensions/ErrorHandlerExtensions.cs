@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Diagnostics;
 
 namespace Coworking.API.Infrastructure.Extensions
 {
-    internal static class ErrorHandlerExtension
+    internal static class ErrorHandlerExtensions
     {
         internal static IServiceCollection ConfigureErrorHandling(this IServiceCollection services)
         {

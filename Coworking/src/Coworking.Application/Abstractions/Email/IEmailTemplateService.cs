@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace Coworking.Application.Abstractions.Email;
+﻿namespace Coworking.Application.Abstractions.Email;
 
 public interface IEmailTemplateService
 {

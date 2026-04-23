@@ -20,18 +20,18 @@ internal sealed class SmtpEmailSender : IEmailSender
         _options = options?.Value ?? throw new ArgumentNullException(nameof(options));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
-        #if DEBUG
+#if DEBUG
         ServicePointManager.ServerCertificateValidationCallback = (s, c, ch, e) => true;
-        #endif
+#endif
     }
 
-    public async Task SendRawEmailAsync(
-        string to,
-        string subject,
-        string body,
-        CancellationToken ct = default)
+    public async Task SendRawEmailAsync(string to, string subject, string body, CancellationToken ct = default)
     {
-        ValidateParameters(to, subject, body);
+        ValidateParameters(
+            to: to,
+            subject: subject,
+            body: body
+            );
 
         var message = BuildMessage(to, subject, body);
 

@@ -36,7 +36,9 @@ public sealed class SlotGenerator : ISlotGenerator
         return slots;
     }
 
-    // ── period boundary ─────────────────────────────────────────────────────
+    /****************************************************************
+     * period boundary
+     *******************************************************/
 
     private static DateTime ResolvePeriodEnd(
         DateOnly date, TimeOnly openTime, TimeOnly closeTime)
@@ -53,7 +55,9 @@ public sealed class SlotGenerator : ISlotGenerator
         return date.ToDateTime(closeTime);
     }
 
-    // ── slot construction ────────────────────────────────────────────────────
+    /****************************************************************
+     * slot construction
+     *******************************************************/
 
     private static bool TryBuildSlot(
         TimeZoneInfo timeZone,

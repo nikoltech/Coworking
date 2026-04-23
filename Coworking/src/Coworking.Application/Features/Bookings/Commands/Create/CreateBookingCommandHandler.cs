@@ -3,6 +3,7 @@ using Coworking.Application.Abstractions.Synchronization;
 using Coworking.Application.Common.Enums;
 using Coworking.Application.Common.Exceptions;
 using Coworking.Application.Features.Bookings.Commands.Create.Notifications;
+using Coworking.Application.Features.Bookings.Commands.Create.Responces;
 using Coworking.Domain.Entities;
 using Coworking.Domain.Enums;
 using Coworking.Domain.Policies.Rounding;
@@ -18,9 +19,9 @@ internal class CreateBookingCommandHandler(
     ICoworkingRepository coworkingRepo,
     IBookingRoundingPolicy roundingPolicy,
     IBookingAccessCoordinator bookingAccessCoordinator)
-    : IRequestHandler<CreateBookingCommand, int>
+    : IRequestHandler<CreateBookingCommand, CreateBookingCommandResponce>
 {
-    public async Task<int> Handle(CreateBookingCommand request, CancellationToken ct)
+    public async Task<CreateBookingCommandResponce> Handle(CreateBookingCommand request, CancellationToken ct)
     {
         var desk = await coworkingRepo.GetDeskWithCoworkingAsync(request.DeskId, ct)
             ?? throw new NotFoundException($"Desk with id {request.DeskId} not found.");
@@ -38,6 +39,8 @@ internal class CreateBookingCommandHandler(
                 end,
                 ct);
 
+        Booking? booking;
+
         // Deadlocks as a guarantee in overlaps. Indexes for boosting + retry policy. 
         await using var transaction =
             await dataContext.BeginTransactionAsync(TransactionIsolationLevel.Serializable, ct);
@@ -51,7 +54,7 @@ internal class CreateBookingCommandHandler(
             if (isOccupied)
                 throw new ConflictException("Space is already booked for this time.");
 
-            var booking = CreateAndInitializeBooking(request, start, end);
+            booking = CreateAndInitializeBooking(request, start, end);
 
             // RangeS-U (level-up locking)
             await bookingRepo.AddAsync(booking, ct);
@@ -59,7 +62,6 @@ internal class CreateBookingCommandHandler(
 
             await transaction.CommitAsync(ct);
 
-            return booking.Id;
         }
         catch
         {
@@ -68,6 +70,8 @@ internal class CreateBookingCommandHandler(
         }
 
         await PublishBookingCreatedAsync(request, desk, start, end, ct);
+
+        return new(booking.AccessCode, booking.Id);
     }
 
     private Task PublishBookingCreatedAsync(
@@ -86,7 +90,7 @@ internal class CreateBookingCommandHandler(
             End: end,
             TimeZoneId: desk.Coworking.TimeZoneId), ct);
     }
-        
+
 
     private (DateTimeOffset Start, DateTimeOffset End) LocalizeAndRoundInterval(
         CreateBookingCommand request,

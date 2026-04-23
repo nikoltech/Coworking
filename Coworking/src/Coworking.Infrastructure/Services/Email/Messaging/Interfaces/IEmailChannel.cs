@@ -1,4 +1,4 @@
-﻿using Coworking.Application.Ports.Email.Messaging.Dtos;
+﻿using Coworking.Infrastructure.Services.Email.Messaging.Dtos;
 
 namespace Coworking.Infrastructure.Services.Email.Messaging.Interfaces;
 

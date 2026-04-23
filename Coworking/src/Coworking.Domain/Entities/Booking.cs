@@ -8,6 +8,8 @@ public class Booking : ITrackEntity
 {
     public int Id { get; set; }
 
+    public Guid AccessCode { get; set; } = Guid.NewGuid();
+
     public DateTimeOffset StartTime { get; set; }
 
     public DateTimeOffset EndTime { get; set; }
@@ -16,14 +18,14 @@ public class Booking : ITrackEntity
 
     public int DeskId { get; set; }
 
-    public Desk Desk { get; set; } = null!;
+    public Desk Desk { get; set; } = default!;
 
 
     //public Guid UserId { get; set; }
 
-    public string UserName { get; set; } = null!;
+    public string UserName { get; set; } = default!;
 
-    public string UserEmail { get; set; } = null!;
+    public string UserEmail { get; set; } = default!;
 
     public string? UserTimeZoneId { get; set; }
 
@@ -33,7 +35,7 @@ public class Booking : ITrackEntity
 
     public static Booking Create(
         int deskId,
-        string userName, // ValueObject?
+        string userName, // ValueObject? depend of choosen user design
         string userEmail,  // ValueObject?
         DateTimeOffset startTime,
         DateTimeOffset endTime)
@@ -49,6 +51,7 @@ public class Booking : ITrackEntity
 
         return new Booking
         {
+            AccessCode = Guid.NewGuid(),
             DeskId = deskId,
             UserName = userName,
             UserEmail = userEmail,

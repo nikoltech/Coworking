@@ -1,8 +1,9 @@
 ﻿using Coworking.Application.Abstractions.Email;
 using Coworking.Application.Features.Bookings.Commands.Cancel.Notifications.Models;
+using Coworking.Application.Helpers;
 using MediatR;
 
-namespace Coworking.Application.Features.Bookings.Commands.Cancel;
+namespace Coworking.Application.Features.Bookings.Commands.Cancel.Notifications;
 
 public sealed record BookingCancelledNotification(
     string UserEmail,
@@ -23,8 +24,8 @@ internal sealed class BookingCancelledNotificationHandler(IEmailNotificationServ
             UserName: n.UserName,
             DeskName: n.DeskName,
             CoworkingName: n.CoworkingName,
-            FormattedStart: n.Start,
-            FormattedEnd: n.End,
+            FormattedStart: BookingDateTimeHelper.FormatDate(n.Start, n.TimeZoneId),
+            FormattedEnd: BookingDateTimeHelper.FormatDate(n.End, n.TimeZoneId),
             TimeZoneId: n.TimeZoneId,
             CancellationReason: n.CancellationReason), ct);
 }

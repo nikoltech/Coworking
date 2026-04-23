@@ -1,4 +1,5 @@
 ﻿using Coworking.Application.Abstractions.Email;
+using Coworking.Infrastructure.Services.Email.Messaging.Dtos;
 using Coworking.Infrastructure.Services.Email.Options;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -6,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Polly;
 using Polly.Retry;
+using System.Net.Mail;
 
 namespace Coworking.Infrastructure.Services.Email.Messaging.Background;
 
@@ -39,9 +41,9 @@ public sealed class EmailBackgroundWorker(
             async (email, token) => await SendWithRetryAsync(email, token));
     }
 
-    // ── private ──────────────────────────────────────────────────────────────
+    /** private **********************/
 
-    private async Task SendWithRetryAsync(EmailNotification email, CancellationToken ct)
+    private async Task SendWithRetryAsync(EmailMessageChannelDto email, CancellationToken ct)
     {
         try
         {
@@ -66,6 +68,8 @@ public sealed class EmailBackgroundWorker(
         }
     }
 
+    /** helpers **********************/
+
     private static ResiliencePipeline BuildRetryPipeline(ILogger logger) =>
         new ResiliencePipelineBuilder()
             .AddRetry(new RetryStrategyOptions
@@ -74,7 +78,12 @@ public sealed class EmailBackgroundWorker(
                 BackoffType = DelayBackoffType.Exponential,
                 Delay = TimeSpan.FromSeconds(3),
                 MaxDelay = TimeSpan.FromSeconds(30),
-                ShouldHandle = new PredicateBuilder().Handle<Exception>(),
+
+                ShouldHandle = args =>
+                    ValueTask.FromResult(
+                        args.Outcome.Exception is not null &&
+                        IsTransient(args.Outcome.Exception)),
+
                 OnRetry = args =>
                 {
                     logger.LogWarning(
@@ -88,4 +97,36 @@ public sealed class EmailBackgroundWorker(
                 }
             })
             .Build();
+
+    private static bool IsTransient(Exception ex)
+    {
+        return ex switch
+        {
+            TimeoutException => true,
+            HttpRequestException => true,
+            SmtpException smtpEx when IsTransientSmtpCode(smtpEx) => true,
+            _ => false
+        };
+    }
+
+    private static bool IsTransientSmtpCode(SmtpException ex)
+    {
+        var statusCode = ex.StatusCode;
+
+        return statusCode switch
+        {
+            SmtpStatusCode.GeneralFailure => true,
+            SmtpStatusCode.MailboxBusy => true,
+            SmtpStatusCode.ServiceNotAvailable => true,
+            SmtpStatusCode.TransactionFailed => true,
+            SmtpStatusCode.ExceededStorageAllocation => true,
+
+            // ❌ permanent
+            SmtpStatusCode.MailboxUnavailable => false,
+            SmtpStatusCode.UserNotLocalTryAlternatePath => false,
+            SmtpStatusCode.MailboxNameNotAllowed => false,
+
+            _ => false
+        };
+    }
 }

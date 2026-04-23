@@ -1,3 +1,3 @@
-﻿namespace Coworking.Application.Ports.Email.Messaging.Dtos;
+﻿namespace Coworking.Infrastructure.Services.Email.Messaging.Dtos;
 
 public record EmailMessageChannelDto(string To, string Subject, string Body);

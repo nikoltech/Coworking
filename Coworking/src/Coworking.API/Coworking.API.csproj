@@ -11,19 +11,14 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.3" />
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.23.0" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="10.1.7" />
+    <PackageReference Include="Swashbuckle.AspNetCore.Annotations" Version="10.1.7" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Coworking.Application\Coworking.Application.csproj" />
     <ProjectReference Include="..\Coworking.Infrastructure.Persistence\Coworking.Infrastructure.Persistence.csproj" />
     <ProjectReference Include="..\Coworking.Infrastructure\Coworking.Infrastructure.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Controllers\" />
-    <Folder Include="Infrastructure\Swagger\" />
-    <Folder Include="Models\Responces\" />
-    <Folder Include="Models\Requests\" />
   </ItemGroup>
 
 </Project>

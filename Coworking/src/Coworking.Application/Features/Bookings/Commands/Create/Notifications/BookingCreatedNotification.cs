@@ -1,10 +1,7 @@
-﻿using Coworking.Application.Abstractions;
-using Coworking.Application.Abstractions.Email;
+﻿using Coworking.Application.Abstractions.Email;
 using Coworking.Application.Features.Bookings.Commands.Create.Notifications.Models;
-using Coworking.Domain.Entities;
+using Coworking.Application.Helpers;
 using MediatR;
-using Microsoft.EntityFrameworkCore;
-using System.Globalization;
 
 namespace Coworking.Application.Features.Bookings.Commands.Create.Notifications;
 
@@ -27,14 +24,7 @@ internal sealed class BookingCreatedNotificationHandler(IEmailNotificationServic
             UserName: n.UserName,
             DeskName: n.DeskName,
             CoworkingName: n.CoworkingName,
-            FormattedStart: FormatDate(n.Start, n.TimeZoneId),
-            FormattedEnd: FormatDate(n.End, n.TimeZoneId),
+            FormattedStart: BookingDateTimeHelper.FormatDate(n.Start, n.TimeZoneId),
+            FormattedEnd: BookingDateTimeHelper.FormatDate(n.End, n.TimeZoneId),
             TimeZoneId: n.TimeZoneId), ct);
- 
-    private static string FormatDate(DateTimeOffset dt, string timeZoneId)
-    {
-        var zone = TimeZoneInfo.FindSystemTimeZoneById(timeZoneId);
-        var local = TimeZoneInfo.ConvertTime(dt, zone);
-        return local.ToString("dddd, MMMM d yyyy · HH:mm", CultureInfo.InvariantCulture);
-    }
 }
