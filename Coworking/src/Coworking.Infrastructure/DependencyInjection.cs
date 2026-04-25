@@ -2,8 +2,14 @@
 using Coworking.Application.Abstractions.Email;
 using Coworking.Application.Abstractions.Synchronization;
 using Coworking.Application.Behaviors.Performance;
+using Coworking.Application.Ports.Squidex.Schemas.City;
+using Coworking.Application.Ports.Squidex.Schemas.Email;
 using Coworking.Domain.Policies.Rounding;
 using Coworking.Domain.Services.SlotGenerator;
+using Coworking.External.Squidex;
+using Coworking.External.Squidex.Client;
+using Coworking.Infrastructure.External.Squidex.Schemas.City;
+using Coworking.Infrastructure.External.Squidex.Schemas.Email;
 using Coworking.Infrastructure.Repositories;
 using Coworking.Infrastructure.Services.Email.Messaging;
 using Coworking.Infrastructure.Services.Email.Messaging.Background;
@@ -30,6 +36,10 @@ public static class DependencyInjection
             .AddDomainServices()
             .AddSynchronization()
             .AddEmailMessaging(configuration);
+
+        services
+            .AddSquidex(configuration)
+            .AddSquidexSchemas();
 
         services.AddHostedServices();
 
@@ -90,6 +100,21 @@ public static class DependencyInjection
             .AddSingleton<IEmailTemplateService, EmailTemplateService>()
             .AddScoped<IEmailNotificationService, EmailNotificationService>()
             .AddTransient<IEmailSender, SmtpEmailSender>();
+
+        return services;
+    }
+
+    private static IServiceCollection AddSquidexSchemas(this IServiceCollection services)
+    {
+        // Default Squidex clients for all schema repositories
+        services.AddScoped(sp =>
+            sp.GetRequiredService<SquidexClientFactory>().Create());
+
+        services.AddScoped(sp =>
+            sp.GetRequiredService<SquidexClientFactory>().CreateAssetClient());
+
+        services.AddScoped<ICityRepository, CityRepository>();
+        services.AddScoped<IEmailRepository, EmailRepository>();
 
         return services;
     }

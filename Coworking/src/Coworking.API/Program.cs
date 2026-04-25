@@ -1,6 +1,7 @@
 using Coworking.API;
 using Coworking.API.Infrastructure.Extensions;
 using Coworking.Application;
+using Coworking.External.Squidex.Localization;
 using Coworking.Infrastructure;
 using Coworking.Infrastructure.Persistence;
 
@@ -20,6 +21,13 @@ builder.Services.AddInfrastructure(config);
 builder.Services.AddOpenApi();
 
 var app = builder.Build();
+
+// Initialize Squidex locales once before serving requests
+await app.Services
+    .GetRequiredService<SquidexLocaleProvider>()
+    .InitializeAsync(
+        app.Services.GetRequiredService<SquidexClientFactory>().Create(),
+        app.Lifetime.ApplicationStopping);
 
 // Global error handling
 app.UseExceptionHandler();

@@ -18,10 +18,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Coworking.Domain\Coworking.Domain.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Ports\Squidex\" />
+    <ProjectReference Include="..\Coworking.External\Squidex\Coworking.External.Squidex.Abstractions\Coworking.External.Squidex.Abstractions.csproj" />
   </ItemGroup>
 
 </Project>

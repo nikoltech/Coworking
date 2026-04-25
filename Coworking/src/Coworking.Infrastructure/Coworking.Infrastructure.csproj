@@ -22,6 +22,8 @@
   <ItemGroup>
     <ProjectReference Include="..\Coworking.Application\Coworking.Application.csproj" />
     <ProjectReference Include="..\Coworking.Domain\Coworking.Domain.csproj" />
+    <ProjectReference Include="..\Coworking.External\Squidex\Coworking.External.Squidex.Abstractions\Coworking.External.Squidex.Abstractions.csproj" />
+    <ProjectReference Include="..\Coworking.External\Squidex\Coworking.External.Squidex\Coworking.External.Squidex.csproj" />
     <ProjectReference Include="..\Coworking.Infrastructure.Persistence\Coworking.Infrastructure.Persistence.csproj" />
   </ItemGroup>
 
