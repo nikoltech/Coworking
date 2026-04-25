@@ -36,12 +36,3 @@ public static class SquidexFilter
     public static FilterLogical And(params object[] filters) => new("and", filters);
     public static FilterLogical Or(params object[] filters) => new("or", filters);
 }
-
-public sealed record FilterObject(
-    [property: JsonPropertyName("path")] string Path,
-    [property: JsonPropertyName("op")] string Op,
-    [property: JsonPropertyName("value")] object? Value);
-
-public sealed class FilterLogical(string op, object[] filters)
-    : Dictionary<string, object[]>
-{{ Add(op, filters); }}

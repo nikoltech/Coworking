@@ -10,14 +10,14 @@ namespace Coworking.External.Squidex.Repository;
 /// Inherit to add schema-specific query methods.
 /// </summary>
 public class SquidexRepository<T>(
-    SquidexApiClient client,
-    SquidexPaginator paginator,
+    ISquidexApiClient client,
+    ISquidexPaginator paginator,
     string schema)
     : ISquidexRepository<T> where T : class
 {
-    protected readonly SquidexApiClient Client = client;
+    protected readonly ISquidexApiClient Client = client;
     protected readonly string Schema = schema;
-    private readonly SquidexPaginator _paginator = paginator;
+    private readonly ISquidexPaginator _paginator = paginator;
 
     public Task<ResponseSchema<T>> QueryAsync(
         RequestQuery query,

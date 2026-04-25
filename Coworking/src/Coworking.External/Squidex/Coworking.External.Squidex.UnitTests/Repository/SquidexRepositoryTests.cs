@@ -1,7 +1,7 @@
-﻿using Coworking.External.Squidex.Abstractions.Filters;
+﻿// Repository/SquidexRepositoryTests.cs
+using Coworking.External.Squidex.Abstractions.Filters;
 using Coworking.External.Squidex.Abstractions.Models;
-using Coworking.External.Squidex.Client;
-using Coworking.External.Squidex.Pagination;
+using Coworking.External.Squidex.Abstractions.Repository;
 using Coworking.External.Squidex.Repository;
 using Coworking.External.Squidex.UnitTests.Helpers;
 using FluentAssertions;
@@ -11,27 +11,26 @@ namespace Coworking.External.Squidex.UnitTests.Repository;
 
 public sealed class SquidexRepositoryTests
 {
-    private readonly SquidexApiClient _client = Substitute.For<SquidexApiClient>();
-    private readonly SquidexPaginator _paginator = Substitute.For<SquidexPaginator>();
+    private readonly ISquidexApiClient _client = Substitute.For<ISquidexApiClient>();
+    private readonly ISquidexPaginator _paginator = Substitute.For<ISquidexPaginator>();
 
-    private SquidexRepository<SquidexFakes.TestSchema> CreateRepo() =>
-        new(_client, _paginator, "test-schema");
+    private SquidexRepository<SquidexFakes.TestSchema> CreateRepo(string schema = "test-schema") =>
+        new(_client, _paginator, schema);
 
     [Fact]
-    public async Task QueryAsync_DelegatesToClient()
+    public async Task QueryAsync_DelegatesToClient_WithSameArguments()
     {
         // Arrange
         var expected = SquidexFakes.MakeResponse<SquidexFakes.TestSchema>();
         var query = RequestQuery.Create().WithTake(5);
+        var opts = new QueryOptions { IncludeUnpublished = true };
 
         _client.QueryAsync<SquidexFakes.TestSchema>(
-                "test-schema", query, Arg.Any<QueryOptions?>(), Arg.Any<CancellationToken>())
+                "test-schema", query, opts, Arg.Any<CancellationToken>())
                .Returns(expected);
 
-        var repo = CreateRepo();
-
         // Act
-        var result = await repo.QueryAsync(query);
+        var result = await CreateRepo().QueryAsync(query, opts);
 
         // Assert
         result.Should().Be(expected);
@@ -41,39 +40,120 @@ public sealed class SquidexRepositoryTests
     public async Task GetAllAsync_DelegatesToPaginator()
     {
         // Arrange
-        var expected = SquidexFakes.MakeResponse<SquidexFakes.TestSchema>();
+        var expected = SquidexFakes.MakeResponse(
+            SquidexFakes.MakeTestSchema("a"),
+            SquidexFakes.MakeTestSchema("b"));
 
         _paginator.FetchAllAsync<SquidexFakes.TestSchema>(
                 "test-schema", _client, Arg.Any<RequestQuery>(),
                 Arg.Any<QueryOptions?>(), Arg.Any<CancellationToken>())
             .Returns(expected);
 
-        var repo = CreateRepo();
-
         // Act
-        var result = await repo.GetAllAsync();
+        var result = await CreateRepo().GetAllAsync();
 
         // Assert
         result.Should().Be(expected);
+        result.Items.Should().HaveCount(2);
     }
 
     [Fact]
     public async Task GetByIdAsync_DelegatesToClient()
     {
         // Arrange
-        var expected = SquidexFakes.MakeContent(new SquidexFakes.TestSchema(), "id-1");
+        var expected = SquidexFakes.MakeContent(
+            SquidexFakes.MakeTestSchema("city"), "city-id");
 
         _client.GetByIdAsync<SquidexFakes.TestSchema>(
-                "test-schema", "id-1", Arg.Any<QueryOptions?>(), Arg.Any<CancellationToken>())
+                "test-schema", "city-id", Arg.Any<QueryOptions?>(), Arg.Any<CancellationToken>())
                .Returns(expected);
 
-        var repo = CreateRepo();
-
         // Act
-        var result = await repo.GetByIdAsync("id-1");
+        var result = await CreateRepo().GetByIdAsync("city-id");
 
         // Assert
         result.Should().Be(expected);
+        result!.Data.Name!.Value.Should().Be("city");
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_ReturnsNull_WhenNotFound()
+    {
+        // Arrange
+        _client.GetByIdAsync<SquidexFakes.TestSchema>(
+                Arg.Any<string>(), Arg.Any<string>(),
+                Arg.Any<QueryOptions?>(), Arg.Any<CancellationToken>())
+               .Returns((ContentDto<SquidexFakes.TestSchema>?)null);
+
+        // Act
+        var result = await CreateRepo().GetByIdAsync("missing-id");
+
+        // Assert
+        result.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task CreateAsync_DelegatesToClient_WithPublishFlag()
+    {
+        // Arrange
+        var schema = SquidexFakes.MakeTestSchema("new");
+        var expected = SquidexFakes.MakeContent(schema, "new-id");
+
+        _client.CreateAsync("test-schema", schema, true, Arg.Any<CancellationToken>())
+               .Returns(expected);
+
+        // Act
+        var result = await CreateRepo().CreateAsync(schema, publish: true);
+
+        // Assert
+        result.Id.Should().Be("new-id");
+        await _client.Received(1).CreateAsync(
+            "test-schema", schema, true, Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task UpdateAsync_DelegatesToClient()
+    {
+        // Arrange
+        var schema = SquidexFakes.MakeTestSchema("updated");
+        var expected = SquidexFakes.MakeContent(schema, "upd-id");
+
+        _client.UpdateAsync("test-schema", "upd-id", schema, Arg.Any<CancellationToken>())
+               .Returns(expected);
+
+        // Act
+        var result = await CreateRepo().UpdateAsync("upd-id", schema);
+
+        // Assert
+        result.Should().Be(expected);
+    }
+
+    [Fact]
+    public async Task PatchAsync_DelegatesToClient()
+    {
+        // Arrange
+        var schema = SquidexFakes.MakeTestSchema("patched");
+        var expected = SquidexFakes.MakeContent(schema, "patch-id");
+
+        _client.PatchAsync("test-schema", "patch-id", schema, Arg.Any<CancellationToken>())
+               .Returns(expected);
+
+        // Act
+        var result = await CreateRepo().PatchAsync("patch-id", schema);
+
+        // Assert
+        result.Should().Be(expected);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_DelegatesToClient_WithPermanentFlag()
+    {
+        // Act
+        await CreateRepo().DeleteAsync("del-id", permanent: true);
+
+        // Assert
+        await _client.Received(1)
+            .DeleteAsync("test-schema", "del-id", true, Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -83,13 +163,11 @@ public sealed class SquidexRepositoryTests
         _client.QueryAsync<SquidexFakes.TestSchema>(
                 "test-schema", Arg.Any<RequestQuery>(),
                 Arg.Any<QueryOptions?>(), Arg.Any<CancellationToken>())
-               .Returns(SquidexFakes.MakePagedResponse(1,
-                   new SquidexFakes.TestSchema()));
-
-        var repo = CreateRepo();
+               .Returns(SquidexFakes.MakePagedResponse(3, TestStatuses.Published,
+                   SquidexFakes.MakeTestSchema("x")));
 
         // Act
-        var exists = await repo.ExistsAsync(SquidexFilter.Eq("data.Name.iv", "test"));
+        var exists = await CreateRepo().ExistsAsync(SquidexFilter.Eq("data.Name.iv", "x"));
 
         // Assert
         exists.Should().BeTrue();
@@ -102,19 +180,17 @@ public sealed class SquidexRepositoryTests
         _client.QueryAsync<SquidexFakes.TestSchema>(
                 "test-schema", Arg.Any<RequestQuery>(),
                 Arg.Any<QueryOptions?>(), Arg.Any<CancellationToken>())
-               .Returns(SquidexFakes.MakePagedResponse(0));
-
-        var repo = CreateRepo();
+               .Returns(SquidexFakes.MakePagedResponse<SquidexFakes.TestSchema>(0, TestStatuses.Published));
 
         // Act
-        var exists = await repo.ExistsAsync(SquidexFilter.Eq("data.Name.iv", "missing"));
+        var exists = await CreateRepo().ExistsAsync(SquidexFilter.Eq("data.Name.iv", "missing"));
 
         // Assert
         exists.Should().BeFalse();
     }
 
     [Fact]
-    public async Task ExistsAsync_UsesNoSlowTotal_ForPerformance()
+    public async Task ExistsAsync_SetsNoSlowTotal_ForPerformance()
     {
         // Arrange
         QueryOptions? capturedOptions = null;
@@ -123,28 +199,71 @@ public sealed class SquidexRepositoryTests
                 "test-schema", Arg.Any<RequestQuery>(),
                 Arg.Do<QueryOptions?>(o => capturedOptions = o),
                 Arg.Any<CancellationToken>())
-               .Returns(SquidexFakes.MakePagedResponse(0));
-
-        var repo = CreateRepo();
+               .Returns(SquidexFakes.MakePagedResponse<SquidexFakes.TestSchema>(0, TestStatuses.Published));
 
         // Act
-        await repo.ExistsAsync(SquidexFilter.Eq("data.Name.iv", "x"));
+        await CreateRepo().ExistsAsync(SquidexFilter.Eq("data.Name.iv", "x"));
 
         // Assert
         capturedOptions!.NoSlowTotal.Should().BeTrue();
     }
 
     [Fact]
-    public async Task DeleteAsync_DelegatesToClient()
+    public async Task ExistsAsync_SetsTakeToOne_ForPerformance()
     {
         // Arrange
-        var repo = CreateRepo();
+        RequestQuery? capturedQuery = null;
+
+        _client.QueryAsync<SquidexFakes.TestSchema>(
+                "test-schema",
+                Arg.Do<RequestQuery>(q => capturedQuery = q),
+                Arg.Any<QueryOptions?>(), Arg.Any<CancellationToken>())
+               .Returns(SquidexFakes.MakePagedResponse<SquidexFakes.TestSchema>(0, TestStatuses.Published));
 
         // Act
-        await repo.DeleteAsync("del-id");
+        await CreateRepo().ExistsAsync(SquidexFilter.Eq("data.Name.iv", "x"));
 
         // Assert
-        await _client.Received(1)
-            .DeleteAsync("test-schema", "del-id", false, Arg.Any<CancellationToken>());
+        capturedQuery!.Take.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task ExistsAsync_PassesIncludeUnpublished_ToQueryOptions()
+    {
+        // Arrange
+        QueryOptions? capturedOptions = null;
+
+        _client.QueryAsync<SquidexFakes.TestSchema>(
+                "test-schema", Arg.Any<RequestQuery>(),
+                Arg.Do<QueryOptions?>(o => capturedOptions = o),
+                Arg.Any<CancellationToken>())
+               .Returns(SquidexFakes.MakePagedResponse<SquidexFakes.TestSchema>(0, TestStatuses.Draft));
+
+        // Act
+        await CreateRepo().ExistsAsync(
+            SquidexFilter.Eq("data.Name.iv", "draft"), includeUnpublished: true);
+
+        // Assert
+        capturedOptions!.IncludeUnpublished.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Repository_UsesCorrectSchema_ForAllOperations()
+    {
+        // Arrange — different schema name
+        var repo = CreateRepo("custom-schema");
+
+        _client.QueryAsync<SquidexFakes.TestSchema>(
+                "custom-schema", Arg.Any<RequestQuery>(),
+                Arg.Any<QueryOptions?>(), Arg.Any<CancellationToken>())
+               .Returns(SquidexFakes.MakeResponse<SquidexFakes.TestSchema>());
+
+        // Act
+        await repo.QueryAsync(RequestQuery.Create());
+
+        // Assert
+        await _client.Received(1).QueryAsync<SquidexFakes.TestSchema>(
+            "custom-schema", Arg.Any<RequestQuery>(),
+            Arg.Any<QueryOptions?>(), Arg.Any<CancellationToken>());
     }
 }

@@ -1,4 +1,5 @@
 ﻿using Coworking.External.Squidex.Abstractions.Models;
+using Coworking.External.Squidex.Abstractions.Repository;
 using Coworking.External.Squidex.Client;
 using Coworking.External.Squidex.Options;
 using Microsoft.Extensions.Options;
@@ -10,13 +11,13 @@ namespace Coworking.External.Squidex.Pagination;
 /// Page 1 is fetched first to determine total count.
 /// Remaining pages are fetched in parallel.
 /// </summary>
-public sealed class SquidexPaginator(IOptions<SquidexOptions> options)
+public sealed class SquidexPaginator(IOptions<SquidexOptions> options) : ISquidexPaginator
 {
     private readonly int _pageSize = options.Value.MaxPageSize;
 
     public async Task<ResponseSchema<T>> FetchAllAsync<T>(
         string schema,
-        SquidexApiClient client,
+        ISquidexApiClient client,
         RequestQuery baseQuery,
         QueryOptions? queryOptions = null,
         CancellationToken ct = default)
@@ -43,7 +44,7 @@ public sealed class SquidexPaginator(IOptions<SquidexOptions> options)
 
     private Task<ResponseSchema<T>[]> FetchRemainingPagesAsync<T>(
         string schema,
-        SquidexApiClient client,
+        ISquidexApiClient client,
         RequestQuery baseQuery,
         long total,
         QueryOptions? queryOptions,

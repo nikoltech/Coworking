@@ -1,8 +1,7 @@
-﻿using Coworking.External.Squidex.Auth;
-using Coworking.External.Squidex.Client;
+﻿// Auth/SquidexAuthHandlerTests.cs
+using Coworking.External.Squidex.Auth;
 using Coworking.External.Squidex.UnitTests.Helpers;
 using FluentAssertions;
-using Microsoft.Extensions.Caching.Memory;
 using NSubstitute;
 using RichardSzalay.MockHttp;
 using System.Net;
@@ -11,117 +10,147 @@ namespace Coworking.External.Squidex.UnitTests.Auth;
 
 public sealed class SquidexAuthHandlerTests
 {
-    private readonly MockHttpMessageHandler _mockHttp = new();
-    private readonly IMemoryCache _cache = new MemoryCache(new MemoryCacheOptions());
+    private readonly ISquidexTokenService _tokenService = Substitute.For<ISquidexTokenService>();
 
-    private SquidexTokenService CreateTokenService()
+    private HttpClient BuildClient(MockHttpMessageHandler mockBackend)
     {
-        var factory = Substitute.For<IHttpClientFactory>();
-
-        // Redirecting internal auth requests to our MockHttp handler
-        factory.CreateClient(SquidexHttpClientNames.Auth)
-               .Returns(_mockHttp.ToHttpClient());
-
-        return new SquidexTokenService(
-            factory,
-            _cache,
-            SquidexFakes.DefaultOptionsMock());
+        var handler = new SquidexAuthHandler(_tokenService)
+        {
+            InnerHandler = mockBackend
+        };
+        return new HttpClient(handler) { BaseAddress = new Uri("https://cloud.squidex.io") };
     }
 
-    private HttpClient BuildClient(SquidexTokenService tokenService)
+    private HttpRequestMessage MakeRequest(
+        string url = "/api/content/app/cities",
+        string clientName = TestClientNames.Default)
     {
-        var handler = new SquidexAuthHandler(tokenService)
-        {
-            InnerHandler = _mockHttp
-        };
-
-        return new HttpClient(handler)
-        {
-            BaseAddress = new Uri("https://cloud.squidex.io")
-        };
+        var request = new HttpRequestMessage(HttpMethod.Get, url);
+        request.Options.Set(
+            new HttpRequestOptionsKey<string>(SquidexAuthHandler.ClientNameKey),
+            clientName);
+        return request;
     }
 
     [Fact]
     public async Task SendAsync_AttachesBearerToken_ToRequest()
     {
         // Arrange
-        var tokenService = CreateTokenService();
-        var client = BuildClient(tokenService);
+        _tokenService.GetTokenAsync(TestClientNames.Default, Arg.Any<CancellationToken>())
+            .Returns("test-token");
 
-        // 1. Setup mock for the token issuance (identity server)
-        _mockHttp.Expect(HttpMethod.Post, "*/identity-server/connect/token")
-            .RespondJson(new { access_token = "valid-token", expires_in = 3600 });
-
-        // 2. Setup mock for the actual API call, verifying the header
-        _mockHttp.Expect(HttpMethod.Get, "*/api/content/app/cities")
-            .WithHeaders("Authorization", "Bearer valid-token")
-            .Respond(HttpStatusCode.OK);
-
-        var request = new HttpRequestMessage(HttpMethod.Get, "/api/content/app/cities");
-        request.Options.Set(new HttpRequestOptionsKey<string>(SquidexAuthHandler.ClientNameKey), "Default");
+        string? capturedAuth = null;
+        var mockBackend = new MockHttpMessageHandler();
+        mockBackend.When("*").Respond(req =>
+        {
+            capturedAuth = req.Headers.Authorization?.ToString();
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            { Content = new StringContent("{}") };
+        });
 
         // Act
-        await client.SendAsync(request);
+        await BuildClient(mockBackend).SendAsync(MakeRequest());
 
         // Assert
-        _mockHttp.VerifyNoOutstandingExpectation();
+        capturedAuth.Should().Be("Bearer test-token");
     }
 
     [Fact]
     public async Task SendAsync_RefreshesTokenAndRetries_On401()
     {
         // Arrange
-        var tokenService = CreateTokenService();
-        var client = BuildClient(tokenService);
+        var callCount = 0;
+        _tokenService.GetTokenAsync(TestClientNames.Default, Arg.Any<CancellationToken>())
+            .Returns("stale-token", "fresh-token");
 
-        // First call sequence
-        _mockHttp.Expect(HttpMethod.Post, "*/identity-server/connect/token")
-            .RespondJson(new { access_token = "stale-token", expires_in = 3600 });
-
-        _mockHttp.Expect(HttpMethod.Get, "*/api/content/app/cities")
-            .WithHeaders("Authorization", "Bearer stale-token")
-            .Respond(HttpStatusCode.Unauthorized);
-
-        // Retry sequence after 401
-        _mockHttp.Expect(HttpMethod.Post, "*/identity-server/connect/token")
-            .RespondJson(new { access_token = "fresh-token", expires_in = 3600 });
-
-        _mockHttp.Expect(HttpMethod.Get, "*/api/content/app/cities")
-            .WithHeaders("Authorization", "Bearer fresh-token")
-            .Respond(HttpStatusCode.OK);
-
-        var request = new HttpRequestMessage(HttpMethod.Get, "/api/content/app/cities");
-        request.Options.Set(new HttpRequestOptionsKey<string>(SquidexAuthHandler.ClientNameKey), "Default");
+        var mockBackend = new MockHttpMessageHandler();
+        mockBackend.When("*").Respond(_ =>
+        {
+            callCount++;
+            var status = callCount == 1
+                ? HttpStatusCode.Unauthorized
+                : HttpStatusCode.OK;
+            return new HttpResponseMessage(status) { Content = new StringContent("{}") };
+        });
 
         // Act
-        var response = await client.SendAsync(request);
+        var response = await BuildClient(mockBackend).SendAsync(MakeRequest());
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        _mockHttp.VerifyNoOutstandingExpectation();
+        callCount.Should().Be(2);
+        _tokenService.Received(1).InvalidateToken(TestClientNames.Default);
+    }
+
+    [Fact]
+    public async Task SendAsync_DoesNotRetry_WhenResponseIsNot401()
+    {
+        // Arrange
+        _tokenService.GetTokenAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns("token");
+
+        var callCount = 0;
+        var mockBackend = new MockHttpMessageHandler();
+        mockBackend.When("*").Respond(_ =>
+        {
+            callCount++;
+            return new HttpResponseMessage(HttpStatusCode.Forbidden)
+            { Content = new StringContent("{}") };
+        });
+
+        // Act
+        await BuildClient(mockBackend).SendAsync(MakeRequest());
+
+        // Assert — no retry on 403
+        callCount.Should().Be(1);
+        _tokenService.DidNotReceive().InvalidateToken(Arg.Any<string>());
     }
 
     [Fact]
     public async Task SendAsync_UsesDefaultClient_WhenNoClientNameInOptions()
     {
         // Arrange
-        var tokenService = CreateTokenService();
-        var client = BuildClient(tokenService);
+        _tokenService.GetTokenAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns("token");
 
-        // Verify that the call is made for the "Default" client credentials
-        _mockHttp.Expect(HttpMethod.Post, "*/identity-server/connect/token")
-            .With(req => req.Content!.ReadAsStringAsync().Result.Contains("client_id=app:default"))
-            .RespondJson(new { access_token = "default-token", expires_in = 3600 });
+        string? capturedClientName = null;
+        _tokenService.When(x =>
+                x.GetTokenAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()))
+            .Do(x => capturedClientName = x.Arg<string>());
 
-        _mockHttp.Expect(HttpMethod.Get, "*/test")
-            .Respond(HttpStatusCode.OK);
+        var mockBackend = new MockHttpMessageHandler();
+        mockBackend.When("*").Respond(HttpStatusCode.OK);
 
+        // Request without client name option
         var request = new HttpRequestMessage(HttpMethod.Get, "/test");
 
         // Act
-        await client.SendAsync(request);
+        await BuildClient(mockBackend).SendAsync(request);
 
         // Assert
-        _mockHttp.VerifyNoOutstandingExpectation();
+        capturedClientName.Should().Be(SquidexAuthHandler.DefaultClient);
+    }
+
+    [Fact]
+    public async Task SendAsync_UsesFrontendClient_WhenSpecifiedInOptions()
+    {
+        // Arrange
+        _tokenService.GetTokenAsync(TestClientNames.Frontend, Arg.Any<CancellationToken>())
+            .Returns("frontend-token");
+
+        string? capturedAuth = null;
+        var mockBackend = new MockHttpMessageHandler();
+        mockBackend.When("*").Respond(req =>
+        {
+            capturedAuth = req.Headers.Authorization?.ToString();
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            { Content = new StringContent("{}") };
+        });
+
+        // Act
+        await BuildClient(mockBackend).SendAsync(MakeRequest(clientName: TestClientNames.Frontend));
+
+        // Assert
+        capturedAuth.Should().Be("Bearer frontend-token");
     }
 }

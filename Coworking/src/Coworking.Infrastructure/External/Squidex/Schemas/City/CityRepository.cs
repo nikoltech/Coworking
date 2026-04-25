@@ -1,5 +1,4 @@
-﻿// Squidex/Schemas/City/CityRepository.cs
-using Coworking.Application.Ports.Squidex.Schemas.City;
+﻿using Coworking.Application.Ports.Squidex.Schemas.City;
 using Coworking.External.Squidex.Abstractions.Filters;
 using Coworking.External.Squidex.Abstractions.Models;
 using Coworking.External.Squidex.Client;

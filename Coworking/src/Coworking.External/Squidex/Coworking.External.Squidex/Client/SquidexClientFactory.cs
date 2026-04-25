@@ -1,4 +1,5 @@
-﻿using Coworking.External.Squidex.Auth;
+﻿using Coworking.External.Squidex.Abstractions.Repository;
+using Coworking.External.Squidex.Auth;
 using Coworking.External.Squidex.Client;
 using Coworking.External.Squidex.Localization;
 using Coworking.External.Squidex.Options;
@@ -11,7 +12,7 @@ public sealed class SquidexClientFactory(
 {
     private readonly SquidexOptions _options = options.Value;
 
-    public SquidexApiClient Create(string clientName = SquidexAuthHandler.DefaultClient)
+    public ISquidexApiClient Create(string clientName = SquidexAuthHandler.DefaultClient)
     {
         EnsureClientExists(clientName);
         var http = httpClientFactory.CreateClient(SquidexHttpClientNames.Api);

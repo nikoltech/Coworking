@@ -1,4 +1,5 @@
-﻿using Coworking.External.Squidex.Client;
+﻿using Coworking.External.Squidex.Abstractions.Repository;
+using Coworking.External.Squidex.Client;
 using Coworking.External.Squidex.Options;
 using Microsoft.Extensions.Options;
 
@@ -26,7 +27,7 @@ public sealed class SquidexLocaleProvider(IOptions<SquidexOptions> options)
     /// Fetches locales from Squidex app if not set in appsettings.
     /// Safe to call multiple times — resolves only once.
     /// </summary>
-    public async Task InitializeAsync(SquidexApiClient client, CancellationToken ct = default)
+    public async Task InitializeAsync(ISquidexApiClient client, CancellationToken ct = default)
     {
         if (_resolved is not null)
             return;

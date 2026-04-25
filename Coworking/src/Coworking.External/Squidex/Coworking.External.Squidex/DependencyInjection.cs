@@ -1,4 +1,5 @@
-﻿using Coworking.External.Squidex.Auth;
+﻿using Coworking.External.Squidex.Abstractions.Repository;
+using Coworking.External.Squidex.Auth;
 using Coworking.External.Squidex.Client;
 using Coworking.External.Squidex.Localization;
 using Coworking.External.Squidex.Options;
@@ -22,8 +23,8 @@ public static class DependencyInjection
 
         services.AddMemoryCache();
 
-        services.AddSingleton<SquidexTokenService>();
-        services.AddSingleton<SquidexPaginator>();
+        services.AddSingleton<ISquidexTokenService, SquidexTokenService>();
+        services.AddSingleton<ISquidexPaginator, SquidexPaginator>();
         services.AddSingleton<SquidexLocaleProvider>();
         services.AddSingleton<SquidexClientFactory>();
 

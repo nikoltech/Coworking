@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Coworking.External.Squidex.Options;
 
-public sealed class SquidexOptions
+public sealed record SquidexOptions
 {
     public const string SectionName = "Squidex";
 
@@ -24,7 +24,7 @@ public sealed class SquidexOptions
     public Dictionary<string, SquidexClientCredentials> Clients { get; init; } = new();
 }
 
-public sealed class SquidexClientCredentials
+public sealed record SquidexClientCredentials
 {
     [Required] public string ClientId { get; init; } = string.Empty;
     [Required] public string ClientSecret { get; init; } = string.Empty;

@@ -1,4 +1,5 @@
 ﻿using Coworking.External.Squidex.Abstractions.Models;
+using Coworking.External.Squidex.Abstractions.Repository;
 using Coworking.External.Squidex.Auth;
 using Coworking.External.Squidex.Exceptions;
 using Coworking.External.Squidex.Localization;
@@ -16,7 +17,7 @@ namespace Coworking.External.Squidex.Client;
 /// Handles HTTP operations, headers, serialization and transient retries.
 /// Auth is handled by SquidexAuthHandler in the HTTP pipeline.
 /// </summary>
-public sealed class SquidexApiClient
+public sealed class SquidexApiClient : ISquidexApiClient
 {
     private readonly HttpClient _http;
     private readonly SquidexOptions _options;

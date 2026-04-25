@@ -15,7 +15,7 @@ namespace Coworking.External.Squidex.Auth;
 public sealed class SquidexTokenService(
     IHttpClientFactory httpClientFactory,
     IMemoryCache cache,
-    IOptions<SquidexOptions> options)
+    IOptions<SquidexOptions> options) : ISquidexTokenService
 {
     private static readonly TimeSpan ExpiryBuffer = TimeSpan.FromMinutes(5);
     private readonly SemaphoreSlim _gate = new(1, 1);

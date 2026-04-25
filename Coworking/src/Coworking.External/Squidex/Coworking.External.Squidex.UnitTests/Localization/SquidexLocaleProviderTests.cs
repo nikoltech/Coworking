@@ -1,4 +1,5 @@
-﻿using Coworking.External.Squidex.Client;
+﻿// Localization/SquidexLocaleProviderTests.cs
+using Coworking.External.Squidex.Abstractions.Repository;
 using Coworking.External.Squidex.Localization;
 using Coworking.External.Squidex.UnitTests.Helpers;
 using FluentAssertions;
@@ -9,42 +10,52 @@ namespace Coworking.External.Squidex.UnitTests.Localization;
 
 public sealed class SquidexLocaleProviderTests
 {
+    private readonly ISquidexApiClient _client = Substitute.For<ISquidexApiClient>();
+
     [Fact]
     public void SupportedLocales_ReturnsFromAppsettings_WhenConfigured()
     {
         // Arrange
-        var options = SquidexFakes.DefaultOptions();
-        var provider = new SquidexLocaleProvider(SquidexFakes.DefaultOptionsMock(options));
+        var provider = new SquidexLocaleProvider(SquidexFakes.OptionsMock());
 
-        // Act & Assert
-        provider.SupportedLocales.Should().BeEquivalentTo(["uk-UA", "en"]);
+        // Assert
+        provider.SupportedLocales.Should()
+            .BeEquivalentTo([TestLocales.UkUA, TestLocales.En]);
     }
 
     [Fact]
-    public void SupportedLocales_ReturnsDefaultLocale_WhenNotConfigured()
+    public void SupportedLocales_ReturnsDefaultLocale_WhenNoLocalesConfigured()
     {
         // Arrange
         var options = SquidexFakes.DefaultOptions() with { SupportedLocales = [] };
-        var provider = new SquidexLocaleProvider(SquidexFakes.DefaultOptionsMock(options));
+        var provider = new SquidexLocaleProvider(SquidexFakes.OptionsMock(options));
 
-        // Act & Assert
-        provider.SupportedLocales.Should().BeEquivalentTo(["uk-UA"]);
+        // Assert
+        provider.SupportedLocales.Should().BeEquivalentTo([TestLocales.UkUA]);
     }
 
     [Fact]
-    public async Task InitializeAsync_UseAppsettings_WhenConfigured()
+    public void DefaultLocale_ReturnsValueFromOptions()
     {
         // Arrange
-        var options = SquidexFakes.DefaultOptions();
-        var provider = new SquidexLocaleProvider(SquidexFakes.DefaultOptionsMock(options));
-        var client = Substitute.For<SquidexApiClient>();
-
-        // Act
-        await provider.InitializeAsync(client);
+        var provider = new SquidexLocaleProvider(SquidexFakes.OptionsMock());
 
         // Assert
-        provider.SupportedLocales.Should().BeEquivalentTo(["uk-UA", "en"]);
-        await client.DidNotReceive().GetAppLocalesAsync(Arg.Any<CancellationToken>());
+        provider.DefaultLocale.Should().Be(TestLocales.UkUA);
+    }
+
+    [Fact]
+    public async Task InitializeAsync_UsesAppsettings_DoesNotCallSquidex()
+    {
+        // Arrange — SupportedLocales set in appsettings
+        var provider = new SquidexLocaleProvider(SquidexFakes.OptionsMock());
+
+        // Act
+        await provider.InitializeAsync(_client);
+
+        // Assert — Squidex not called because appsettings wins
+        await _client.DidNotReceive().GetAppLocalesAsync(Arg.Any<CancellationToken>());
+        provider.SupportedLocales.Should().BeEquivalentTo([TestLocales.UkUA, TestLocales.En]);
     }
 
     [Fact]
@@ -52,53 +63,52 @@ public sealed class SquidexLocaleProviderTests
     {
         // Arrange
         var options = SquidexFakes.DefaultOptions() with { SupportedLocales = [] };
-        var provider = new SquidexLocaleProvider(SquidexFakes.DefaultOptionsMock(options));
+        var provider = new SquidexLocaleProvider(SquidexFakes.OptionsMock(options));
 
-        var client = Substitute.For<SquidexApiClient>();
-        client.GetAppLocalesAsync(Arg.Any<CancellationToken>())
-              .Returns(new[] { "uk-UA", "en", "de" }.ToList() as IReadOnlyList<string>);
+        _client.GetAppLocalesAsync(Arg.Any<CancellationToken>())
+               .Returns(new[] { TestLocales.UkUA, TestLocales.En, TestLocales.De }
+                   .ToList() as IReadOnlyList<string>);
 
         // Act
-        await provider.InitializeAsync(client);
+        await provider.InitializeAsync(_client);
 
         // Assert
-        provider.SupportedLocales.Should().BeEquivalentTo(["uk-UA", "en", "de"]);
+        provider.SupportedLocales.Should()
+            .BeEquivalentTo([TestLocales.UkUA, TestLocales.En, TestLocales.De]);
     }
 
     [Fact]
-    public async Task InitializeAsync_FallsBackToDefault_WhenSquidexUnreachable()
+    public async Task InitializeAsync_FallsBackToDefaultLocale_WhenSquidexUnreachable()
     {
         // Arrange
         var options = SquidexFakes.DefaultOptions() with { SupportedLocales = [] };
-        var provider = new SquidexLocaleProvider(SquidexFakes.DefaultOptionsMock(options));
+        var provider = new SquidexLocaleProvider(SquidexFakes.OptionsMock(options));
 
-        var client = Substitute.For<SquidexApiClient>();
-        client.GetAppLocalesAsync(Arg.Any<CancellationToken>())
-              .Throws(new HttpRequestException("Connection refused"));
+        _client.GetAppLocalesAsync(Arg.Any<CancellationToken>())
+               .Throws(new HttpRequestException("Connection refused"));
 
         // Act
-        await provider.InitializeAsync(client);
+        await provider.InitializeAsync(_client);
 
-        // Assert
-        provider.SupportedLocales.Should().BeEquivalentTo(["uk-UA"]);
+        // Assert — graceful fallback
+        provider.SupportedLocales.Should().BeEquivalentTo([TestLocales.UkUA]);
     }
 
     [Fact]
-    public async Task InitializeAsync_IsIdempotent_DoesNotFetchTwice()
+    public async Task InitializeAsync_IsIdempotent_CallsSquidexOnlyOnce()
     {
         // Arrange
         var options = SquidexFakes.DefaultOptions() with { SupportedLocales = [] };
-        var provider = new SquidexLocaleProvider(SquidexFakes.DefaultOptionsMock(options));
+        var provider = new SquidexLocaleProvider(SquidexFakes.OptionsMock(options));
 
-        var client = Substitute.For<SquidexApiClient>();
-        client.GetAppLocalesAsync(Arg.Any<CancellationToken>())
-              .Returns(new[] { "uk-UA" }.ToList() as IReadOnlyList<string>);
+        _client.GetAppLocalesAsync(Arg.Any<CancellationToken>())
+               .Returns(new[] { TestLocales.UkUA }.ToList() as IReadOnlyList<string>);
 
         // Act
-        await provider.InitializeAsync(client);
-        await provider.InitializeAsync(client);
+        await provider.InitializeAsync(_client);
+        await provider.InitializeAsync(_client); // second call — should be no-op
 
-        // Assert — fetched only once
-        await client.Received(1).GetAppLocalesAsync(Arg.Any<CancellationToken>());
+        // Assert
+        await _client.Received(1).GetAppLocalesAsync(Arg.Any<CancellationToken>());
     }
 }

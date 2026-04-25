@@ -1,4 +1,5 @@
-﻿using Coworking.External.Squidex.Auth;
+﻿// Auth/SquidexTokenServiceTests.cs
+using Coworking.External.Squidex.Auth;
 using Coworking.External.Squidex.Client;
 using Coworking.External.Squidex.Exceptions;
 using Coworking.External.Squidex.Options;
@@ -16,29 +17,36 @@ public sealed class SquidexTokenServiceTests
 {
     private readonly MockHttpMessageHandler _mockHttp = new();
     private readonly IMemoryCache _cache = new MemoryCache(new MemoryCacheOptions());
-    private readonly SquidexOptions _options = SquidexFakes.DefaultOptions();
 
-    private SquidexTokenService CreateService()
+    private SquidexTokenService CreateService(SquidexOptions? options = null)
     {
         var factory = Substitute.For<IHttpClientFactory>();
         factory.CreateClient(SquidexHttpClientNames.Auth)
                .Returns(_mockHttp.ToHttpClient());
 
-        return new SquidexTokenService(factory, _cache, SquidexFakes.DefaultOptionsMock(_options));
+        return new SquidexTokenService(
+            factory, _cache, SquidexFakes.OptionsMock(options));
     }
+
+    private MockedRequest SetupTokenEndpoint(
+        string token = "test-access-token",
+        int expiresIn = 3600) =>
+        _mockHttp
+            .When(HttpMethod.Post, "*/identity-server/connect/token")
+            .Respond(HttpStatusCode.OK,
+                new StringContent(
+                    SquidexFakes.TokenJson(token, expiresIn),
+                    Encoding.UTF8, "application/json"));
 
     [Fact]
     public async Task GetTokenAsync_ReturnsToken_WhenRequestSucceeds()
     {
         // Arrange
-        _mockHttp
-            .When(HttpMethod.Post, "*/identity-server/connect/token")
-            .RespondJson(new { access_token = "my-token", token_type = "Bearer", expires_in = 3600 });
-
+        SetupTokenEndpoint("my-token");
         var service = CreateService();
 
         // Act
-        var token = await service.GetTokenAsync("Default", CancellationToken.None);
+        var token = await service.GetTokenAsync(TestClientNames.Default, CancellationToken.None);
 
         // Assert
         token.Should().Be("my-token");
@@ -48,21 +56,27 @@ public sealed class SquidexTokenServiceTests
     public async Task GetTokenAsync_ReturnsCachedToken_OnSecondCall()
     {
         // Arrange
+        var callCount = 0;
         _mockHttp
             .When(HttpMethod.Post, "*/identity-server/connect/token")
-            .RespondJson(new { access_token = "cached-token", token_type = "Bearer", expires_in = 3600 });
+            .Respond(_ =>
+            {
+                Interlocked.Increment(ref callCount);
+                return new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent(
+                        SquidexFakes.TokenJson(), Encoding.UTF8, "application/json")
+                };
+            });
 
         var service = CreateService();
 
         // Act
-        await service.GetTokenAsync("Default", CancellationToken.None);
-        await service.GetTokenAsync("Default", CancellationToken.None);
+        await service.GetTokenAsync(TestClientNames.Default, CancellationToken.None);
+        await service.GetTokenAsync(TestClientNames.Default, CancellationToken.None);
 
-        // Assert — only one HTTP call made
-        _mockHttp.VerifyNoOutstandingExpectation();
-        _mockHttp.GetMatchCount(
-            _mockHttp.When(HttpMethod.Post, "*/identity-server/connect/token"))
-            .Should().Be(0); // already matched and consumed
+        // Assert — only one HTTP call
+        callCount.Should().Be(1);
     }
 
     [Fact]
@@ -72,15 +86,15 @@ public sealed class SquidexTokenServiceTests
         var service = CreateService();
 
         // Act
-        var act = () => service.GetTokenAsync("Unknown", CancellationToken.None);
+        var act = () => service.GetTokenAsync(TestClientNames.Unknown, CancellationToken.None);
 
         // Assert
         await act.Should().ThrowAsync<InvalidOperationException>()
-            .WithMessage("*Unknown*");
+            .WithMessage($"*{TestClientNames.Unknown}*");
     }
 
     [Fact]
-    public async Task GetTokenAsync_Throws_WhenSquidexReturnsError()
+    public async Task GetTokenAsync_Throws_WhenSquidexReturns401()
     {
         // Arrange
         _mockHttp
@@ -90,7 +104,7 @@ public sealed class SquidexTokenServiceTests
         var service = CreateService();
 
         // Act
-        var act = () => service.GetTokenAsync("Default", CancellationToken.None);
+        var act = () => service.GetTokenAsync(TestClientNames.Default, CancellationToken.None);
 
         // Assert
         await act.Should().ThrowAsync<SquidexApiException>()
@@ -101,25 +115,35 @@ public sealed class SquidexTokenServiceTests
     public async Task InvalidateToken_ClearsCache_SoNextCallFetchesFresh()
     {
         // Arrange
+        var callCount = 0;
         _mockHttp
             .When(HttpMethod.Post, "*/identity-server/connect/token")
-            .RespondJson(new { access_token = "token-v1", token_type = "Bearer", expires_in = 3600 })
-            .RespondJson(new { access_token = "token-v2", token_type = "Bearer", expires_in = 3600 });
+            .Respond(_ =>
+            {
+                callCount++;
+                var token = callCount == 1 ? "token-v1" : "token-v2";
+                return new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent(
+                        SquidexFakes.TokenJson(token), Encoding.UTF8, "application/json")
+                };
+            });
 
         var service = CreateService();
 
-        await service.GetTokenAsync("Default", CancellationToken.None);
+        await service.GetTokenAsync(TestClientNames.Default, CancellationToken.None);
 
         // Act
-        service.InvalidateToken("Default");
-        var freshToken = await service.GetTokenAsync("Default", CancellationToken.None);
+        service.InvalidateToken(TestClientNames.Default);
+        var freshToken = await service.GetTokenAsync(TestClientNames.Default, CancellationToken.None);
 
         // Assert
         freshToken.Should().Be("token-v2");
+        callCount.Should().Be(2);
     }
 
     [Fact]
-    public async Task GetTokenAsync_IsConcurrencySafe_NoDuplicateRequests()
+    public async Task GetTokenAsync_IsConcurrencySafe_FetchesTokenOnlyOnce()
     {
         // Arrange
         var callCount = 0;
@@ -128,20 +152,51 @@ public sealed class SquidexTokenServiceTests
             .Respond(_ =>
             {
                 Interlocked.Increment(ref callCount);
-                var json = SquidexFakes.TokenJson();
-                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+                Thread.Sleep(10); // simulate latency
+                return new HttpResponseMessage(HttpStatusCode.OK)
                 {
-                    Content = new StringContent(json, Encoding.UTF8, "application/json")
-                });
+                    Content = new StringContent(
+                        SquidexFakes.TokenJson(), Encoding.UTF8, "application/json")
+                };
             });
 
         var service = CreateService();
 
-        // Act — concurrent requests
-        await Task.WhenAll(Enumerable.Range(0, 10)
-            .Select(_ => service.GetTokenAsync("Default", CancellationToken.None)));
+        // Act — 20 concurrent requests
+        await Task.WhenAll(Enumerable.Range(0, 20)
+            .Select(_ => service.GetTokenAsync(TestClientNames.Default, CancellationToken.None)));
 
-        // Assert — token fetched only once
+        // Assert — only one actual HTTP call despite concurrency
         callCount.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task GetTokenAsync_UsesFrontendCredentials_ForFrontendClient()
+    {
+        // Arrange
+        string? capturedClientId = null;
+        _mockHttp
+            .When(HttpMethod.Post, "*/identity-server/connect/token")
+            .Respond(req =>
+            {
+                var body = req.Content!.ReadAsStringAsync().GetAwaiter().GetResult();
+                capturedClientId = body.Split('&')
+                    .FirstOrDefault(p => p.StartsWith("client_id="))
+                    ?.Split('=')[1];
+
+                return new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent(
+                        SquidexFakes.TokenJson(), Encoding.UTF8, "application/json")
+                };
+            });
+
+        var service = CreateService();
+
+        // Act
+        await service.GetTokenAsync(TestClientNames.Frontend, CancellationToken.None);
+
+        // Assert — correct credentials used for Frontend client
+        capturedClientId.Should().Be("app%3Afrontend"); // URL-encoded "app:frontend"
     }
 }
