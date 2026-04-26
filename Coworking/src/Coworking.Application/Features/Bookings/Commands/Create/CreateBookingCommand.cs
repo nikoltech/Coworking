@@ -11,4 +11,4 @@ public record CreateBookingCommand(
     string UserName,
     DateTimeOffset StartTime,
     DateTimeOffset EndTime,
-    BookingMetadata? Metadata) : IRequest<CreateBookingCommandResponce>;
+    BookingMetadata? Metadata) : IRequest<CreateBookingCommandResponse>;

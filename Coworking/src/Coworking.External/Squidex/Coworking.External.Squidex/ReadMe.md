@@ -1,4 +1,8 @@
 ﻿
+--# Coworking.External.Squidex
+Status: Need testing and improvements
+
+
 -- Configuration
 
 ---- appsettings.json

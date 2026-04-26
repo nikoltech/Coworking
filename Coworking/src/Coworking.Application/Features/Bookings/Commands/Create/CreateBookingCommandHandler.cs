@@ -19,9 +19,9 @@ internal class CreateBookingCommandHandler(
     ICoworkingRepository coworkingRepo,
     IBookingRoundingPolicy roundingPolicy,
     IBookingAccessCoordinator bookingAccessCoordinator)
-    : IRequestHandler<CreateBookingCommand, CreateBookingCommandResponce>
+    : IRequestHandler<CreateBookingCommand, CreateBookingCommandResponse>
 {
-    public async Task<CreateBookingCommandResponce> Handle(CreateBookingCommand request, CancellationToken ct)
+    public async Task<CreateBookingCommandResponse> Handle(CreateBookingCommand request, CancellationToken ct)
     {
         var desk = await coworkingRepo.GetDeskWithCoworkingAsync(request.DeskId, ct)
             ?? throw new NotFoundException($"Desk with id {request.DeskId} not found.");

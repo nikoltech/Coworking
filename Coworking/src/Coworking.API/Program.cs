@@ -1,8 +1,6 @@
 using Coworking.API;
 using Coworking.API.Infrastructure.Extensions;
 using Coworking.API.Infrastructure.Extensions.Initialization;
-using Coworking.API.Infrastructure.Extensions.Security;
-using Coworking.API.Infrastructure.RateLimiting;
 using Coworking.Application;
 using Coworking.Infrastructure;
 using Coworking.Infrastructure.Persistence;
@@ -10,7 +8,6 @@ using Coworking.Infrastructure.Persistence;
 var builder = WebApplication.CreateBuilder(args);
 
 var config = builder.Configuration;
-
 
 // Core layers
 builder.Services.AddApplication();

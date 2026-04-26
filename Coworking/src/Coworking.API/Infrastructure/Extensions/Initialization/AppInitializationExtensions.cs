@@ -15,8 +15,8 @@ public static class AppInitializationExtensions
 
         try
         {
-            // Initialize Squidex locales once before serving requests
-            await InitializeSquidexLocalesAsync(services, app);
+            //// Initialize Squidex locales once before serving requests
+            //await InitializeSquidexLocalesAsync(services, app);
         }
         catch (Exception ex)
         {
