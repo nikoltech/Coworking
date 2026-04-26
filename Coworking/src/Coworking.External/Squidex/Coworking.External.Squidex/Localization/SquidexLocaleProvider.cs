@@ -1,51 +1,88 @@
-﻿using Coworking.External.Squidex.Abstractions.Repository;
+﻿// External.Squidex/Localization/SquidexLocaleProvider.cs
+using Coworking.External.Squidex.Abstractions.Localization;
+using Coworking.External.Squidex.Abstractions.Repository;
 using Coworking.External.Squidex.Options;
 using Microsoft.Extensions.Options;
 
 namespace Coworking.External.Squidex.Localization;
 
 /// <summary>
-/// Resolves supported locales for X-Languages header.
-/// Priority: appsettings.SupportedLocales > Squidex app languages > DefaultLocale fallback.
+/// Resolves supported locales and default locale for X-Languages header.
 ///
-/// Call InitializeAsync once on application startup before serving requests.
+/// Priority for DefaultLocale:
+///   1. appsettings.DefaultLocale (explicit)
+///   2. Squidex app language marked as IsMaster
+///   3. SquidexLocales.UkUA (fallback constant)
+///
+/// Priority for SupportedLocales:
+///   1. appsettings.SupportedLocales (explicit)
+///   2. All locales from Squidex app
+///   3. [DefaultLocale] (fallback)
+///
+/// Call InitializeAsync once on startup before serving requests.
 /// </summary>
-public sealed class SquidexLocaleProvider(IOptions<SquidexOptions> options)
+public sealed class SquidexLocaleProvider
 {
-    private readonly SquidexOptions _options = options.Value;
-    private IReadOnlyList<string>? _resolved;
+    private readonly SquidexOptions _options;
+    private IReadOnlyList<string>? _supportedLocales;
+    private string? _defaultLocale;
 
-    public string DefaultLocale => _options.DefaultLocale;
+    public SquidexLocaleProvider(IOptions<SquidexOptions> options) =>
+        _options = options.Value;
+
+    public string DefaultLocale =>
+        _defaultLocale ?? _options.DefaultLocale;
 
     public IReadOnlyList<string> SupportedLocales =>
-        _resolved ?? (_options.SupportedLocales.Count > 0
+        _supportedLocales ?? (_options.SupportedLocales.Count > 0
             ? _options.SupportedLocales
-            : [_options.DefaultLocale]);
+            : [DefaultLocale]);
 
     /// <summary>
-    /// Fetches locales from Squidex app if not set in appsettings.
+    /// Fetches locales from Squidex app if not configured in appsettings.
     /// Safe to call multiple times — resolves only once.
     /// </summary>
-    public async Task InitializeAsync(ISquidexApiClient client, CancellationToken ct = default)
+    public async Task InitializeAsync(
+        ISquidexApiClient client, CancellationToken ct = default)
     {
-        if (_resolved is not null)
+        // Already initialized — skip
+        if (_supportedLocales is not null)
             return;
 
+        // appsettings wins for SupportedLocales
         if (_options.SupportedLocales.Count > 0)
         {
-            _resolved = _options.SupportedLocales;
+            _supportedLocales = _options.SupportedLocales;
+            // DefaultLocale stays from appsettings — no need to fetch
             return;
         }
 
         try
         {
             var locales = await client.GetAppLocalesAsync(ct);
-            _resolved = locales.Count > 0 ? locales : [_options.DefaultLocale];
+
+            if (locales.Count == 0)
+            {
+                _supportedLocales = [_options.DefaultLocale];
+                return;
+            }
+
+            _supportedLocales = locales
+                .Select(l => l.Iso2Code)
+                .ToList();
+
+            // Set DefaultLocale from IsMaster only if not explicitly set in appsettings
+            if (_options.DefaultLocale == SquidexLocales.En)
+            {
+                var master = locales.FirstOrDefault(l => l.IsMaster);
+                if (master is not null)
+                    _defaultLocale = master.Iso2Code;
+            }
         }
         catch
         {
-            // Squidex unreachable on startup — fall back to default
-            _resolved = [_options.DefaultLocale];
+            // Squidex unreachable on startup — graceful fallback
+            _supportedLocales = [_options.DefaultLocale];
         }
     }
 }

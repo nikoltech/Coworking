@@ -90,3 +90,9 @@ public sealed class CityRepository(SquidexApiClient client, SquidexPaginator pag
 
 ```
 
+
+
+Need improvements:
+- Critical: overhead of supporting multiple clients! For now need wrapper with duplicated methods invocations.
+- overhead is repository for each schema! But it is posible to use generic repository with schema name as parameter.
+- supporting different apps.

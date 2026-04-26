@@ -62,5 +62,5 @@ public interface ISquidexApiClient
         string schema, string id, string newStatus,
         CancellationToken ct = default);
 
-    Task<IReadOnlyList<string>> GetAppLocalesAsync(CancellationToken ct = default);
+    Task<IReadOnlyList<SquidexLocaleInfo>> GetAppLocalesAsync(CancellationToken ct = default);
 }

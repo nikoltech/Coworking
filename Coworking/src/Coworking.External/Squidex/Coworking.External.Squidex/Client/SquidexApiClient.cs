@@ -13,7 +13,7 @@ using System.Text.Json.Serialization;
 
 namespace Coworking.External.Squidex.Client;
 
-public sealed class SquidexApiClient : ISquidexApiClient
+public class SquidexApiClient : ISquidexApiClient
 {
     private readonly HttpClient _http;
     private readonly SquidexOptions _options;
@@ -22,8 +22,8 @@ public sealed class SquidexApiClient : ISquidexApiClient
 
     /// <summary>
     /// Safe batch size for IDs query.
-    /// URL length = base URL (~60) + path (~50) + each GUID with comma (~37).
-    /// At 8192 char URL limit: ~210 IDs max. Using 80 is conservative and safe.
+    /// URL limit ~8192 chars. Each GUID+comma = ~37 chars.
+    /// Base URL + path ~110 chars → safe at 80 IDs per batch.
     /// </summary>
     private const int IdsBatchSize = 80;
 
@@ -48,8 +48,7 @@ public sealed class SquidexApiClient : ISquidexApiClient
     // ── JSON query (q= param) ─────────────────────────────────────────────────
 
     public Task<ResponseSchema<T>> QueryAsync<T>(
-        string schema,
-        RequestQuery query,
+        string schema, RequestQuery query,
         QueryOptions? queryOptions = null,
         CancellationToken ct = default)
     {
@@ -64,8 +63,7 @@ public sealed class SquidexApiClient : ISquidexApiClient
     // ── OData query ($filter, $orderby, etc.) ────────────────────────────────
 
     public Task<ResponseSchema<T>> QueryODataAsync<T>(
-        string schema,
-        ODataQuery query,
+        string schema, ODataQuery query,
         QueryOptions? queryOptions = null,
         CancellationToken ct = default)
     {
@@ -80,12 +78,13 @@ public sealed class SquidexApiClient : ISquidexApiClient
     // ── POST query (body) ─────────────────────────────────────────────────────
 
     public Task<ResponseSchema<T>> QueryPostAsync<T>(
-        string schema,
-        RequestQuery query,
+        string schema, RequestQuery query,
         QueryOptions? queryOptions = null,
         CancellationToken ct = default)
     {
-        var request = BuildRequest(HttpMethod.Post, $"{ContentUrl(schema)}/query", queryOptions);
+        var request = BuildRequest(
+            HttpMethod.Post, $"{ContentUrl(schema)}/query", queryOptions);
+
         request.Content = JsonContent.Create(
             new PostQueryBody(query), options: Json);
 
@@ -95,15 +94,12 @@ public sealed class SquidexApiClient : ISquidexApiClient
     // ── IDs query (batched) ───────────────────────────────────────────────────
 
     public async Task<ResponseSchema<T>> GetByIdsAsync<T>(
-        string schema,
-        IEnumerable<string> ids,
+        string schema, IEnumerable<string> ids,
         QueryOptions? queryOptions = null,
         CancellationToken ct = default)
     {
-        var batches = ids.Chunk(IdsBatchSize);
-
-        var tasks = batches.Select(batch =>
-            QueryByIdsBatchAsync<T>(schema, batch, queryOptions, ct));
+        var tasks = ids.Chunk(IdsBatchSize)
+            .Select(batch => QueryByIdsBatchAsync<T>(schema, batch, queryOptions, ct));
 
         var results = await Task.WhenAll(tasks);
         var allItems = results.SelectMany(r => r.Items).ToList();
@@ -114,8 +110,7 @@ public sealed class SquidexApiClient : ISquidexApiClient
     // ── Single item ───────────────────────────────────────────────────────────
 
     public async Task<ContentDto<T>?> GetByIdAsync<T>(
-        string schema,
-        string id,
+        string schema, string id,
         QueryOptions? queryOptions = null,
         CancellationToken ct = default)
     {
@@ -175,7 +170,8 @@ public sealed class SquidexApiClient : ISquidexApiClient
 
     // ── App ──────────────────────────────────────────────────────────────────
 
-    public async Task<IReadOnlyList<string>> GetAppLocalesAsync(CancellationToken ct = default)
+    public async Task<IReadOnlyList<SquidexLocaleInfo>> GetAppLocalesAsync(
+        CancellationToken ct = default)
     {
         var url = $"{_options.BaseUrl.TrimEnd('/')}/api/apps/{_options.AppName}/languages";
         var request = BuildRequest(HttpMethod.Get, url);
@@ -186,7 +182,9 @@ public sealed class SquidexApiClient : ISquidexApiClient
         var result = await response.Content
             .ReadFromJsonAsync<AppLanguagesResponse>(Json, ct);
 
-        return result?.Items.Select(l => l.Iso2Code).ToList() ?? [];
+        return result?.Items
+            .Select(l => new SquidexLocaleInfo(l.Iso2Code, l.IsMaster, l.IsOptional))
+            .ToList() ?? [];
     }
 
     // ── Retry ────────────────────────────────────────────────────────────────
@@ -217,12 +215,9 @@ public sealed class SquidexApiClient : ISquidexApiClient
     // ── Private ──────────────────────────────────────────────────────────────
 
     private Task<ResponseSchema<T>> QueryByIdsBatchAsync<T>(
-        string schema,
-        string[] batch,
-        QueryOptions? queryOptions,
-        CancellationToken ct)
+        string schema, string[] batch,
+        QueryOptions? queryOptions, CancellationToken ct)
     {
-        // IDs query overrides all other parameters — passed as comma-separated
         var ids = string.Join(",", batch);
         var request = BuildRequest(
             HttpMethod.Get,
@@ -244,8 +239,7 @@ public sealed class SquidexApiClient : ISquidexApiClient
     }
 
     private HttpRequestMessage BuildRequest(
-        HttpMethod method,
-        string url,
+        HttpMethod method, string url,
         QueryOptions? queryOptions = null)
     {
         var request = new HttpRequestMessage(method, url);
@@ -277,10 +271,6 @@ public sealed class SquidexApiClient : ISquidexApiClient
         return request;
     }
 
-    /// <summary>
-    /// JSON query: dot separator (data.Title.iv).
-    /// Serialized as JSON, URL-encoded, passed as ?q=.
-    /// </summary>
     private static string ToJsonQueryString(RequestQuery query)
     {
         var json = JsonSerializer.Serialize(query, new JsonSerializerOptions
@@ -290,10 +280,6 @@ public sealed class SquidexApiClient : ISquidexApiClient
         return "q=" + Uri.EscapeDataString(json);
     }
 
-    /// <summary>
-    /// OData query: slash separator (data/Title/iv).
-    /// Each option is a separate $param.
-    /// </summary>
     private static string ToODataQueryString(ODataQuery query)
     {
         var sb = new StringBuilder();
@@ -352,6 +338,5 @@ public sealed class SquidexApiClient : ISquidexApiClient
     private sealed record AppLanguage(
         [property: JsonPropertyName("iso2Code")] string Iso2Code,
         [property: JsonPropertyName("isMaster")] bool IsMaster,
-        [property: JsonPropertyName("isOptional")] bool IsOptional
-        );
+        [property: JsonPropertyName("isOptional")] bool IsOptional);
 }

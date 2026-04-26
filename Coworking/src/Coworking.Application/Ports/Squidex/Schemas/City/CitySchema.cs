@@ -9,6 +9,8 @@ namespace Coworking.Application.Ports.Squidex.Schemas.City;
 /// </summary>
 public sealed class CitySchema
 {
+    public const string SchemaName = "city";
+
     [JsonPropertyName("Title")]
     public LocalizedField<string>? Title { get; set; }
 

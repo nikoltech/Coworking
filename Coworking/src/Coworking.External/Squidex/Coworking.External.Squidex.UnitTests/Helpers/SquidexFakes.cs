@@ -9,98 +9,125 @@ namespace Coworking.External.Squidex.UnitTests.Helpers;
 
 internal static class SquidexFakes
 {
-    // ── Options ──────────────────────────────────────────────────────────────
+	// ── Options ──────────────────────────────────────────────────────────────
 
-    public static SquidexOptions DefaultOptions(
-        string baseUrl = "https://fake.cloud.squidex.io",
-        string appName = "test-app") =>
-        new()
-        {
-            BaseUrl = baseUrl,
-            AppName = appName,
-            MaxPageSize = 3,
-            DefaultLocale = TestLocales.UkUA,
-            SupportedLocales = [TestLocales.UkUA, TestLocales.En],
-            Clients = new Dictionary<string, SquidexClientCredentials>
-            {
-                [TestClientNames.Default] = new() { ClientId = "app:default", ClientSecret = "secret-1" },
-                [TestClientNames.Frontend] = new() { ClientId = "app:frontend", ClientSecret = "secret-2" }
-            }
-        };
+	public static SquidexOptions DefaultOptions(
+		string baseUrl = "https://cloud.squidex.io",
+		string appName = "test-app") =>
+		new()
+		{
+			BaseUrl = baseUrl,
+			AppName = appName,
+			MaxPageSize = 3,
+			DefaultLocale = TestLocales.UkUA,
+			SupportedLocales = [TestLocales.UkUA, TestLocales.En],
+			Clients = new Dictionary<string, SquidexClientCredentials>
+			{
+				[TestClientNames.Default] = new() { ClientId = "app:default", ClientSecret = "secret-1" },
+				[TestClientNames.Frontend] = new() { ClientId = "app:frontend", ClientSecret = "secret-2" }
+			}
+		};
 
-    public static IOptions<SquidexOptions> OptionsMock(SquidexOptions? options = null) =>
-        Microsoft.Extensions.Options.Options.Create(options ?? DefaultOptions());
+	public static SquidexOptions OptionsWithoutLocales(
+		string baseUrl = "https://cloud.squidex.io",
+		string appName = "test-app") =>
+		DefaultOptions(baseUrl, appName) with { SupportedLocales = [] };
 
-    // ── Content factories ─────────────────────────────────────────────────────
+	public static IOptions<SquidexOptions> OptionsMock(SquidexOptions? options = null) =>
+		Microsoft.Extensions.Options.Options.Create(options ?? DefaultOptions());
 
-    public static ContentDto<T> MakeContent<T>(
-        T data,
-        string id = "test-id",
-        string status = TestStatuses.Published) =>
-        new(id, 1, DateTime.UtcNow, DateTime.UtcNow, status, data);
+	// ── Content factories ─────────────────────────────────────────────────────
 
-    public static ContentDto<T> MakeDraft<T>(T data, string id = "draft-id") =>
-        MakeContent(data, id, TestStatuses.Draft);
+	public static ContentDto<T> MakeContent<T>(
+		T data,
+		string id = "test-id",
+		string status = TestStatuses.Published) =>
+		new(id, 1, DateTime.UtcNow, DateTime.UtcNow, status, data);
 
-    public static ContentDto<T> MakeArchived<T>(T data, string id = "archived-id") =>
-        MakeContent(data, id, TestStatuses.Archived);
+	public static ContentDto<T> MakeDraft<T>(T data, string id = "draft-id") =>
+		MakeContent(data, id, TestStatuses.Draft);
 
-    public static ResponseSchema<T> MakeResponse<T>(
-        params T[] items) =>
-        new(items.Length,
-            items.Select((item, i) => MakeContent(item, $"id-{i + 1}")).ToList());
+	public static ContentDto<T> MakeArchived<T>(T data, string id = "archived-id") =>
+		MakeContent(data, id, TestStatuses.Archived);
 
-    public static ResponseSchema<T> MakePagedResponse<T>(
-        long total,
-        string status = TestStatuses.Published,
-        params T[] items) =>
-        new(total,
-            items.Select((item, i) => MakeContent(item, $"id-{i + 1}", status)).ToList());
+	public static ResponseSchema<T> MakeResponse<T>(params T[] items) =>
+		new(items.Length,
+			items.Select((item, i) => MakeContent(item, $"id-{i + 1}")).ToList());
 
-    // ── JSON helpers ──────────────────────────────────────────────────────────
+	public static ResponseSchema<T> MakePagedResponse<T>(
+		long total,
+		string status = TestStatuses.Published,
+		params T[] items) =>
+		new(total,
+			items.Select((item, i) => MakeContent(item, $"id-{i + 1}", status)).ToList());
 
-    public static string TokenJson(
-        string token = "test-access-token",
-        int expiresIn = 3600) =>
-        JsonSerializer.Serialize(new
-        {
-            access_token = token,
-            token_type = "Bearer",
-            expires_in = expiresIn
-        });
+	// ── Locale factories ──────────────────────────────────────────────────────
 
-    public static string AppLanguagesJson(params string[] locales) =>
-        JsonSerializer.Serialize(new
-        {
-            items = locales.Select(l => new { iso2Code = l })
-        });
+	public static SquidexLocaleInfo MakeMasterLocale(string iso2Code = TestLocales.UkUA) =>
+		new(iso2Code, IsMaster: true, IsOptional: false);
 
-    public static string ResponseJson<T>(ResponseSchema<T> response) =>
-        JsonSerializer.Serialize(response);
+	public static SquidexLocaleInfo MakeLocale(
+		string iso2Code, bool isOptional = false) =>
+		new(iso2Code, IsMaster: false, IsOptional: isOptional);
 
-    public static string ContentJson<T>(ContentDto<T> content) =>
-        JsonSerializer.Serialize(content);
+	public static IReadOnlyList<SquidexLocaleInfo> MakeLocales(
+		string masterLocale, params string[] otherLocales)
+	{
+		var list = new List<SquidexLocaleInfo> { MakeMasterLocale(masterLocale) };
+		list.AddRange(otherLocales.Select(l => MakeLocale(l)));
+		return list;
+	}
 
-    // ── Test schemas ──────────────────────────────────────────────────────────
+	// ── JSON helpers ──────────────────────────────────────────────────────────
 
-    public sealed class TestSchema
-    {
-        [JsonPropertyName("Name")]
-        public IvField<string>? Name { get; set; }
+	public static string TokenJson(
+		string token = "test-access-token",
+		int expiresIn = 3600) =>
+		JsonSerializer.Serialize(new
+		{
+			access_token = token,
+			token_type = "Bearer",
+			expires_in = expiresIn
+		});
 
-        [JsonPropertyName("Title")]
-        public LocalizedField<string>? Title { get; set; }
+	public static string AppLanguagesJson(
+		string masterLocale = TestLocales.UkUA,
+		params string[] otherLocales)
+	{
+		var items = new List<object>
+		{
+			new { iso2Code = masterLocale, isMaster = true,  isOptional = false }
+		};
 
-        [JsonPropertyName("IsActive")]
-        public IvField<bool?>? IsActive { get; set; }
-    }
+		items.AddRange(otherLocales.Select(l =>
+			(object)new { iso2Code = l, isMaster = false, isOptional = false }));
 
-    public static TestSchema MakeTestSchema(
-        string? name = null,
-        bool? active = null) =>
-        new()
-        {
-            Name = name is not null ? new IvField<string>(name) : null,
-            IsActive = active is not null ? new IvField<bool?>(active) : null
-        };
+		return JsonSerializer.Serialize(new { items });
+	}
+
+	public static string ResponseJson<T>(ResponseSchema<T> response) =>
+		JsonSerializer.Serialize(response);
+
+	// ── Test schemas ──────────────────────────────────────────────────────────
+
+	public sealed class TestSchema
+	{
+		[JsonPropertyName("Name")]
+		public IvField<string>? Name { get; set; }
+
+		[JsonPropertyName("Title")]
+		public LocalizedField<string>? Title { get; set; }
+
+		[JsonPropertyName("IsActive")]
+		public IvField<bool?>? IsActive { get; set; }
+	}
+
+	public static TestSchema MakeTestSchema(
+		string? name = null,
+		bool? active = null) =>
+		new()
+		{
+			Name = name is not null ? new IvField<string>(name) : null,
+			IsActive = active is not null ? new IvField<bool?>(active) : null
+		};
 }

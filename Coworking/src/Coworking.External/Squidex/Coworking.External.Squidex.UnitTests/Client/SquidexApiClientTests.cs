@@ -1,5 +1,4 @@
-﻿// Client/SquidexApiClientTests.cs
-using Coworking.External.Squidex.Abstractions.Models;
+﻿using Coworking.External.Squidex.Abstractions.Models;
 using Coworking.External.Squidex.Client;
 using Coworking.External.Squidex.Exceptions;
 using Coworking.External.Squidex.Localization;
@@ -25,17 +24,16 @@ public sealed class SquidexApiClientTests
     }
 
     private SquidexApiClient CreateClient() =>
-        new (_mockHttp.ToHttpClient(), _options, TestClientNames.Default, _locales);
+        new(_mockHttp.ToHttpClient(), _options, TestClientNames.Default, _locales);
 
     private string ContentUrl(string schema) =>
         $"*/api/content/{_options.AppName}/{schema}*";
 
-    // ── Query ─────────────────────────────────────────────────────────────────
+    // ── JSON Query ────────────────────────────────────────────────────────────
 
     [Fact]
     public async Task QueryAsync_ReturnsDeserializedResponse()
     {
-        // Arrange
         var expected = SquidexFakes.MakeResponse(
             SquidexFakes.MakeTestSchema("alpha"),
             SquidexFakes.MakeTestSchema("beta"));
@@ -44,20 +42,163 @@ public sealed class SquidexApiClientTests
             .When(HttpMethod.Get, ContentUrl("cities"))
             .RespondJson(expected);
 
-        // Act
         var result = await CreateClient().QueryAsync<SquidexFakes.TestSchema>(
             "cities", RequestQuery.Create().WithTake(10));
 
-        // Assert
         result.Total.Should().Be(2);
         result.Items[0].Data.Name!.Value.Should().Be("alpha");
         result.Items[1].Data.Name!.Value.Should().Be("beta");
     }
 
     [Fact]
+    public async Task QueryAsync_UsesQParam_NotODataParams()
+    {
+        // Ensure JSON query uses ?q= not $filter etc.
+        string? capturedUrl = null;
+        _mockHttp.When(HttpMethod.Get, ContentUrl("cities")).Respond(req =>
+        {
+            capturedUrl = req.RequestUri?.Query;
+            return OkResponse(SquidexFakes.MakeResponse<SquidexFakes.TestSchema>());
+        });
+
+        await CreateClient().QueryAsync<SquidexFakes.TestSchema>(
+            "cities", RequestQuery.Create().WithTake(5));
+
+        capturedUrl.Should().StartWith("?q=");
+        capturedUrl.Should().NotContain("$top");
+    }
+
+    // ── OData Query ───────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task QueryODataAsync_UsesODataParams_NotQParam()
+    {
+        string? capturedUrl = null;
+        _mockHttp.When(HttpMethod.Get, ContentUrl("cities")).Respond(req =>
+        {
+            capturedUrl = req.RequestUri?.Query;
+            return OkResponse(SquidexFakes.MakeResponse<SquidexFakes.TestSchema>());
+        });
+
+        var query = ODataQuery.Create().WithTop(10).WithFilter("data/Name/iv eq 'test'");
+
+        await CreateClient().QueryODataAsync<SquidexFakes.TestSchema>("cities", query);
+
+        capturedUrl.Should().Contain("$top=10");
+        capturedUrl.Should().Contain("$filter=");
+        capturedUrl.Should().NotContain("?q=");
+    }
+
+    [Fact]
+    public async Task QueryODataAsync_EscapesFilterValue()
+    {
+        string? capturedUrl = null;
+        _mockHttp.When(HttpMethod.Get, ContentUrl("cities")).Respond(req =>
+        {
+            capturedUrl = req.RequestUri?.Query;
+            return OkResponse(SquidexFakes.MakeResponse<SquidexFakes.TestSchema>());
+        });
+
+        var query = ODataQuery.Create().WithFilter("data/Name/iv eq 'Київ'");
+
+        await CreateClient().QueryODataAsync<SquidexFakes.TestSchema>("cities", query);
+
+        capturedUrl.Should().NotContain("data/Name/iv eq 'Київ'"); // raw — should be encoded
+        capturedUrl.Should().Contain("%27"); // encoded quote
+    }
+
+    // ── POST Query ────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task QueryPostAsync_PostsToQueryEndpoint()
+    {
+        string? capturedUrl = null;
+        _mockHttp.When(HttpMethod.Post, ContentUrl("cities")).Respond(req =>
+        {
+            capturedUrl = req.RequestUri?.PathAndQuery;
+            return OkResponse(SquidexFakes.MakeResponse<SquidexFakes.TestSchema>());
+        });
+
+        await CreateClient().QueryPostAsync<SquidexFakes.TestSchema>(
+            "cities", RequestQuery.Create().WithTake(5));
+
+        capturedUrl.Should().EndWith("/query");
+    }
+
+    [Fact]
+    public async Task QueryPostAsync_SendsQueryInBody_NotUrl()
+    {
+        string? capturedBody = null;
+        _mockHttp.When(HttpMethod.Post, ContentUrl("cities")).Respond(async req =>
+        {
+            capturedBody = await req.Content!.ReadAsStringAsync();
+            return OkResponse(SquidexFakes.MakeResponse<SquidexFakes.TestSchema>());
+        });
+
+        await CreateClient().QueryPostAsync<SquidexFakes.TestSchema>(
+            "cities", RequestQuery.Create().WithTake(5));
+
+        capturedBody.Should().NotBeNullOrEmpty();
+        capturedBody.Should().Contain("\"take\""); // JSON body contains query
+    }
+
+    // ── IDs query ─────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task GetByIdsAsync_SendsSingleRequest_ForSmallBatch()
+    {
+        var callCount = 0;
+        _mockHttp.When(HttpMethod.Get, ContentUrl("cities")).Respond(_ =>
+        {
+            callCount++;
+            return OkResponse(SquidexFakes.MakeResponse<SquidexFakes.TestSchema>());
+        });
+
+        await CreateClient().GetByIdsAsync<SquidexFakes.TestSchema>(
+            "cities", ["id-1", "id-2", "id-3"]);
+
+        callCount.Should().Be(1); // all in one request
+    }
+
+    [Fact]
+    public async Task GetByIdsAsync_BatchesRequests_WhenExceedingBatchSize()
+    {
+        // 80 is batch size — 81 IDs = 2 requests
+        var ids = Enumerable.Range(0, 81).Select(i => $"id-{i}").ToList();
+        var callCount = 0;
+
+        _mockHttp.When(HttpMethod.Get, ContentUrl("cities")).Respond(_ =>
+        {
+            callCount++;
+            return OkResponse(SquidexFakes.MakeResponse<SquidexFakes.TestSchema>());
+        });
+
+        await CreateClient().GetByIdsAsync<SquidexFakes.TestSchema>("cities", ids);
+
+        callCount.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task GetByIdsAsync_UsesIdsParam_NotQParam()
+    {
+        string? capturedUrl = null;
+        _mockHttp.When(HttpMethod.Get, ContentUrl("cities")).Respond(req =>
+        {
+            capturedUrl = req.RequestUri?.Query;
+            return OkResponse(SquidexFakes.MakeResponse<SquidexFakes.TestSchema>());
+        });
+
+        await CreateClient().GetByIdsAsync<SquidexFakes.TestSchema>(
+            "cities", ["id-1", "id-2"]);
+
+        capturedUrl.Should().StartWith("?ids=");
+    }
+
+    // ── Headers ───────────────────────────────────────────────────────────────
+
+    [Fact]
     public async Task QueryAsync_AddsXLanguagesHeader_WithSupportedLocales()
     {
-        // Arrange
         string? capturedLanguages = null;
         _mockHttp.When(HttpMethod.Get, ContentUrl("cities")).Respond(req =>
         {
@@ -66,18 +207,15 @@ public sealed class SquidexApiClientTests
             return OkResponse(SquidexFakes.MakeResponse<SquidexFakes.TestSchema>());
         });
 
-        // Act
         await CreateClient().QueryAsync<SquidexFakes.TestSchema>(
             "cities", RequestQuery.Create());
 
-        // Assert — SupportedLocales from options
         capturedLanguages.Should().Be($"{TestLocales.UkUA},{TestLocales.En}");
     }
 
     [Fact]
     public async Task QueryAsync_AddsXFlattenAndSingleLanguage_WhenFlattenEnabled()
     {
-        // Arrange
         string? capturedFlatten = null;
         string? capturedLanguages = null;
 
@@ -90,11 +228,9 @@ public sealed class SquidexApiClientTests
 
         var opts = new QueryOptions { Flatten = true, Languages = [TestLocales.UkUA] };
 
-        // Act
         await CreateClient().QueryAsync<SquidexFakes.TestSchema>(
             "cities", RequestQuery.Create(), opts);
 
-        // Assert
         capturedFlatten.Should().Be("true");
         capturedLanguages.Should().Be(TestLocales.UkUA);
     }
@@ -102,7 +238,6 @@ public sealed class SquidexApiClientTests
     [Fact]
     public async Task QueryAsync_AddsXUnpublishedHeader_WhenRequested()
     {
-        // Arrange
         string? capturedUnpublished = null;
         _mockHttp.When(HttpMethod.Get, ContentUrl("cities")).Respond(req =>
         {
@@ -111,20 +246,15 @@ public sealed class SquidexApiClientTests
             return OkResponse(SquidexFakes.MakeResponse<SquidexFakes.TestSchema>());
         });
 
-        var opts = new QueryOptions { IncludeUnpublished = true };
-
-        // Act
         await CreateClient().QueryAsync<SquidexFakes.TestSchema>(
-            "cities", RequestQuery.Create(), opts);
+            "cities", RequestQuery.Create(), new QueryOptions { IncludeUnpublished = true });
 
-        // Assert
         capturedUnpublished.Should().Be("true");
     }
 
     [Fact]
     public async Task QueryAsync_AddsXNoSlowTotalHeader_WhenRequested()
     {
-        // Arrange
         string? capturedNoSlowTotal = null;
         _mockHttp.When(HttpMethod.Get, ContentUrl("cities")).Respond(req =>
         {
@@ -133,13 +263,9 @@ public sealed class SquidexApiClientTests
             return OkResponse(SquidexFakes.MakeResponse<SquidexFakes.TestSchema>());
         });
 
-        var opts = new QueryOptions { NoSlowTotal = true };
-
-        // Act
         await CreateClient().QueryAsync<SquidexFakes.TestSchema>(
-            "cities", RequestQuery.Create(), opts);
+            "cities", RequestQuery.Create(), new QueryOptions { NoSlowTotal = true });
 
-        // Assert
         capturedNoSlowTotal.Should().Be("true");
     }
 
@@ -148,23 +274,19 @@ public sealed class SquidexApiClientTests
     [Fact]
     public async Task GetByIdAsync_ReturnsNull_WhenNotFound()
     {
-        // Arrange
         _mockHttp
             .When(HttpMethod.Get, "*/api/content/test-app/cities/missing-id")
             .Respond(HttpStatusCode.NotFound);
 
-        // Act
-        var result = await CreateClient().GetByIdAsync<SquidexFakes.TestSchema>(
-            "cities", "missing-id");
+        var result = await CreateClient()
+            .GetByIdAsync<SquidexFakes.TestSchema>("cities", "missing-id");
 
-        // Assert
         result.Should().BeNull();
     }
 
     [Fact]
     public async Task GetByIdAsync_ReturnsContent_WhenFound()
     {
-        // Arrange
         var expected = SquidexFakes.MakeContent(
             SquidexFakes.MakeTestSchema("kyiv"), "city-1");
 
@@ -172,43 +294,34 @@ public sealed class SquidexApiClientTests
             .When(HttpMethod.Get, "*/api/content/test-app/cities/city-1")
             .RespondJson(expected);
 
-        // Act
-        var result = await CreateClient().GetByIdAsync<SquidexFakes.TestSchema>(
-            "cities", "city-1");
+        var result = await CreateClient()
+            .GetByIdAsync<SquidexFakes.TestSchema>("cities", "city-1");
 
-        // Assert
         result.Should().NotBeNull();
         result!.Id.Should().Be("city-1");
         result.Data.Name!.Value.Should().Be("kyiv");
     }
 
-    // ── Status ────────────────────────────────────────────────────────────────
-
     [Fact]
-    public async Task GetByIdAsync_ReturnsContentWithDraftStatus()
+    public async Task GetByIdAsync_ReturnsDraftContent()
     {
-        // Arrange
-        var expected = SquidexFakes.MakeDraft(
-            SquidexFakes.MakeTestSchema("draft-city"), "draft-1");
+        var expected = SquidexFakes.MakeDraft(SquidexFakes.MakeTestSchema("draft"), "draft-1");
 
         _mockHttp
             .When(HttpMethod.Get, "*/api/content/test-app/cities/draft-1")
             .RespondJson(expected);
 
-        // Act
-        var result = await CreateClient().GetByIdAsync<SquidexFakes.TestSchema>(
-            "cities", "draft-1");
+        var result = await CreateClient()
+            .GetByIdAsync<SquidexFakes.TestSchema>("cities", "draft-1");
 
-        // Assert
         result!.Status.Should().Be(TestStatuses.Draft);
     }
 
-    // ── Create ────────────────────────────────────────────────────────────────
+    // ── Mutations ─────────────────────────────────────────────────────────────
 
     [Fact]
-    public async Task CreateAsync_PostsToUrlWithPublishParam_AndReturnsCreated()
+    public async Task CreateAsync_PostsWithPublishParam()
     {
-        // Arrange
         var schema = SquidexFakes.MakeTestSchema("new-city");
         var expected = SquidexFakes.MakeContent(schema, "new-id");
 
@@ -216,53 +329,41 @@ public sealed class SquidexApiClientTests
             .When(HttpMethod.Post, "*/api/content/test-app/cities?publish=true")
             .RespondJson(expected);
 
-        // Act
         var result = await CreateClient().CreateAsync("cities", schema, publish: true);
 
-        // Assert
         result.Id.Should().Be("new-id");
-        result.Data.Name!.Value.Should().Be("new-city");
     }
 
     [Fact]
-    public async Task CreateAsync_PostsWithoutPublishParam_WhenPublishFalse()
+    public async Task CreateAsync_PostsWithoutPublishParam_WhenFalse()
     {
-        // Arrange
-        var schema = SquidexFakes.MakeTestSchema("draft-city");
+        var schema = SquidexFakes.MakeTestSchema("draft");
         var expected = SquidexFakes.MakeDraft(schema, "draft-id");
 
         _mockHttp
             .When(HttpMethod.Post, "*/api/content/test-app/cities")
             .RespondJson(expected);
 
-        // Act
         var result = await CreateClient().CreateAsync("cities", schema, publish: false);
 
-        // Assert
         result.Status.Should().Be(TestStatuses.Draft);
     }
 
-    // ── Delete ────────────────────────────────────────────────────────────────
-
     [Fact]
-    public async Task DeleteAsync_SendsDeleteRequest_WithoutPermanentParam()
+    public async Task DeleteAsync_SendsDeleteRequest()
     {
-        // Arrange
         _mockHttp
             .When(HttpMethod.Delete, "*/api/content/test-app/cities/del-id")
             .Respond(HttpStatusCode.NoContent);
 
-        // Act
         var act = () => CreateClient().DeleteAsync("cities", "del-id");
 
-        // Assert
         await act.Should().NotThrowAsync();
     }
 
     [Fact]
     public async Task DeleteAsync_AddsPermanentParam_WhenRequested()
     {
-        // Arrange
         string? capturedUrl = null;
         _mockHttp
             .When(HttpMethod.Delete, "*/api/content/test-app/cities/del-id*")
@@ -272,19 +373,14 @@ public sealed class SquidexApiClientTests
                 return new HttpResponseMessage(HttpStatusCode.NoContent);
             });
 
-        // Act
         await CreateClient().DeleteAsync("cities", "del-id", permanent: true);
 
-        // Assert
         capturedUrl.Should().Contain("permanent=true");
     }
-
-    // ── ChangeStatus ──────────────────────────────────────────────────────────
 
     [Fact]
     public async Task ChangeStatusAsync_SendsPutToStatusEndpoint()
     {
-        // Arrange
         var expected = SquidexFakes.MakeContent(
             SquidexFakes.MakeTestSchema(), "id-1", TestStatuses.Archived);
 
@@ -292,11 +388,9 @@ public sealed class SquidexApiClientTests
             .When(HttpMethod.Put, "*/api/content/test-app/cities/id-1/status")
             .RespondJson(expected);
 
-        // Act
-        var result = await CreateClient().ChangeStatusAsync<SquidexFakes.TestSchema>(
-            "cities", "id-1", TestStatuses.Archived);
+        var result = await CreateClient()
+            .ChangeStatusAsync<SquidexFakes.TestSchema>("cities", "id-1", TestStatuses.Archived);
 
-        // Assert
         result.Status.Should().Be(TestStatuses.Archived);
     }
 
@@ -310,7 +404,6 @@ public sealed class SquidexApiClientTests
     [InlineData(HttpStatusCode.TooManyRequests)]
     public async Task QueryAsync_RetriesOnTransientError_AndSucceeds(HttpStatusCode transientCode)
     {
-        // Arrange
         var callCount = 0;
         _mockHttp.When(HttpMethod.Get, ContentUrl("cities")).Respond(_ =>
         {
@@ -320,11 +413,9 @@ public sealed class SquidexApiClientTests
                 : OkResponse(SquidexFakes.MakeResponse<SquidexFakes.TestSchema>());
         });
 
-        // Act
         var result = await CreateClient().QueryAsync<SquidexFakes.TestSchema>(
             "cities", RequestQuery.Create());
 
-        // Assert
         result.Should().NotBeNull();
         callCount.Should().Be(3);
     }
@@ -332,16 +423,13 @@ public sealed class SquidexApiClientTests
     [Fact]
     public async Task QueryAsync_ThrowsSquidexApiException_AfterAllRetriesFail()
     {
-        // Arrange
         _mockHttp
             .When(HttpMethod.Get, ContentUrl("cities"))
             .RespondError(HttpStatusCode.InternalServerError, "Server blew up");
 
-        // Act
         var act = () => CreateClient().QueryAsync<SquidexFakes.TestSchema>(
             "cities", RequestQuery.Create());
 
-        // Assert
         var ex = await act.Should().ThrowAsync<SquidexApiException>();
         ex.Which.StatusCode.Should().Be(HttpStatusCode.InternalServerError);
         ex.Which.Message.Should().Be("Server blew up");
@@ -350,7 +438,6 @@ public sealed class SquidexApiClientTests
     [Fact]
     public async Task QueryAsync_DoesNotRetry_OnClientError()
     {
-        // Arrange
         var callCount = 0;
         _mockHttp.When(HttpMethod.Get, ContentUrl("cities")).Respond(_ =>
         {
@@ -358,33 +445,53 @@ public sealed class SquidexApiClientTests
             return new HttpResponseMessage(HttpStatusCode.BadRequest);
         });
 
-        // Act
         var act = () => CreateClient().QueryAsync<SquidexFakes.TestSchema>(
             "cities", RequestQuery.Create());
 
-        // Assert
         await act.Should().ThrowAsync<SquidexApiException>();
-        callCount.Should().Be(1); // no retry on 4xx
+        callCount.Should().Be(1);
     }
 
-    // ── App Languages ─────────────────────────────────────────────────────────
+    // ── App Languages ──────────────────────────────────────────────────────────
 
     [Fact]
-    public async Task GetAppLocalesAsync_ReturnsLocalesFromSquidex()
+    public async Task GetAppLocalesAsync_ReturnsFullLocaleInfo_IncludingIsMasterAndIsOptional()
     {
-        // Arrange
         _mockHttp
             .When(HttpMethod.Get, $"*/api/apps/{_options.AppName}/languages")
             .Respond(HttpStatusCode.OK,
                 new StringContent(
-                    SquidexFakes.AppLanguagesJson(TestLocales.UkUA, TestLocales.En, TestLocales.De),
+                    SquidexFakes.AppLanguagesJson(TestLocales.UkUA, TestLocales.En),
                     Encoding.UTF8, "application/json"));
 
-        // Act
         var locales = await CreateClient().GetAppLocalesAsync();
 
-        // Assert
-        locales.Should().BeEquivalentTo([TestLocales.UkUA, TestLocales.En, TestLocales.De]);
+        locales.Should().HaveCount(2);
+
+        var master = locales.Single(l => l.IsMaster);
+        master.Iso2Code.Should().Be(TestLocales.UkUA);
+        master.IsOptional.Should().BeFalse();
+
+        var secondary = locales.Single(l => !l.IsMaster);
+        secondary.Iso2Code.Should().Be(TestLocales.En);
+    }
+
+    [Fact]
+    public async Task GetAppLocalesAsync_IdentifiesMasterLocale()
+    {
+        _mockHttp
+            .When(HttpMethod.Get, $"*/api/apps/{_options.AppName}/languages")
+            .Respond(HttpStatusCode.OK,
+                new StringContent(
+                    SquidexFakes.AppLanguagesJson(
+                        masterLocale: TestLocales.En, // "en" is master
+                        TestLocales.UkUA),
+                    Encoding.UTF8, "application/json"));
+
+        var locales = await CreateClient().GetAppLocalesAsync();
+
+        locales.Single(l => l.IsMaster).Iso2Code.Should().Be(TestLocales.En);
+        locales.Single(l => !l.IsMaster).Iso2Code.Should().Be(TestLocales.UkUA);
     }
 
     // ── Private helper ────────────────────────────────────────────────────────

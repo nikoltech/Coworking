@@ -8,7 +8,7 @@ using Coworking.External.Squidex.Repository;
 namespace Coworking.Infrastructure.External.Squidex.Schemas.City;
 
 public sealed class CityRepository(SquidexApiClient client, SquidexPaginator paginator)
-    : SquidexRepository<CitySchema>(client, paginator, "city"), ICityRepository
+    : SquidexRepository<CitySchema>(client, paginator, CitySchema.SchemaName), ICityRepository
 {
     public async Task<ContentDto<CitySchema>?> GetByTitleAsync(
         string title, CancellationToken ct = default)
