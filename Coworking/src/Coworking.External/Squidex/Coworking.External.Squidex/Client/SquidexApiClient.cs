@@ -1,5 +1,4 @@
 ﻿using Coworking.External.Squidex.Abstractions.Models;
-using Coworking.External.Squidex.Abstractions.Repository;
 using Coworking.External.Squidex.Auth;
 using Coworking.External.Squidex.Exceptions;
 using Coworking.External.Squidex.Localization;
@@ -7,16 +6,12 @@ using Coworking.External.Squidex.Options;
 using System.Diagnostics;
 using System.Net;
 using System.Net.Http.Json;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace Coworking.External.Squidex.Client;
 
-/// <summary>
-/// Low-level Squidex REST client.
-/// Handles HTTP operations, headers, serialization and transient retries.
-/// Auth is handled by SquidexAuthHandler in the HTTP pipeline.
-/// </summary>
 public sealed class SquidexApiClient : ISquidexApiClient
 {
     private readonly HttpClient _http;
@@ -24,13 +19,20 @@ public sealed class SquidexApiClient : ISquidexApiClient
     private readonly string _clientName;
     private readonly SquidexLocaleProvider _locales;
 
+    /// <summary>
+    /// Safe batch size for IDs query.
+    /// URL length = base URL (~60) + path (~50) + each GUID with comma (~37).
+    /// At 8192 char URL limit: ~210 IDs max. Using 80 is conservative and safe.
+    /// </summary>
+    private const int IdsBatchSize = 80;
+
     private static readonly JsonSerializerOptions Json = new()
     {
         PropertyNameCaseInsensitive = true,
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
     };
 
-    public SquidexApiClient(
+    internal SquidexApiClient(
         HttpClient http,
         SquidexOptions options,
         string clientName,
@@ -42,7 +44,7 @@ public sealed class SquidexApiClient : ISquidexApiClient
         _locales = locales;
     }
 
-    // ── Content ──────────────────────────────────────────────────────────────
+    // ── JSON query (q= param) ─────────────────────────────────────────────────
 
     public Task<ResponseSchema<T>> QueryAsync<T>(
         string schema,
@@ -52,11 +54,63 @@ public sealed class SquidexApiClient : ISquidexApiClient
     {
         var request = BuildRequest(
             HttpMethod.Get,
-            $"{ContentUrl(schema)}?{ToQueryString(query)}",
+            $"{ContentUrl(schema)}?{ToJsonQueryString(query)}",
             queryOptions);
 
         return SendAndDeserializeAsync<ResponseSchema<T>>(request, ct);
     }
+
+    // ── OData query ($filter, $orderby, etc.) ────────────────────────────────
+
+    public Task<ResponseSchema<T>> QueryODataAsync<T>(
+        string schema,
+        ODataQuery query,
+        QueryOptions? queryOptions = null,
+        CancellationToken ct = default)
+    {
+        var request = BuildRequest(
+            HttpMethod.Get,
+            $"{ContentUrl(schema)}?{ToODataQueryString(query)}",
+            queryOptions);
+
+        return SendAndDeserializeAsync<ResponseSchema<T>>(request, ct);
+    }
+
+    // ── POST query (body) ─────────────────────────────────────────────────────
+
+    public Task<ResponseSchema<T>> QueryPostAsync<T>(
+        string schema,
+        RequestQuery query,
+        QueryOptions? queryOptions = null,
+        CancellationToken ct = default)
+    {
+        var request = BuildRequest(HttpMethod.Post, $"{ContentUrl(schema)}/query", queryOptions);
+        request.Content = JsonContent.Create(
+            new PostQueryBody(query), options: Json);
+
+        return SendAndDeserializeAsync<ResponseSchema<T>>(request, ct);
+    }
+
+    // ── IDs query (batched) ───────────────────────────────────────────────────
+
+    public async Task<ResponseSchema<T>> GetByIdsAsync<T>(
+        string schema,
+        IEnumerable<string> ids,
+        QueryOptions? queryOptions = null,
+        CancellationToken ct = default)
+    {
+        var batches = ids.Chunk(IdsBatchSize);
+
+        var tasks = batches.Select(batch =>
+            QueryByIdsBatchAsync<T>(schema, batch, queryOptions, ct));
+
+        var results = await Task.WhenAll(tasks);
+        var allItems = results.SelectMany(r => r.Items).ToList();
+
+        return new ResponseSchema<T>(allItems.Count, allItems);
+    }
+
+    // ── Single item ───────────────────────────────────────────────────────────
 
     public async Task<ContentDto<T>?> GetByIdAsync<T>(
         string schema,
@@ -73,6 +127,8 @@ public sealed class SquidexApiClient : ISquidexApiClient
         await response.EnsureSquidexSuccessAsync(ct);
         return await response.Content.ReadFromJsonAsync<ContentDto<T>>(Json, ct);
     }
+
+    // ── Mutations ────────────────────────────────────────────────────────────
 
     public Task<ContentDto<T>> CreateAsync<T>(
         string schema, T data, bool publish = true, CancellationToken ct = default)
@@ -157,15 +213,23 @@ public sealed class SquidexApiClient : ISquidexApiClient
         throw new UnreachableException();
     }
 
-    private static bool IsTransient(HttpStatusCode code) => code is
-        HttpStatusCode.RequestTimeout or
-        HttpStatusCode.TooManyRequests or
-        HttpStatusCode.InternalServerError or
-        HttpStatusCode.BadGateway or
-        HttpStatusCode.ServiceUnavailable or
-        HttpStatusCode.GatewayTimeout;
-
     // ── Private ──────────────────────────────────────────────────────────────
+
+    private Task<ResponseSchema<T>> QueryByIdsBatchAsync<T>(
+        string schema,
+        string[] batch,
+        QueryOptions? queryOptions,
+        CancellationToken ct)
+    {
+        // IDs query overrides all other parameters — passed as comma-separated
+        var ids = string.Join(",", batch);
+        var request = BuildRequest(
+            HttpMethod.Get,
+            $"{ContentUrl(schema)}?ids={Uri.EscapeDataString(ids)}",
+            queryOptions);
+
+        return SendAndDeserializeAsync<ResponseSchema<T>>(request, ct);
+    }
 
     private async Task<T> SendAndDeserializeAsync<T>(
         HttpRequestMessage request, CancellationToken ct)
@@ -198,15 +262,12 @@ public sealed class SquidexApiClient : ISquidexApiClient
 
         if (opts.Flatten)
         {
-            // Flatten to scalar — schema DTO must use plain C# types
             request.Headers.Add("X-Flatten", "true");
-
             var languages = opts.Languages ?? [_locales.DefaultLocale];
             request.Headers.Add("X-Languages", string.Join(",", languages));
         }
         else
         {
-            // Return only requested locales — avoids pulling all locales per field
             var languages = opts.Languages ?? _locales.SupportedLocales;
             if (languages.Count > 0)
                 request.Headers.Add("X-Languages", string.Join(",", languages));
@@ -215,7 +276,11 @@ public sealed class SquidexApiClient : ISquidexApiClient
         return request;
     }
 
-    private static string ToQueryString(RequestQuery query)
+    /// <summary>
+    /// JSON query: dot separator (data.Title.iv).
+    /// Serialized as JSON, URL-encoded, passed as ?q=.
+    /// </summary>
+    private static string ToJsonQueryString(RequestQuery query)
     {
         var json = JsonSerializer.Serialize(query, new JsonSerializerOptions
         {
@@ -224,8 +289,33 @@ public sealed class SquidexApiClient : ISquidexApiClient
         return "q=" + Uri.EscapeDataString(json);
     }
 
+    /// <summary>
+    /// OData query: slash separator (data/Title/iv).
+    /// Each option is a separate $param.
+    /// </summary>
+    private static string ToODataQueryString(ODataQuery query)
+    {
+        var sb = new StringBuilder();
+
+        if (query.Top.HasValue) sb.Append($"$top={query.Top}&");
+        if (query.Skip > 0) sb.Append($"$skip={query.Skip}&");
+        if (query.Filter is not null) sb.Append($"$filter={Uri.EscapeDataString(query.Filter)}&");
+        if (query.OrderBy is not null) sb.Append($"$orderby={Uri.EscapeDataString(query.OrderBy)}&");
+        if (query.Search is not null) sb.Append($"$search={Uri.EscapeDataString(query.Search)}&");
+
+        return sb.ToString().TrimEnd('&');
+    }
+
     private string ContentUrl(string schema) =>
         $"{_options.BaseUrl.TrimEnd('/')}/api/content/{_options.AppName}/{schema}";
+
+    private static bool IsTransient(HttpStatusCode code) => code is
+        HttpStatusCode.RequestTimeout or
+        HttpStatusCode.TooManyRequests or
+        HttpStatusCode.InternalServerError or
+        HttpStatusCode.BadGateway or
+        HttpStatusCode.ServiceUnavailable or
+        HttpStatusCode.GatewayTimeout;
 
     private static async Task<HttpRequestMessage> CloneAsync(
         HttpRequestMessage source, CancellationToken ct)
@@ -251,6 +341,9 @@ public sealed class SquidexApiClient : ISquidexApiClient
     }
 
     // ── Response types ────────────────────────────────────────────────────────
+
+    private sealed record PostQueryBody(
+        [property: JsonPropertyName("q")] RequestQuery Query);
 
     private sealed record AppLanguagesResponse(
         [property: JsonPropertyName("items")] List<AppLanguage> Items);

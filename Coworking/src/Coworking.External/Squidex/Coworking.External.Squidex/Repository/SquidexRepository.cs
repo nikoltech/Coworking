@@ -1,14 +1,8 @@
 ﻿using Coworking.External.Squidex.Abstractions.Models;
 using Coworking.External.Squidex.Abstractions.Repository;
-using Coworking.External.Squidex.Client;
-using Coworking.External.Squidex.Pagination;
 
 namespace Coworking.External.Squidex.Repository;
 
-/// <summary>
-/// Base Squidex repository. Schema name is fixed per instance.
-/// Inherit to add schema-specific query methods.
-/// </summary>
 public class SquidexRepository<T>(
     ISquidexApiClient client,
     ISquidexPaginator paginator,
@@ -20,21 +14,33 @@ public class SquidexRepository<T>(
     private readonly ISquidexPaginator _paginator = paginator;
 
     public Task<ResponseSchema<T>> QueryAsync(
-        RequestQuery query,
-        QueryOptions? queryOptions = null,
+        RequestQuery query, QueryOptions? queryOptions = null,
         CancellationToken ct = default) =>
         Client.QueryAsync<T>(Schema, query, queryOptions, ct);
 
+    public Task<ResponseSchema<T>> QueryODataAsync(
+        ODataQuery query, QueryOptions? queryOptions = null,
+        CancellationToken ct = default) =>
+        Client.QueryODataAsync<T>(Schema, query, queryOptions, ct);
+
+    public Task<ResponseSchema<T>> QueryPostAsync(
+        RequestQuery query, QueryOptions? queryOptions = null,
+        CancellationToken ct = default) =>
+        Client.QueryPostAsync<T>(Schema, query, queryOptions, ct);
+
     public Task<ResponseSchema<T>> GetAllAsync(
-        RequestQuery? query = null,
-        QueryOptions? queryOptions = null,
+        RequestQuery? query = null, QueryOptions? queryOptions = null,
         CancellationToken ct = default) =>
         _paginator.FetchAllAsync<T>(
             Schema, Client, query ?? RequestQuery.Create(), queryOptions, ct);
 
+    public Task<ResponseSchema<T>> GetByIdsAsync(
+        IEnumerable<string> ids, QueryOptions? queryOptions = null,
+        CancellationToken ct = default) =>
+        Client.GetByIdsAsync<T>(Schema, ids, queryOptions, ct);
+
     public Task<ContentDto<T>?> GetByIdAsync(
-        string id,
-        QueryOptions? queryOptions = null,
+        string id, QueryOptions? queryOptions = null,
         CancellationToken ct = default) =>
         Client.GetByIdAsync<T>(Schema, id, queryOptions, ct);
 
@@ -55,8 +61,7 @@ public class SquidexRepository<T>(
         Client.DeleteAsync(Schema, id, permanent, ct);
 
     public async Task<bool> ExistsAsync(
-        object filter,
-        bool includeUnpublished = false,
+        object filter, bool includeUnpublished = false,
         CancellationToken ct = default)
     {
         var result = await Client.QueryAsync<T>(

@@ -1,6 +1,4 @@
-﻿using Coworking.External.Squidex.Abstractions.Repository;
-using Coworking.External.Squidex.Client;
-using Coworking.External.Squidex.Options;
+﻿using Coworking.External.Squidex.Options;
 using Microsoft.Extensions.Options;
 
 namespace Coworking.External.Squidex.Localization;

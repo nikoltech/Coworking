@@ -1,5 +1,4 @@
-﻿using Coworking.External.Squidex.Abstractions.Repository;
-using Coworking.External.Squidex.Auth;
+﻿using Coworking.External.Squidex.Auth;
 using Coworking.External.Squidex.Client;
 using Coworking.External.Squidex.Localization;
 using Coworking.External.Squidex.Options;
