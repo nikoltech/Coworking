@@ -11,7 +11,7 @@ public sealed record SquidexOptions
     [Required] public string AppName { get; init; } = string.Empty;
 
     public int MaxPageSize { get; init; } = 200;
-    public string DefaultLocale { get; init; } = SquidexLocales.UkUA;
+    public string DefaultLocale { get; init; } = SquidexLocales.En;
 
     /// <summary>
     /// Locales to request via X-Languages header.

@@ -1,4 +1,4 @@
-﻿using Coworking.API.Mappings;
+﻿using Coworking.API.Infrastructure.Swagger;
 
 namespace Coworking.API.Infrastructure.Extensions
 {
@@ -6,10 +6,12 @@ namespace Coworking.API.Infrastructure.Extensions
     {
         internal static void AddApiServices(this IServiceCollection services)
         {
+            services.AddSwagger();
             services.AddAutoMapper(cfg =>
             {
                 cfg.AddMaps(typeof(DependencyInjection).Assembly);
             });
+
         }
     }
 }

@@ -1,4 +1,4 @@
-namespace Coworking.Application.Abstractions.HttpContext.Models;
+namespace Coworking.Application.Abstractions.Accessors.User.Models;
 
 public class ContextUserDto
 {

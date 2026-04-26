@@ -1,4 +1,6 @@
-﻿namespace Coworking.Application.Ports.Squidex.Schemas.Email;
+﻿using Coworking.External.Squidex.Abstractions.Filters;
+
+namespace Coworking.Application.Ports.Squidex.Schemas.Email;
 
 /// <summary>
 /// OData filter path constants for EmailSchema.
@@ -6,8 +8,12 @@
 /// </summary>
 public static class EmailPaths
 {
-    private const string Root = "data";
+    public static readonly string Name = SquidexPaths.Iv("Name");
+    public static readonly string Value = SquidexPaths.Iv("Value");
 
-    public const string Name = $"{Root}.Name.iv";
-    public const string Value = $"{Root}.Value.iv";
+    public static class OData
+    {
+        public static readonly string Name = SquidexPaths.ODataIv("Name");
+        public static readonly string Value = SquidexPaths.ODataIv("Value");
+    }
 }

@@ -1,13 +1,16 @@
 ﻿using Coworking.Infrastructure.Services.Email.Messaging.Dtos;
 using Coworking.Infrastructure.Services.Email.Messaging.Interfaces;
+using Coworking.Infrastructure.Services.Email.Options;
+using Microsoft.Extensions.Options;
 using System.Threading.Channels;
 
 namespace Coworking.Infrastructure.Services.Email.Messaging;
 
-public sealed class EmailChannel : IEmailChannel
+public sealed class EmailChannel(IOptions<SmtpOptions> options) : IEmailChannel
 {
     private readonly Channel<EmailMessageChannelDto> _channel =
-        Channel.CreateBounded<EmailMessageChannelDto>(new BoundedChannelOptions(1000)
+        Channel.CreateBounded<EmailMessageChannelDto>(
+            new BoundedChannelOptions(options.Value.ChannelCapacity)
         {
             FullMode = BoundedChannelFullMode.Wait,
             SingleReader = true,

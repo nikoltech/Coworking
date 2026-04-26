@@ -25,9 +25,7 @@ public sealed class BookingsController(
     [ProducesResponseType(typeof(CreateBookingResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status422UnprocessableEntity)]
-    public async Task<ActionResult<CreateBookingResponse>> Create(
-        [FromBody] CreateBookingRequest request,
-        CancellationToken ct)
+    public async Task<ActionResult<CreateBookingResponse>> Create([FromBody] CreateBookingRequest request, CancellationToken ct)
     {
         var command = mapper.Map<CreateBookingCommand>(request);
 
@@ -46,9 +44,7 @@ public sealed class BookingsController(
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
-    public async Task<IActionResult> Cancel(
-        [FromRoute] int id,
-        CancellationToken ct)
+    public async Task<IActionResult> Cancel([FromRoute] int id, CancellationToken ct)
     {
         await mediator.Send(new CancelBookingCommand(id), ct);
 

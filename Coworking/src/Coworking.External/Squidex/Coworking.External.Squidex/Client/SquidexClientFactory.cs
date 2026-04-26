@@ -1,8 +1,10 @@
-﻿using Coworking.External.Squidex.Auth;
-using Coworking.External.Squidex.Client;
+﻿using Coworking.External.Squidex.Abstractions.Repository;
+using Coworking.External.Squidex.Auth;
 using Coworking.External.Squidex.Localization;
 using Coworking.External.Squidex.Options;
 using Microsoft.Extensions.Options;
+
+namespace Coworking.External.Squidex.Client;
 
 public sealed class SquidexClientFactory(
     IHttpClientFactory httpClientFactory,

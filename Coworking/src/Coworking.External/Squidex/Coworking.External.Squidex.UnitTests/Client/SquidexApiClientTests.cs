@@ -25,7 +25,7 @@ public sealed class SquidexApiClientTests
     }
 
     private SquidexApiClient CreateClient() =>
-        new(_mockHttp.ToHttpClient(), _options, TestClientNames.Default, _locales);
+        new (_mockHttp.ToHttpClient(), _options, TestClientNames.Default, _locales);
 
     private string ContentUrl(string schema) =>
         $"*/api/content/{_options.AppName}/{schema}*";

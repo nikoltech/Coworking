@@ -1,5 +1,6 @@
 ﻿using Coworking.Application.Abstractions;
 using Coworking.Application.Abstractions.Email;
+using Coworking.Application.Abstractions.Languages;
 using Coworking.Application.Abstractions.Synchronization;
 using Coworking.Application.Behaviors.Performance;
 using Coworking.Application.Ports.Squidex.Schemas.City;
@@ -10,6 +11,7 @@ using Coworking.External.Squidex;
 using Coworking.External.Squidex.Client;
 using Coworking.Infrastructure.External.Squidex.Schemas.City;
 using Coworking.Infrastructure.External.Squidex.Schemas.Email;
+using Coworking.Infrastructure.Providers;
 using Coworking.Infrastructure.Repositories;
 using Coworking.Infrastructure.Services.Email.Messaging;
 using Coworking.Infrastructure.Services.Email.Messaging.Background;
@@ -33,6 +35,7 @@ public static class DependencyInjection
         services
             .AddOptions(configuration)
             .AddRepositories()
+            .AddServices()
             .AddDomainServices()
             .AddSynchronization()
             .AddEmailMessaging(configuration);
@@ -59,6 +62,13 @@ public static class DependencyInjection
         services
             .AddScoped<IBookingRepository, BookingRepository>()
             .AddScoped<ICoworkingRepository, CoworkingRepository>();
+
+        return services;
+    }
+
+    private static IServiceCollection AddServices(this IServiceCollection services)
+    {
+        services.AddScoped<ILanguageProvider, LanguageProvider>();
 
         return services;
     }

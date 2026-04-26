@@ -18,7 +18,7 @@ public sealed class SquidexAuthHandlerTests
         {
             InnerHandler = mockBackend
         };
-        return new HttpClient(handler) { BaseAddress = new Uri("https://cloud.squidex.io") };
+        return new HttpClient(handler) { BaseAddress = new Uri("https://fake.cloud.squidex.io") };
     }
 
     private HttpRequestMessage MakeRequest(

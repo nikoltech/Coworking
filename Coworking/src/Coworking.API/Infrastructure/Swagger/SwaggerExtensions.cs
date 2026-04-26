@@ -2,7 +2,7 @@
 
 internal static class SwaggerExtensions
 {
-    internal static IServiceCollection AddCustomizedSwagger(this IServiceCollection services)
+    internal static IServiceCollection AddSwagger(this IServiceCollection services)
     {
         services.AddSwaggerGen(c =>
         {
@@ -16,7 +16,6 @@ internal static class SwaggerExtensions
             // show enums as strings (very important for the frontend)
             c.UseInlineDefinitionsForEnums();
 
-            // enable annotations
             c.EnableAnnotations();
         });
 

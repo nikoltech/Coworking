@@ -1,4 +1,5 @@
 ﻿using Coworking.External.Squidex.Abstractions.Models;
+using Coworking.External.Squidex.Abstractions.Repository;
 using Coworking.External.Squidex.Auth;
 using Coworking.External.Squidex.Exceptions;
 using Coworking.External.Squidex.Localization;
@@ -32,7 +33,7 @@ public sealed class SquidexApiClient : ISquidexApiClient
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
     };
 
-    internal SquidexApiClient(
+    public SquidexApiClient(
         HttpClient http,
         SquidexOptions options,
         string clientName,
@@ -349,5 +350,8 @@ public sealed class SquidexApiClient : ISquidexApiClient
         [property: JsonPropertyName("items")] List<AppLanguage> Items);
 
     private sealed record AppLanguage(
-        [property: JsonPropertyName("iso2Code")] string Iso2Code);
+        [property: JsonPropertyName("iso2Code")] string Iso2Code,
+        [property: JsonPropertyName("isMaster")] bool IsMaster,
+        [property: JsonPropertyName("isOptional")] bool IsOptional
+        );
 }

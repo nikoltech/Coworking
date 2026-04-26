@@ -1,5 +1,7 @@
 ﻿using Coworking.External.Squidex.Abstractions.Models;
 
+namespace Coworking.External.Squidex.Abstractions.Repository;
+
 public interface ISquidexApiClient
 {
     /// <summary>Query via JSON (q= param). Default and recommended.</summary>

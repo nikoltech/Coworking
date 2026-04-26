@@ -18,8 +18,7 @@ public sealed class CoworkingsController(
     [HttpGet]
     [EnableRateLimiting("read-heavy")]
     [ProducesResponseType(typeof(IReadOnlyList<CoworkingDto>), StatusCodes.Status200OK)]
-    public async Task<ActionResult<IReadOnlyList<CoworkingDto>>> Get(
-        CancellationToken ct)
+    public async Task<ActionResult<IReadOnlyList<CoworkingDto>>> Get(CancellationToken ct)
     {
         var result = await mediator.Send(new GetCoworkingsQuery(), ct);
 

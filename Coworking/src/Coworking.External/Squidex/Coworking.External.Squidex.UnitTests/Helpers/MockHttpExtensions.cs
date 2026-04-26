@@ -10,7 +10,7 @@ internal static class MockHttpExtensions
 {
     public static HttpClient ToHttpClient(
         this MockHttpMessageHandler handler,
-        string baseUrl = "https://cloud.squidex.io") =>
+        string baseUrl = "https://fake.cloud.squidex.io") =>
         new(handler) { BaseAddress = new Uri(baseUrl) };
 
     public static MockedRequest RespondJson<T>(

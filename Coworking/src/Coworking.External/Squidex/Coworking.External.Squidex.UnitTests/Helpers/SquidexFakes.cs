@@ -12,7 +12,7 @@ internal static class SquidexFakes
     // ── Options ──────────────────────────────────────────────────────────────
 
     public static SquidexOptions DefaultOptions(
-        string baseUrl = "https://cloud.squidex.io",
+        string baseUrl = "https://fake.cloud.squidex.io",
         string appName = "test-app") =>
         new()
         {

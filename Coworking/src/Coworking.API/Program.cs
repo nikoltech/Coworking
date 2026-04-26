@@ -1,7 +1,9 @@
 using Coworking.API;
 using Coworking.API.Infrastructure.Extensions;
+using Coworking.API.Infrastructure.Extensions.Initialization;
+using Coworking.API.Infrastructure.Extensions.Security;
+using Coworking.API.Infrastructure.RateLimiting;
 using Coworking.Application;
-using Coworking.External.Squidex.Localization;
 using Coworking.Infrastructure;
 using Coworking.Infrastructure.Persistence;
 
@@ -9,43 +11,49 @@ var builder = WebApplication.CreateBuilder(args);
 
 var config = builder.Configuration;
 
-// API layer
-builder.Services.AddApi(config);
 
 // Core layers
 builder.Services.AddApplication();
 builder.Services.AddPersistence(config);
 builder.Services.AddInfrastructure(config);
 
-// OpenAPI (modern Swagger replacement in .NET 10)
-builder.Services.AddOpenApi();
+// API layer
+builder.Services.ConfigureApi(config);
 
+// Build
 var app = builder.Build();
 
-// Initialize Squidex locales once before serving requests
-await app.Services
-    .GetRequiredService<SquidexLocaleProvider>()
-    .InitializeAsync(
-        app.Services.GetRequiredService<SquidexClientFactory>().Create(),
-        app.Lifetime.ApplicationStopping);
+await app.InitializeApplicationAsync();
 
-// Global error handling
+app.UseForwardedHeaders();
+
 app.UseExceptionHandler();
 app.UseStatusCodePages();
 
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
+    app.UseSwagger();
+    app.UseSwaggerUI();
 }
 
 app.UseHttpsRedirection();
-
 app.UseCors(CorsExtensions.DefaultCorsPolicyName);
 
 app.UseRateLimiter();
 
 app.UseAuthorization();
-
 app.MapControllers();
 
 app.Run();
+
+
+
+//app.MapGet("/check-my-ip", (HttpContext context) =>
+//{
+//    return Results.Ok(new
+//    {
+//        RemoteIp = context.Connection.RemoteIpAddress?.ToString(),
+//        CF_Ip = context.Request.Headers["CF-Connecting-IP"].ToString(),
+//        ForwardedFor = context.Request.Headers["X-Forwarded-For"].ToString()
+//    });
+//});

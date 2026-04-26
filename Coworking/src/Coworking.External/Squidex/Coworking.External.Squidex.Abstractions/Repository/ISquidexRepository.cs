@@ -1,5 +1,7 @@
 ﻿using Coworking.External.Squidex.Abstractions.Models;
 
+namespace Coworking.External.Squidex.Abstractions.Repository;
+
 public interface ISquidexRepository<T> where T : class
 {
     Task<ResponseSchema<T>> QueryAsync(

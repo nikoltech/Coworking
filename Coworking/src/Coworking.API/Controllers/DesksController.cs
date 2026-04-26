@@ -45,7 +45,7 @@ public sealed class DesksController(
         var query = mapper.Map<GetDeskAvailabilityQuery>(
             new GetDeskAvailabilityRequest(deskId, date));
 
-        var result = await mediator.Send(query, ct); // TODO: mannualy see controllers. finish configuration of API layer.
+        var result = await mediator.Send(query, ct);
 
         return Ok(mapper.Map<DeskAvailabilityResponse>(result));
     }

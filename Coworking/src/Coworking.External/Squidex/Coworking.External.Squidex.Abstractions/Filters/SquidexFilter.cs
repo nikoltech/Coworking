@@ -1,6 +1,4 @@
-﻿using System.Text.Json.Serialization;
-
-namespace Coworking.External.Squidex.Abstractions.Filters;
+﻿namespace Coworking.External.Squidex.Abstractions.Filters;
 
 /// <summary>
 /// Builds Squidex filter objects without string operation literals.
