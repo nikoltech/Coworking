@@ -8,7 +8,7 @@ namespace Coworking.External.Squidex.Auth;
 /// On 401 — invalidates cached token and retries once.
 /// App name and client name are passed via HttpRequestMessage.Options.
 /// </summary>
-internal sealed class SquidexAuthHandler(SquidexTokenService tokenService) : DelegatingHandler
+public sealed class SquidexAuthHandler(SquidexTokenService tokenService) : DelegatingHandler
 {
     internal const string AppNameKey = "SquidexAppName";
     internal const string ClientNameKey = "SquidexClientName";

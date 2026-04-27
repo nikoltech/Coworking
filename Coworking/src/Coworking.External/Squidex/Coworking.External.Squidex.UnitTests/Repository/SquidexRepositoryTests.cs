@@ -2,6 +2,7 @@
 using Coworking.External.Squidex.Abstractions.Filters;
 using Coworking.External.Squidex.Abstractions.Models;
 using Coworking.External.Squidex.Abstractions.Repository;
+using Coworking.External.Squidex.Context;
 using Coworking.External.Squidex.Repository;
 using Coworking.External.Squidex.UnitTests.Helpers;
 using FluentAssertions;
@@ -14,7 +15,7 @@ public sealed class SquidexRepositoryTests
     private readonly ISquidexApiClient _client = Substitute.For<ISquidexApiClient>();
     private readonly ISquidexPaginator _paginator = Substitute.For<ISquidexPaginator>();
 
-    private SquidexRepository<SquidexFakes.TestSchema> CreateRepo(string schema = "test-schema") =>
+    private SquidexSet<SquidexFakes.TestSchema> CreateRepo(string schema = "test-schema") =>
         new(_client, _paginator, schema);
 
     [Fact]

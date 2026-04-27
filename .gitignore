@@ -234,3 +234,12 @@ _Pvt_Extensions
 
 # Editor directories and files
 .idea
+
+# secrets
+.env
+*.pfx
+*.pem
+*.key
+
+# docker
+docker-compose.override.yml

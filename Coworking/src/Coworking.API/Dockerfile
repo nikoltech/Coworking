@@ -1,30 +1,31 @@
-# See https://aka.ms/customizecontainer to learn how to customize your debug container and how Visual Studio uses this Dockerfile to build your images for faster debugging.
-
-# This stage is used when running from VS in fast mode (Default for Debug configuration)
-FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS base
+FROM mcr.microsoft.com/dotnet/aspnet:10.0-alpine AS base
 USER $APP_UID
 WORKDIR /app
 EXPOSE 8080
 EXPOSE 8081
 
-
-# This stage is used to build the service project
-FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0-alpine AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
-COPY ["Coworking/Coworking.csproj", "Coworking/"]
-RUN dotnet restore "./Coworking/Coworking.csproj"
-COPY . .
-WORKDIR "/src/Coworking"
-RUN dotnet build "./Coworking.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
-# This stage is used to publish the service project to be copied to the final stage
+COPY ["Coworking/src/Coworking.API/Coworking.API.csproj", "Coworking/src/Coworking.API/"]
+COPY ["Coworking/src/Coworking.Application/Coworking.Application.csproj", "Coworking/src/Coworking.Application/"]
+COPY ["Coworking/src/Coworking.Domain/Coworking.Domain.csproj", "Coworking/src/Coworking.Domain/"]
+COPY ["Coworking/src/Coworking.External/Squidex/Coworking.External.Squidex.Abstractions/Coworking.External.Squidex.Abstractions.csproj", "Coworking/src/Coworking.External/Squidex/Coworking.External.Squidex.Abstractions/"]
+COPY ["Coworking/src/Coworking.Infrastructure.Persistence/Coworking.Infrastructure.Persistence.csproj", "Coworking/src/Coworking.Infrastructure.Persistence/"]
+COPY ["Coworking/src/Coworking.Infrastructure/Coworking.Infrastructure.csproj", "Coworking/src/Coworking.Infrastructure/"]
+COPY ["Coworking/src/Coworking.External/Squidex/Coworking.External.Squidex/Coworking.External.Squidex.csproj", "Coworking/src/Coworking.External/Squidex/Coworking.External.Squidex/"]
+
+RUN dotnet restore "./Coworking/src/Coworking.API/Coworking.API.csproj"
+COPY . .
+WORKDIR "/src/Coworking/src/Coworking.API"
+RUN dotnet build "./Coworking.API.csproj" -c $BUILD_CONFIGURATION -o /app/build
+
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "./Coworking.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+RUN dotnet publish "./Coworking.API.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
 
-# This stage is used in production or when running from VS in regular mode (Default when not using the Debug configuration)
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "Coworking.dll"]
+ENTRYPOINT ["dotnet", "Coworking.API.dll"]

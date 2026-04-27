@@ -20,7 +20,7 @@ builder.Services.ConfigureApi(config);
 // Build
 var app = builder.Build();
 
-await app.InitializeApplicationAsync();
+await app.InitializeApplicationAsync(config);
 
 app.UseForwardedHeaders();
 

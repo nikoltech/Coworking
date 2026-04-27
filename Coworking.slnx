@@ -12,4 +12,7 @@
     <Project Path="Coworking/src/Coworking.External/Squidex/Coworking.External.Squidex.UnitTests/Coworking.External.Squidex.UnitTests.csproj" />
     <Project Path="Coworking/src/Coworking.External/Squidex/Coworking.External.Squidex/Coworking.External.Squidex.csproj" />
   </Folder>
+  <Project Path="docker-compose.dcproj">
+    <Build />
+  </Project>
 </Solution>
