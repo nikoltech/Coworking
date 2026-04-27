@@ -1,14 +1,13 @@
 ﻿using Coworking.Application.Ports.Squidex.Schemas.City;
 using Coworking.External.Squidex.Abstractions.Filters;
 using Coworking.External.Squidex.Abstractions.Models;
-using Coworking.External.Squidex.Client;
-using Coworking.External.Squidex.Pagination;
-using Coworking.External.Squidex.Repository;
+using Coworking.External.Squidex.Abstractions.Repository;
+using Coworking.External.Squidex.Context;
 
 namespace Coworking.Infrastructure.External.Squidex.Schemas.City;
 
-public sealed class CityRepository(SquidexApiClient client, SquidexPaginator paginator)
-    : SquidexRepository<CitySchema>(client, paginator, CitySchema.SchemaName), ICityRepository
+public sealed class CityRepository(ISquidexApiClient client, ISquidexPaginator paginator)
+    : SquidexSet<CitySchema>(client, paginator, CitySchema.SchemaName), ICityRepository
 {
     public async Task<ContentDto<CitySchema>?> GetByTitleAsync(
         string title, CancellationToken ct = default)

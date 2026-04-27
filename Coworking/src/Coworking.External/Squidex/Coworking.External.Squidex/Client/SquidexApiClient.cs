@@ -1,9 +1,9 @@
 ﻿using Coworking.External.Squidex.Abstractions.Models;
+using Coworking.External.Squidex.Abstractions.Options;
 using Coworking.External.Squidex.Abstractions.Repository;
 using Coworking.External.Squidex.Auth;
 using Coworking.External.Squidex.Exceptions;
 using Coworking.External.Squidex.Localization;
-using Coworking.External.Squidex.Options;
 using System.Diagnostics;
 using System.Net;
 using System.Net.Http.Json;
@@ -13,18 +13,13 @@ using System.Text.Json.Serialization;
 
 namespace Coworking.External.Squidex.Client;
 
-public class SquidexApiClient : ISquidexApiClient
+public sealed class SquidexApiClient : ISquidexApiClient
 {
     private readonly HttpClient _http;
-    private readonly SquidexOptions _options;
     private readonly string _clientName;
     private readonly SquidexLocaleProvider _locales;
 
-    /// <summary>
-    /// Safe batch size for IDs query.
-    /// URL limit ~8192 chars. Each GUID+comma = ~37 chars.
-    /// Base URL + path ~110 chars → safe at 80 IDs per batch.
-    /// </summary>
+    /// <summary>Safe batch size for IDs query — respects URL length limits.</summary>
     private const int IdsBatchSize = 80;
 
     private static readonly JsonSerializerOptions Json = new()
@@ -33,19 +28,21 @@ public class SquidexApiClient : ISquidexApiClient
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
     };
 
-    public SquidexApiClient(
+    public SquidexAppOptions AppOptions { get; }
+
+    internal SquidexApiClient(
         HttpClient http,
-        SquidexOptions options,
+        SquidexAppOptions appOptions,
         string clientName,
         SquidexLocaleProvider locales)
     {
         _http = http;
-        _options = options;
+        AppOptions = appOptions;
         _clientName = clientName;
         _locales = locales;
     }
 
-    // ── JSON query (q= param) ─────────────────────────────────────────────────
+    // ── JSON query ────────────────────────────────────────────────────────────
 
     public Task<ResponseSchema<T>> QueryAsync<T>(
         string schema, RequestQuery query,
@@ -60,7 +57,7 @@ public class SquidexApiClient : ISquidexApiClient
         return SendAndDeserializeAsync<ResponseSchema<T>>(request, ct);
     }
 
-    // ── OData query ($filter, $orderby, etc.) ────────────────────────────────
+    // ── OData query ───────────────────────────────────────────────────────────
 
     public Task<ResponseSchema<T>> QueryODataAsync<T>(
         string schema, ODataQuery query,
@@ -75,7 +72,7 @@ public class SquidexApiClient : ISquidexApiClient
         return SendAndDeserializeAsync<ResponseSchema<T>>(request, ct);
     }
 
-    // ── POST query (body) ─────────────────────────────────────────────────────
+    // ── POST query ────────────────────────────────────────────────────────────
 
     public Task<ResponseSchema<T>> QueryPostAsync<T>(
         string schema, RequestQuery query,
@@ -85,8 +82,7 @@ public class SquidexApiClient : ISquidexApiClient
         var request = BuildRequest(
             HttpMethod.Post, $"{ContentUrl(schema)}/query", queryOptions);
 
-        request.Content = JsonContent.Create(
-            new PostQueryBody(query), options: Json);
+        request.Content = JsonContent.Create(new PostQueryBody(query), options: Json);
 
         return SendAndDeserializeAsync<ResponseSchema<T>>(request, ct);
     }
@@ -173,7 +169,7 @@ public class SquidexApiClient : ISquidexApiClient
     public async Task<IReadOnlyList<SquidexLocaleInfo>> GetAppLocalesAsync(
         CancellationToken ct = default)
     {
-        var url = $"{_options.BaseUrl.TrimEnd('/')}/api/apps/{_options.AppName}/languages";
+        var url = $"{AppOptions.BaseUrl.TrimEnd('/')}/api/apps/{AppOptions.AppName}/languages";
         var request = BuildRequest(HttpMethod.Get, url);
         var response = await SendWithRetryAsync(request, ct);
 
@@ -239,12 +235,15 @@ public class SquidexApiClient : ISquidexApiClient
     }
 
     private HttpRequestMessage BuildRequest(
-        HttpMethod method, string url,
-        QueryOptions? queryOptions = null)
+        HttpMethod method, string url, QueryOptions? queryOptions = null)
     {
         var request = new HttpRequestMessage(method, url);
         var opts = queryOptions ?? QueryOptions.Default;
 
+        // Tell auth handler which app+client to use
+        request.Options.Set(
+            new HttpRequestOptionsKey<string>(SquidexAuthHandler.AppNameKey),
+            AppOptions.AppName);
         request.Options.Set(
             new HttpRequestOptionsKey<string>(SquidexAuthHandler.ClientNameKey),
             _clientName);
@@ -294,7 +293,7 @@ public class SquidexApiClient : ISquidexApiClient
     }
 
     private string ContentUrl(string schema) =>
-        $"{_options.BaseUrl.TrimEnd('/')}/api/content/{_options.AppName}/{schema}";
+        $"{AppOptions.BaseUrl.TrimEnd('/')}/api/content/{AppOptions.AppName}/{schema}";
 
     private static bool IsTransient(HttpStatusCode code) => code is
         HttpStatusCode.RequestTimeout or

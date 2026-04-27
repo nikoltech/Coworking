@@ -4,33 +4,34 @@ using System.Net.Http.Headers;
 namespace Coworking.External.Squidex.Auth;
 
 /// <summary>
-/// Attaches Bearer token to every Squidex HTTP request.
-/// On 401 — invalidates cached token and retries once with a fresh token.
-/// Client name is passed via HttpRequestMessage.Options.
+/// Attaches Bearer token to every Squidex request.
+/// On 401 — invalidates cached token and retries once.
+/// App name and client name are passed via HttpRequestMessage.Options.
 /// </summary>
-public sealed class SquidexAuthHandler(ISquidexTokenService tokenService) : DelegatingHandler
+internal sealed class SquidexAuthHandler(SquidexTokenService tokenService) : DelegatingHandler
 {
-    public const string ClientNameKey = "SquidexClientName";
-    public const string DefaultClient = "Default";
+    internal const string AppNameKey = "SquidexAppName";
+    internal const string ClientNameKey = "SquidexClientName";
+    internal const string DefaultClient = "Default";
 
     protected override async Task<HttpResponseMessage> SendAsync(
         HttpRequestMessage request, CancellationToken ct)
     {
-        var clientName = GetClientName(request);
+        var appName = GetOption(request, AppNameKey) ?? string.Empty;
+        var clientName = GetOption(request, ClientNameKey) ?? DefaultClient;
 
-        request.Headers.Authorization = await GetAuthHeaderAsync(clientName, ct);
+        request.Headers.Authorization = await GetAuthHeaderAsync(appName, clientName, ct);
 
         var response = await base.SendAsync(request, ct);
 
         if (response.StatusCode != HttpStatusCode.Unauthorized)
             return response;
 
-        // Token expired mid-flight — refresh and retry once
-        tokenService.InvalidateToken(clientName);
+        tokenService.InvalidateToken(appName, clientName);
         response.Dispose();
 
         var retryRequest = await CloneAsync(request, ct);
-        retryRequest.Headers.Authorization = await GetAuthHeaderAsync(clientName, ct);
+        retryRequest.Headers.Authorization = await GetAuthHeaderAsync(appName, clientName, ct);
 
         return await base.SendAsync(retryRequest, ct);
     }
@@ -38,17 +39,17 @@ public sealed class SquidexAuthHandler(ISquidexTokenService tokenService) : Dele
     // ── private ──────────────────────────────────────────────────────────────
 
     private async Task<AuthenticationHeaderValue> GetAuthHeaderAsync(
-        string clientName, CancellationToken ct)
+        string appName, string clientName, CancellationToken ct)
     {
-        var token = await tokenService.GetTokenAsync(clientName, ct);
+        var token = await tokenService.GetTokenAsync(appName, clientName, ct);
         return new AuthenticationHeaderValue("Bearer", token);
     }
 
-    private static string GetClientName(HttpRequestMessage request) =>
+    private static string? GetOption(HttpRequestMessage request, string key) =>
         request.Options.TryGetValue(
-            new HttpRequestOptionsKey<string>(ClientNameKey), out var name)
-            ? name ?? DefaultClient
-            : DefaultClient;
+            new HttpRequestOptionsKey<string>(key), out var value)
+            ? value
+            : null;
 
     private static async Task<HttpRequestMessage> CloneAsync(
         HttpRequestMessage source, CancellationToken ct)

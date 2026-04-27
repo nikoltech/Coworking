@@ -1,6 +1,6 @@
 ﻿using Coworking.Application.Features.Bookings.Queries.GetDeskAvailability.Dtos;
 
-namespace Coworking.API.Models.Responses;
+namespace Coworking.API.Models.Responces;
 
 /// <summary>
 /// Represents desk availability information for a specific date.

@@ -8,6 +8,7 @@ public interface ISquidexPaginator
         string schema,
         ISquidexApiClient client,
         RequestQuery baseQuery,
+        int pageSize,
         QueryOptions? queryOptions = null,
         CancellationToken ct = default);
 }

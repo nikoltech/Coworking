@@ -1,38 +1,37 @@
-﻿using Coworking.External.Squidex.Abstractions.Repository;
-using Coworking.External.Squidex.Auth;
+﻿using Coworking.External.Squidex.Abstractions.Options;
+using Coworking.External.Squidex.Abstractions.Repository;
 using Coworking.External.Squidex.Localization;
-using Coworking.External.Squidex.Options;
 using Microsoft.Extensions.Options;
 
 namespace Coworking.External.Squidex.Client;
 
+/// <summary>
+/// Creates SquidexApiClient instances for app+client combinations.
+/// Locale providers are cached per app to avoid redundant Squidex API calls.
+/// </summary>
 public sealed class SquidexClientFactory(
     IHttpClientFactory httpClientFactory,
-    IOptions<SquidexOptions> options,
-    SquidexLocaleProvider locales)
+    IOptions<SquidexGlobalOptions> globalOptions,
+    SquidexLocaleProviderCache localeCache)
 {
-    private readonly SquidexOptions _options = options.Value;
+    private readonly SquidexGlobalOptions _options = globalOptions.Value;
 
-    public ISquidexApiClient Create(string clientName = SquidexAuthHandler.DefaultClient)
+    public ISquidexApiClient CreateForApp(string appName, string? clientName = null)
     {
-        EnsureClientExists(clientName);
+        var appOptions = GetAppOptions(appName);
+        var client = clientName ?? appOptions.DefaultClient;
+        var locales = localeCache.GetOrCreate(appName, appOptions);
         var http = httpClientFactory.CreateClient(SquidexHttpClientNames.Api);
-        return new SquidexApiClient(http, _options, clientName, locales);
+
+        return new SquidexApiClient(http, appOptions, client, locales);
     }
 
-    public SquidexAssetClient CreateAssetClient(
-        string clientName = SquidexAuthHandler.DefaultClient)
-    {
-        EnsureClientExists(clientName);
-        var http = httpClientFactory.CreateClient(SquidexHttpClientNames.Api);
-        return new SquidexAssetClient(http, _options, clientName);
-    }
+    // ── private ──────────────────────────────────────────────────────────────
 
-    private void EnsureClientExists(string clientName)
-    {
-        if (!_options.Clients.ContainsKey(clientName))
-            throw new InvalidOperationException(
-                $"Squidex client '{clientName}' is not configured. " +
-                $"Available: {string.Join(", ", _options.Clients.Keys)}");
-    }
+    private SquidexAppOptions GetAppOptions(string appName) =>
+        _options.Apps.TryGetValue(appName, out var app)
+            ? app
+            : throw new InvalidOperationException(
+                $"Squidex app '{appName}' is not configured. " +
+                $"Available: {string.Join(", ", _options.Apps.Keys)}");
 }

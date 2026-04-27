@@ -1,4 +1,4 @@
-﻿namespace Coworking.API.Models.Responses;
+﻿namespace Coworking.API.Models.Responces;
 
 public record TimeSlotResponse
 (

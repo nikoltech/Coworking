@@ -1,16 +1,19 @@
 ﻿using MediatR;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using System.Diagnostics;
 
 namespace Coworking.Application.Behaviors.Performance;
 
 public class PerformanceBehavior<TRequest, TResponse>(
     ILogger<PerformanceBehavior<TRequest, TResponse>> logger,
-    PerformanceSettings settings)
+    IOptions<PerformanceSettings> options)
     : IPipelineBehavior<TRequest, TResponse> where TRequest : IRequest<TResponse>
 {
     public async Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken ct)
     {
+        var settings = options.Value;
+
         if (settings.Enabled is false)
             return await next(ct);
 

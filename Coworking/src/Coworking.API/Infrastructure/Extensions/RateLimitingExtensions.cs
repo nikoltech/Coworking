@@ -1,7 +1,7 @@
 ﻿using Coworking.API.Infrastructure.Helpers;
 using System.Threading.RateLimiting;
 
-namespace Coworking.API.Infrastructure.RateLimiting;
+namespace Coworking.API.Infrastructure.Extensions;
 
 public static class RateLimitingExtensions
 {

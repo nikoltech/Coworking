@@ -1,39 +1,27 @@
 ﻿using Coworking.External.Squidex.Abstractions.Models;
+using Coworking.External.Squidex.Abstractions.Options;
 
 namespace Coworking.External.Squidex.Abstractions.Repository;
 
 public interface ISquidexApiClient
 {
-    /// <summary>Query via JSON (q= param). Default and recommended.</summary>
     Task<ResponseSchema<T>> QueryAsync<T>(
-        string schema,
-        RequestQuery query,
+        string schema, RequestQuery query,
         QueryOptions? queryOptions = null,
         CancellationToken ct = default);
 
-    /// <summary>Query via OData ($filter, $orderby, etc.).</summary>
     Task<ResponseSchema<T>> QueryODataAsync<T>(
-        string schema,
-        ODataQuery query,
+        string schema, ODataQuery query,
         QueryOptions? queryOptions = null,
         CancellationToken ct = default);
 
-    /// <summary>
-    /// Query via POST body — avoids URL length limit.
-    /// Useful for complex queries. Same JSON format as RequestQuery.
-    /// </summary>
     Task<ResponseSchema<T>> QueryPostAsync<T>(
-        string schema,
-        RequestQuery query,
+        string schema, RequestQuery query,
         QueryOptions? queryOptions = null,
         CancellationToken ct = default);
 
-    /// <summary>
-    /// Query by IDs — batched automatically to respect URL length limits.
-    /// </summary>
     Task<ResponseSchema<T>> GetByIdsAsync<T>(
-        string schema,
-        IEnumerable<string> ids,
+        string schema, IEnumerable<string> ids,
         QueryOptions? queryOptions = null,
         CancellationToken ct = default);
 
@@ -63,4 +51,6 @@ public interface ISquidexApiClient
         CancellationToken ct = default);
 
     Task<IReadOnlyList<SquidexLocaleInfo>> GetAppLocalesAsync(CancellationToken ct = default);
+
+    SquidexAppOptions AppOptions { get; }
 }

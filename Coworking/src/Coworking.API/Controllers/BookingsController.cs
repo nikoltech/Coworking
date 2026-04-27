@@ -1,7 +1,7 @@
 ﻿using AutoMapper;
 using Coworking.API.Controllers.Abstractions;
 using Coworking.API.Models.Requests;
-using Coworking.API.Models.Responses;
+using Coworking.API.Models.Responces;
 using Coworking.Application.Features.Bookings.Commands.Cancel;
 using Coworking.Application.Features.Bookings.Commands.Create;
 using MediatR;

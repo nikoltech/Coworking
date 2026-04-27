@@ -1,6 +1,6 @@
-﻿using Coworking.External.Squidex.Client;
+﻿using Coworking.External.Squidex.Abstractions.Options;
+using Coworking.External.Squidex.Client;
 using Coworking.External.Squidex.Exceptions;
-using Coworking.External.Squidex.Options;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using System.Net.Http.Json;
@@ -9,21 +9,23 @@ using System.Text.Json.Serialization;
 namespace Coworking.External.Squidex.Auth;
 
 /// <summary>
-/// Fetches and caches OAuth2 tokens per Squidex client.
-/// Thread-safe — SemaphoreSlim prevents token stampede under concurrent load.
+/// Fetches and caches OAuth2 tokens per app+client combination.
+/// Cache key format: "{appName}:{clientName}"
+/// Thread-safe — SemaphoreSlim prevents token stampede.
 /// </summary>
 public sealed class SquidexTokenService(
     IHttpClientFactory httpClientFactory,
     IMemoryCache cache,
-    IOptions<SquidexOptions> options) : ISquidexTokenService
+    IOptions<SquidexGlobalOptions> options)
 {
     private static readonly TimeSpan ExpiryBuffer = TimeSpan.FromMinutes(5);
     private readonly SemaphoreSlim _gate = new(1, 1);
-    private readonly SquidexOptions _options = options.Value;
+    private readonly SquidexGlobalOptions _options = options.Value;
 
-    public async Task<string> GetTokenAsync(string clientName, CancellationToken ct)
+    public async Task<string> GetTokenAsync(
+        string appName, string clientName, CancellationToken ct)
     {
-        var cacheKey = $"squidex:token:{clientName}";
+        var cacheKey = CacheKey(appName, clientName);
 
         if (cache.TryGetValue(cacheKey, out string? token) && token is not null)
             return token;
@@ -31,12 +33,12 @@ public sealed class SquidexTokenService(
         await _gate.WaitAsync(ct);
         try
         {
-            // Double-check after acquiring the gate
             if (cache.TryGetValue(cacheKey, out token) && token is not null)
                 return token;
 
-            var credentials = GetCredentials(clientName);
-            var result = await RequestTokenAsync(credentials, ct);
+            var credentials = GetCredentials(appName, clientName);
+            var appOptions = GetAppOptions(appName);
+            var result = await RequestTokenAsync(appOptions.BaseUrl, credentials, ct);
             var expiry = TimeSpan.FromSeconds(result.ExpiresIn) - ExpiryBuffer;
 
             cache.Set(cacheKey, result.AccessToken, expiry);
@@ -48,23 +50,34 @@ public sealed class SquidexTokenService(
         }
     }
 
-    public void InvalidateToken(string clientName) =>
-        cache.Remove($"squidex:token:{clientName}");
+    public void InvalidateToken(string appName, string clientName) =>
+        cache.Remove(CacheKey(appName, clientName));
 
     // ── private ──────────────────────────────────────────────────────────────
 
-    private SquidexClientCredentials GetCredentials(string clientName) =>
-        _options.Clients.TryGetValue(clientName, out var credentials)
-            ? credentials
+    private SquidexAppOptions GetAppOptions(string appName) =>
+        _options.Apps.TryGetValue(appName, out var app)
+            ? app
             : throw new InvalidOperationException(
-                $"Squidex client '{clientName}' is not configured. " +
-                $"Available: {string.Join(", ", _options.Clients.Keys)}");
+                $"Squidex app '{appName}' is not configured. " +
+                $"Available: {string.Join(", ", _options.Apps.Keys)}");
+
+    private SquidexClientCredentials GetCredentials(string appName, string clientName)
+    {
+        var app = GetAppOptions(appName);
+
+        return app.Clients.TryGetValue(clientName, out var creds)
+            ? creds
+            : throw new InvalidOperationException(
+                $"Squidex client '{clientName}' is not configured for app '{appName}'. " +
+                $"Available: {string.Join(", ", app.Clients.Keys)}");
+    }
 
     private async Task<TokenResponse> RequestTokenAsync(
-        SquidexClientCredentials credentials, CancellationToken ct)
+        string baseUrl, SquidexClientCredentials credentials, CancellationToken ct)
     {
         var http = httpClientFactory.CreateClient(SquidexHttpClientNames.Auth);
-        var url = $"{_options.BaseUrl.TrimEnd('/')}/identity-server/connect/token";
+        var url = $"{baseUrl.TrimEnd('/')}/identity-server/connect/token";
 
         var body = new FormUrlEncodedContent(new Dictionary<string, string>
         {
@@ -80,6 +93,9 @@ public sealed class SquidexTokenService(
         return await response.Content.ReadFromJsonAsync<TokenResponse>(ct)
                ?? throw new InvalidOperationException("Empty token response from Squidex.");
     }
+
+    private static string CacheKey(string appName, string clientName) =>
+        $"squidex:token:{appName}:{clientName}";
 
     private sealed record TokenResponse(
         [property: JsonPropertyName("access_token")] string AccessToken,

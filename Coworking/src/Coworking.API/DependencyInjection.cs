@@ -1,6 +1,5 @@
 ﻿using Coworking.API.Infrastructure.Extensions;
 using Coworking.API.Infrastructure.Extensions.Security;
-using Coworking.API.Infrastructure.RateLimiting;
 
 namespace Coworking.API;
 

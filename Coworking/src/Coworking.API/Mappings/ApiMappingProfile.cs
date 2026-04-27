@@ -1,10 +1,8 @@
 ﻿using AutoMapper;
 using Coworking.API.Models.Requests;
-using Coworking.API.Models.Responses;
-using Coworking.Application.Features.Bookings.Commands.Cancel;
+using Coworking.API.Models.Responces;
 using Coworking.Application.Features.Bookings.Commands.Create;
 using Coworking.Application.Features.Bookings.Commands.Create.Requests;
-using Coworking.Application.Features.Bookings.Queries.GetDeskAvailability;
 using Coworking.Application.Features.Bookings.Queries.GetDeskAvailability.Dtos;
 
 namespace Coworking.API.Mappings;
