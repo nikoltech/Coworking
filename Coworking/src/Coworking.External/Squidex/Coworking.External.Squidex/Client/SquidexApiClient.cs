@@ -6,6 +6,7 @@ using Coworking.External.Squidex.Exceptions;
 using Coworking.External.Squidex.Localization;
 using System.Diagnostics;
 using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
@@ -120,6 +121,34 @@ public sealed class SquidexApiClient : ISquidexApiClient
         return await response.Content.ReadFromJsonAsync<ContentDto<T>>(Json, ct);
     }
 
+    /// <summary>
+    /// For conditional GET — client caches ETag and sends it as If-None-Match header. 
+    /// </summary>
+    /// <param name="knownVersion">Optional ETag for conditional GET</param>
+    /// <returns>If content is not modified, returns NotModified=true and null content. Otherwise, returns content with NotModified=false.</returns>
+    public async Task<(ContentDto<T>? Content, bool NotModified)> GetByIdConditionalAsync<T>(
+        string schema, string id,
+        int? knownVersion = null,
+        QueryOptions? queryOptions = null,
+        CancellationToken ct = default)
+    {
+        var request = BuildRequest(HttpMethod.Get, $"{ContentUrl(schema)}/{id}", queryOptions);
+
+        if (knownVersion.HasValue)
+            request.Headers.IfNoneMatch.Add(
+                new EntityTagHeaderValue($"\"{knownVersion}\""));
+
+        var response = await SendWithRetryAsync(request, ct);
+
+        if (response.StatusCode == HttpStatusCode.NotModified)
+            return (null, NotModified: true);
+
+        await response.EnsureSquidexSuccessAsync(ct);
+
+        var content = await response.Content.ReadFromJsonAsync<ContentDto<T>>(Json, ct);
+        return (content, NotModified: false);
+    }
+
     // ── Mutations ────────────────────────────────────────────────────────────
 
     public Task<ContentDto<T>> CreateAsync<T>(
@@ -131,11 +160,24 @@ public sealed class SquidexApiClient : ISquidexApiClient
         return SendAndDeserializeAsync<ContentDto<T>>(request, ct);
     }
 
+    /// <summary>
+    /// Updates content item with optimistic concurrency control using ETag.
+    /// </summary>
+    /// <param name="expectedVersion">Optional ETag for concurrency control</param>
+    /// <returns></returns>
     public Task<ContentDto<T>> UpdateAsync<T>(
-        string schema, string id, T data, CancellationToken ct = default)
+        string schema, string id, T data,
+        int? expectedVersion = null,
+        CancellationToken ct = default)
     {
         var request = BuildRequest(HttpMethod.Put, $"{ContentUrl(schema)}/{id}");
         request.Content = JsonContent.Create(data, options: Json);
+
+        // if version is provided, add If-Match header
+        if (expectedVersion.HasValue)
+            request.Headers.IfMatch.Add(
+                new EntityTagHeaderValue($"\"{expectedVersion}\""));
+
         return SendAndDeserializeAsync<ContentDto<T>>(request, ct);
     }
 

@@ -1,4 +1,5 @@
-﻿using System.Net.Http.Json;
+﻿using System.Net;
+using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -13,6 +14,10 @@ public static class HttpResponseExtensions
     {
         if (response.IsSuccessStatusCode)
             return;
+
+        if (response.StatusCode == HttpStatusCode.PreconditionFailed)
+            throw new SquidexConcurrencyException(
+                "Content was modified by another request. Fetch the latest version and retry.");
 
         SquidexErrorBody? error = null;
         try

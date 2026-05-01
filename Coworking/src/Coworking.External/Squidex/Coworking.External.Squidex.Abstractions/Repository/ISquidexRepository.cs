@@ -36,9 +36,26 @@ public interface ISquidexRepository<T> where T : class
         string id, QueryOptions? queryOptions = null,
         CancellationToken ct = default);
 
+    /// <summary>
+    /// Gets content by ID, returning a flag indicating if the content has not been modified since the known version.
+    /// </summary>
+    /// <param name="knownVersion">Optional ETag for conditional GET.</param>
+    /// <returns>If content is not modified, returns NotModified=true and null content. Otherwise, returns content with NotModified=false.</returns>
+    Task<(ContentDto<T>? Content, bool NotModified)> GetByIdConditionalAsync(
+        string id,
+        int? knownVersion = null,
+        QueryOptions? queryOptions = null,
+        CancellationToken ct = default);
+
     Task<ContentDto<T>> CreateAsync(T data, bool publish = true, CancellationToken ct = default);
-    Task<ContentDto<T>> UpdateAsync(string id, T data, CancellationToken ct = default);
+
+    Task<ContentDto<T>> UpdateAsync(
+       string id, T data,
+       int? expectedVersion = null,
+       CancellationToken ct = default);
+
     Task<ContentDto<T>> PatchAsync(string id, T data, CancellationToken ct = default);
+
     Task DeleteAsync(string id, bool permanent = false, CancellationToken ct = default);
 
     Task<bool> ExistsAsync(

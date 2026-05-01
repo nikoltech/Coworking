@@ -30,12 +30,24 @@ public interface ISquidexApiClient
         QueryOptions? queryOptions = null,
         CancellationToken ct = default);
 
+    /// <summary>
+    /// For conditional GET — client caches ETag and sends it as If-None-Match header. 
+    /// </summary>
+    /// <param name="knownVersion">Optional ETag for conditional GET</param>
+    /// <returns>If content is not modified, returns NotModified=true and null content. Otherwise, returns content with NotModified=false.</returns>
+    Task<(ContentDto<T>? Content, bool NotModified)> GetByIdConditionalAsync<T>(
+        string schema, string id,
+        int? knownVersion = null,
+        QueryOptions? queryOptions = null,
+        CancellationToken ct = default);
+
     Task<ContentDto<T>> CreateAsync<T>(
         string schema, T data, bool publish = true,
         CancellationToken ct = default);
 
     Task<ContentDto<T>> UpdateAsync<T>(
-        string schema, string id, T data,
+        string schema, string id, T data, 
+        int? expectedVersion = null, 
         CancellationToken ct = default);
 
     Task<ContentDto<T>> PatchAsync<T>(

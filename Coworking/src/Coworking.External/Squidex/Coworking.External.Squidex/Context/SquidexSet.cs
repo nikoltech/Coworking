@@ -61,13 +61,32 @@ public class SquidexSet<T> : ISquidexRepository<T> where T : class
         CancellationToken ct = default) =>
         Client.GetByIdAsync<T>(Schema, id, queryOptions, ct);
 
+    /// <summary>
+    /// Gets content by ID, returning a flag indicating if the content has not been modified since the known version.
+    /// </summary>
+    /// <param name="knownVersion">Optional ETag for conditional GET.</param>
+    /// <returns>If content is not modified, returns NotModified=true and null content. Otherwise, returns content with NotModified=false.</returns>
+    public Task<(ContentDto<T>? Content, bool NotModified)> GetByIdConditionalAsync(
+        string id, 
+        int? knownVersion = null,
+        QueryOptions? queryOptions = null,
+        CancellationToken ct = default) =>
+        Client.GetByIdConditionalAsync<T>(Schema, id, knownVersion, queryOptions, ct);
+
     public Task<ContentDto<T>> CreateAsync(
         T data, bool publish = true, CancellationToken ct = default) =>
         Client.CreateAsync(Schema, data, publish, ct);
 
+    /// <summary>
+    /// Updates content with optimistic concurrency control using ETag.
+    /// </summary>
+    /// <param name="expectedVersion">optional ETag for concurrency control</param>
+    /// <returns></returns>
     public Task<ContentDto<T>> UpdateAsync(
-        string id, T data, CancellationToken ct = default) =>
-        Client.UpdateAsync(Schema, id, data, ct);
+        string id, T data,
+        int? expectedVersion = null,
+        CancellationToken ct = default) => 
+        Client.UpdateAsync(Schema, id, data, expectedVersion, ct);
 
     public Task<ContentDto<T>> PatchAsync(
         string id, T data, CancellationToken ct = default) =>
