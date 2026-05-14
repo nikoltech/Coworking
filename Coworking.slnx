@@ -6,6 +6,10 @@
     <Project Path="Coworking/src/Coworking.Infrastructure.Persistence/Coworking.Infrastructure.Persistence.csproj" Id="89f0ad2d-6fb7-4e7d-b195-08be033e4c4d" />
     <Project Path="Coworking/src/Coworking.Infrastructure/Coworking.Infrastructure.csproj" />
   </Folder>
+  <Folder Name="/src/Messaging/">
+    <Project Path="Coworking/src/Coworking.Messaging.Contracts/Coworking.Messaging.Contracts.csproj" />
+    <Project Path="Coworking/src/Coworking.Messaging/Coworking.Messaging.csproj" />
+  </Folder>
   <Folder Name="/src/External/" />
   <Folder Name="/src/External/Squidex/">
     <Project Path="Coworking/src/Coworking.External/Squidex/Coworking.External.Squidex.Abstractions/Coworking.External.Squidex.Abstractions.csproj" />

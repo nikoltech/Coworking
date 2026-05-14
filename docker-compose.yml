@@ -6,6 +6,20 @@ services:
       dockerfile: Coworking/src/Coworking.API/Dockerfile
     depends_on:
       - db
+      - rabbitmq
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: coworking_rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmqdata:/var/lib/rabbitmq
+    restart: unless-stopped
 
   db:
     image: postgres:16-alpine
@@ -32,4 +46,5 @@ services:
 
 volumes:
   pgdata:
+  rabbitmqdata:
 #  redisdata:

@@ -1,0 +1,27 @@
+# Build output
+bin/
+obj/
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+
+# Test results
+TestResults/
+
+# NuGet
+*.nupkg
+**/packages/*
+
+# Secrets
+.env
+*.pem
+*.key
+*.pfx
+
+# appsettings могут содержать реальные ключи, пароли, connection strings
+appsettings*.json
+
+# Docker override
+docker-compose.override.yml
