@@ -1,4 +1,4 @@
-﻿using Coworking.Application.Abstractions;
+using Coworking.Application.Abstractions;
 using Coworking.Application.Common.Exceptions;
 using Coworking.Application.Features.Bookings.Commands.Cancel.Notifications;
 using Coworking.Domain.Entities;
@@ -36,6 +36,7 @@ internal class CancelBookingCommandHandler(
             booking.SetStatus(BookingStatus.Cancelled);
 
             await dataContext.SaveChangesAsync(ct);
+            await PublishBookingCancelledAsync(booking, ct);
 
             await transaction.CommitAsync(ct);
         }
@@ -44,8 +45,10 @@ internal class CancelBookingCommandHandler(
             await transaction.RollbackAsync(ct);
             throw;
         }
+    }
 
-        await mediator.Publish(new BookingCancelledNotification(
+    private Task PublishBookingCancelledAsync(Booking booking, CancellationToken ct) =>
+        mediator.Publish(new BookingCancelledNotification(
             UserEmail: booking.UserEmail,
             UserName: booking.UserName,
             DeskName: booking.Desk.Name,
@@ -54,5 +57,4 @@ internal class CancelBookingCommandHandler(
             End: booking.EndTime,
             TimeZoneId: booking.Desk.Coworking.TimeZoneId,
             CancellationReason: default), ct);
-    }
 }

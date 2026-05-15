@@ -10,7 +10,8 @@ public class MappingProfile : Profile
     public MappingProfile()
     {
         CreateMap<Domain.Entities.Coworking, CoworkingDto>()
-            .ForMember(dest => dest.TimeZone, opt => opt.MapFrom(src => src.TimeZoneId));
+            .ForMember(dest => dest.TimeZone, opt => opt.MapFrom(src => src.TimeZoneId))
+            .ForMember(dest => dest.SlotSizeMinutes, opt => opt.MapFrom(src => src.SlotSize.Minutes));
 
         CreateMap<Desk, DeskDto>();
     }
