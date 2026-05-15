@@ -73,16 +73,29 @@ public static class DependencyInjection
         x.AddConsumer<BookingCancelledConsumer>(c => c.UseMessageRetry(ConfigureRetry));
     }
 
-    // Общая политика retry для всех консьюмеров.
-    // Повторяем только transient ошибки (сеть, таймаут).
-    // Permanent ошибки (баг в данных) — сразу в DLQ без лишних попыток.
+    // Shared retry policy for all consumers.
+    // Only transient errors are retried (network, timeout).
+    // Permanent errors (data bugs) go straight to DLQ without wasted attempts.
     private static void ConfigureRetry(IRetryConfigurator r)
     {
         r.Exponential(5, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(5));
-        r.Ignore<ArgumentException>(); // immediate in DLQ, like default
+        r.Ignore<ArgumentException>();
         r.Ignore<InvalidOperationException>();
         r.Handle<HttpRequestException>();
         r.Handle<TimeoutException>();
-        r.Handle<SmtpException>();
+
+        r.Ignore<SmtpException>(ex => IsTransientSmtpCode(ex)); // Transient SMTP codes are already handled.
+        r.Handle<SmtpException>(ex => !IsTransientSmtpCode(ex)); // Permanent SMTP codes — straight to DLQ.
     }
+
+    private static bool IsTransientSmtpCode(SmtpException ex) =>
+        ex.StatusCode switch
+        {
+            SmtpStatusCode.GeneralFailure => true,
+            SmtpStatusCode.MailboxBusy => true,
+            SmtpStatusCode.ServiceNotAvailable => true,
+            SmtpStatusCode.TransactionFailed => true,
+            SmtpStatusCode.ExceededStorageAllocation => true,
+            _ => false
+        };
 }

@@ -10,7 +10,6 @@ using Coworking.Infrastructure.External.Squidex;
 using Coworking.Infrastructure.Providers;
 using Coworking.Infrastructure.Repositories;
 using Coworking.Infrastructure.Services.Email.Messaging;
-using Coworking.Infrastructure.Services.Email.Messaging.Background;
 using Coworking.Infrastructure.Services.Email.Messaging.Interfaces;
 using Coworking.Infrastructure.Services.Email.Options;
 using Coworking.Infrastructure.Services.Email.Senders;
@@ -104,7 +103,7 @@ public static class DependencyInjection
 
         services
             .AddSingleton<IEmailTemplateService, EmailTemplateService>()
-            .AddScoped<IEmailNotificationService, EmailNotificationService>()
+            .AddScoped<IEmailNotificationService, DirectEmailNotificationService>()
             .AddTransient<IEmailSender, SmtpEmailSender>();
 
         return services;
@@ -113,7 +112,7 @@ public static class DependencyInjection
     private static IServiceCollection AddHostedServices(this IServiceCollection services)
     {
         services.AddHostedService<BookingLockExpiryCleaner>();
-        services.AddHostedService<EmailBackgroundWorker>();
+        //services.AddHostedService<EmailBackgroundWorker>(); // replaced by RabbitMQ consumer + DirectEmailNotificationService
 
         return services;
     }
