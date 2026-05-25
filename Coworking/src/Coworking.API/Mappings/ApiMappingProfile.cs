@@ -16,7 +16,8 @@ public class ApiMappingProfile : Profile
         CreateMap<CreateBookingRequest, CreateBookingCommand>();
 
         CreateMap<GetDeskAvailabilityRequest, GetDeskAvailabilityQuery>()
-            .ForCtorParam("targetDate", opt => opt.MapFrom(src => src.TargetDate));
+            .ForCtorParam("dateFrom", opt => opt.MapFrom(src => src.DateFrom))
+            .ForCtorParam("dateTo", opt => opt.MapFrom(src => src.DateTo));
 
         CreateMap<TimeSlotDto, TimeSlotResponse>();
         CreateMap<Application.Features.Bookings.Queries.GetDeskAvailability.Responses.DeskAvailabilityResponse, DeskAvailabilityResponse>();

@@ -1,6 +1,7 @@
 ﻿using Coworking.Application.Abstractions;
 using Coworking.Application.Abstractions.Transactions;
 using Coworking.Application.Common.Enums;
+using Coworking.Infrastructure.Persistence.Configurations.Common;
 using Coworking.Infrastructure.Persistence.Extensions;
 using Coworking.Infrastructure.Persistence.Transactions;
 using MassTransit;
@@ -26,6 +27,17 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
     }
+    protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
+    {
+        configurationBuilder
+            .Properties<DateTimeOffset>()
+            .HaveConversion<DateTimeOffsetUtcConverter>();
+
+        configurationBuilder
+            .Properties<DateTimeOffset?>()
+            .HaveConversion<DateTimeOffsetUtcConverter>();
+    }
+
 
     public override Task<int> SaveChangesAsync(CancellationToken ct = default)
     {
