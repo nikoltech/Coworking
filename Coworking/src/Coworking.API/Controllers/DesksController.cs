@@ -1,4 +1,5 @@
-﻿using AutoMapper;
+﻿using System.ComponentModel.DataAnnotations;
+using AutoMapper;
 using Coworking.API.Controllers.Abstractions;
 using Coworking.API.Models.Requests;
 using Coworking.API.Models.Responces;
@@ -31,7 +32,7 @@ public sealed class DesksController(
     }
 
     /// <summary>
-    /// Returns desk availability for a specific date.
+    /// Returns desk availability for a specific targetDate.
     /// </summary>
     [HttpGet("{deskId:int}/availability")]
     [EnableRateLimiting("read-heavy")]
@@ -39,11 +40,10 @@ public sealed class DesksController(
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<ActionResult<DeskAvailabilityResponse>> GetAvailability(
         [FromRoute] int deskId,
-        [FromQuery] DateOnly date,
+        [FromQuery, Required] DateOnly? targetDate,
         CancellationToken ct)
     {
-        var query = mapper.Map<GetDeskAvailabilityQuery>(
-            new GetDeskAvailabilityRequest(deskId, date));
+        var query = mapper.Map<GetDeskAvailabilityQuery>(new GetDeskAvailabilityRequest(deskId, targetDate));
 
         var result = await mediator.Send(query, ct);
 

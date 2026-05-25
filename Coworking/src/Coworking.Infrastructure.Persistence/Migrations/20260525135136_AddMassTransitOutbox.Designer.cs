@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Coworking.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260525123108_Init")]
-    partial class Init
+    [Migration("20260525135136_AddMassTransitOutbox")]
+    partial class AddMassTransitOutbox
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -75,7 +75,6 @@ namespace Coworking.Infrastructure.Persistence.Migrations
                         .HasColumnName("user_name");
 
                     b.Property<string>("UserTimeZoneId")
-                        .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)")
                         .HasColumnName("user_time_zone_id");

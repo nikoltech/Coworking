@@ -22,7 +22,6 @@ public class BookingConfiguration : IEntityTypeConfiguration<Booking>
             .HasMaxLength(50);
 
         builder.Property(x => x.UserTimeZoneId)
-            .IsRequired()
             .HasMaxLength(100);
 
         // indexes

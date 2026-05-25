@@ -72,7 +72,6 @@ namespace Coworking.Infrastructure.Persistence.Migrations
                         .HasColumnName("user_name");
 
                     b.Property<string>("UserTimeZoneId")
-                        .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)")
                         .HasColumnName("user_time_zone_id");
