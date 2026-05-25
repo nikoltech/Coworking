@@ -4,6 +4,8 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <!-- Shared with Coworking.Infrastructure.Persistence (design-time factory).
+         Required here so the API host loads user secrets, incl. the Kestrel dev-cert password VS stores. -->
     <UserSecretsId>9ee7850e-941f-45d0-8662-5deee62f6cb9</UserSecretsId>
     <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
     <DockerfileContext>..\..\..</DockerfileContext>

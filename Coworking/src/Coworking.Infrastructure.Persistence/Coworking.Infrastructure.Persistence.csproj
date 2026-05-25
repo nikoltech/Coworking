@@ -4,6 +4,7 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <UserSecretsId>9ee7850e-941f-45d0-8662-5deee62f6cb9</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
@@ -14,6 +15,7 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.3" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="10.0.3" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="10.0.3" />
     <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="10.0.3" />
     <PackageReference Include="Microsoft.Extensions.Configuration.FileExtensions" Version="10.0.3" />

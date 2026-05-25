@@ -14,10 +14,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     {
         base.OnModelCreating(modelBuilder);
 
-        modelBuilder.ApplyGlobalConfiguration();
-
-        modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
-
         // Outbox таблицы MassTransit. Три таблицы:
         // OutboxMessage   — сообщения ожидающие отправки в брокер
         // OutboxState     — состояние доставки для каждой очереди
@@ -25,6 +21,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         modelBuilder.AddInboxStateEntity();
         modelBuilder.AddOutboxMessageEntity();
         modelBuilder.AddOutboxStateEntity();
+
+        modelBuilder.ApplyGlobalConfiguration();
+
+        modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
     }
 
     public override Task<int> SaveChangesAsync(CancellationToken ct = default)

@@ -13,7 +13,12 @@ namespace Coworking.Infrastructure.Persistence.Factories
 
             var optionsBuilder = new DbContextOptionsBuilder<AppDbContext>();
 
-            optionsBuilder.UseNpgsql(connectionString);
+            // Must match the runtime configuration in Persistence/DependencyInjection.cs,
+            // otherwise the design-time model (migrations/snapshot) diverges from the
+            // runtime model and triggers PendingModelChangesWarning.
+            optionsBuilder
+                .UseNpgsql(connectionString)
+                .UseSnakeCaseNamingConvention();
 
             return new AppDbContext(optionsBuilder.Options);
         }
@@ -32,10 +37,9 @@ namespace Coworking.Infrastructure.Persistence.Factories
             IConfigurationRoot configuration = new ConfigurationBuilder()
                 .SetBasePath(apiPath)
                 .AddJsonFile("appsettings.json", optional: false)
-                .AddJsonFile(
-                    $"appsettings.{environment}.json",
-                    optional: true)
+                .AddJsonFile($"appsettings.{environment}.json", optional: true)
                 //.AddJsonFile("appsettings.Local.json", true)
+                .AddUserSecrets<ApplicationDbContextFactory>(optional: true)
                 .AddEnvironmentVariables()
                 .Build();
 
