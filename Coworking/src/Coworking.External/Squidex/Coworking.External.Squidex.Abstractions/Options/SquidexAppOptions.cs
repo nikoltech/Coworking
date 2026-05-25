@@ -9,7 +9,7 @@ public sealed record SquidexAppOptions
     [Required] public string AppName { get; init; } = string.Empty;
 
     public int MaxPageSize { get; init; } = 200;
-    public string DefaultLocale { get; init; } = SquidexLocales.En;
+    public string DefaultLocale { get; init; } = SquidexLocales.Default;
     public string DefaultClient { get; init; } = "Default";
 
     /// <summary>

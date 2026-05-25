@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <!--
+    Намеренно без зависимостей — чистые DTO.
+    Любой внешний сервис может подключить только этот проект
+    не тащя за собой всю инфраструктуру Messaging.
+  -->
+
+</Project>

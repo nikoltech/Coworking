@@ -16,7 +16,7 @@ internal class BookingRepository(AppDbContext context) : IBookingRepository
             .Where(b => b.EndTime > DateTimeOffset.UtcNow
                      && b.Status != BookingStatus.Cancelled
                      && b.Status != BookingStatus.Expired)
-            .AnyAsync(BookingSpecifications.OverlappingWith(deskId, start, end), cancellationToken);
+            .AnyAsync(BookingSpecifications.OverlappingWith(deskId, start.ToUniversalTime(), end.ToUniversalTime()), cancellationToken);
     }
 
     public async Task AddAsync(Booking booking, CancellationToken cancellationToken)

@@ -48,8 +48,8 @@ public sealed class SquidexLocaleProvider
 
             _supportedLocales = locales.Select(l => l.Iso2Code).ToList();
 
-            // Set DefaultLocale from IsMaster only if not explicitly overridden
-            if (_appOptions.DefaultLocale == SquidexLocales.UkUA)
+            // Override DefaultLocale with IsMaster only if not explicitly set in appsettings
+            if (string.IsNullOrEmpty(_appOptions.DefaultLocale) || _appOptions.DefaultLocale == SquidexLocales.Default)
             {
                 var master = locales.FirstOrDefault(l => l.IsMaster);
                 if (master is not null)

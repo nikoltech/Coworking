@@ -4,6 +4,7 @@ using Coworking.API.Infrastructure.Extensions.Initialization;
 using Coworking.Application;
 using Coworking.Infrastructure;
 using Coworking.Infrastructure.Persistence;
+using Coworking.Messaging;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -13,6 +14,7 @@ var config = builder.Configuration;
 builder.Services.AddApplication();
 builder.Services.AddPersistence(config);
 builder.Services.AddInfrastructure(config);
+builder.Services.AddMessaging(config);
 
 // API layer
 builder.Services.ConfigureApi(config);

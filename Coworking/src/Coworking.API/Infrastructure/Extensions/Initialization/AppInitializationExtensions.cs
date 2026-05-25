@@ -41,15 +41,34 @@ public static class AppInitializationExtensions
             return;
         }
 
+        var logger = webApplication.Logger;
+
+        using var scope = webApplication.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
         try
         {
-            using var scope = webApplication.Services.CreateScope();
-            var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             await context.Database.MigrateAsync();
         }
         catch (Exception ex)
         {
-            webApplication.Logger.LogError("An error occurred while migrating or initializing the database. Exception: {@ex}", ex);
+            logger.LogError("An error occurred while migrating or initializing the database. Exception: {@ex}", ex);
+        }
+
+        try
+        {
+            // === DEV SEED (remove me) ===
+            var stopping = webApplication.Lifetime.ApplicationStopping;
+            if (configuration.GetValue<bool>("General:ResetData"))
+                await DevDataSeeder.ResetAsync(context, stopping);
+
+            if (configuration.GetValue<bool>("General:SeedData"))
+                await DevDataSeeder.SeedAsync(context, stopping);
+            // === /DEV SEED ===
+        }
+        catch (Exception ex)
+        {
+            logger.LogError("An error occurred while seeding the database. Exception: {@ex}", ex);
         }
     }
 

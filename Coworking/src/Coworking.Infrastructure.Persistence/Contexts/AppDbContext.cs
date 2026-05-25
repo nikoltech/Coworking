@@ -1,8 +1,10 @@
 ﻿using Coworking.Application.Abstractions;
 using Coworking.Application.Abstractions.Transactions;
 using Coworking.Application.Common.Enums;
+using Coworking.Infrastructure.Persistence.Configurations.Common;
 using Coworking.Infrastructure.Persistence.Extensions;
 using Coworking.Infrastructure.Persistence.Transactions;
+using MassTransit;
 using Microsoft.EntityFrameworkCore;
 
 namespace Coworking.Infrastructure.Persistence.Contexts;
@@ -13,10 +15,29 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     {
         base.OnModelCreating(modelBuilder);
 
+        // Outbox таблицы MassTransit. Три таблицы:
+        // OutboxMessage   — сообщения ожидающие отправки в брокер
+        // OutboxState     — состояние доставки для каждой очереди
+        // InboxState      — обработанные MessageId для идемпотентности консьюмера
+        modelBuilder.AddInboxStateEntity();
+        modelBuilder.AddOutboxMessageEntity();
+        modelBuilder.AddOutboxStateEntity();
+
         modelBuilder.ApplyGlobalConfiguration();
 
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
     }
+    protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
+    {
+        configurationBuilder
+            .Properties<DateTimeOffset>()
+            .HaveConversion<DateTimeOffsetUtcConverter>();
+
+        configurationBuilder
+            .Properties<DateTimeOffset?>()
+            .HaveConversion<DateTimeOffsetUtcConverter>();
+    }
+
 
     public override Task<int> SaveChangesAsync(CancellationToken ct = default)
     {

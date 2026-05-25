@@ -6,6 +6,8 @@
 /// </summary>
 public static class SquidexLocales
 {
+    public const string Default = En;
+
     public const string UkUA = "uk-UA";
     public const string En = "en";
     public const string RuRU = "ru-RU";

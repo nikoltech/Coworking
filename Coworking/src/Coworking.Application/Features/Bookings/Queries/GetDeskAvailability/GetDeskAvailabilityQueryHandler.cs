@@ -1,4 +1,4 @@
-﻿using Coworking.Application.Abstractions;
+using Coworking.Application.Abstractions;
 using Coworking.Application.Common.Exceptions;
 using Coworking.Application.Features.Bookings.Queries.GetDeskAvailability.Dtos;
 using Coworking.Application.Features.Bookings.Queries.GetDeskAvailability.Responses;
@@ -20,17 +20,17 @@ internal sealed class GetDeskAvailabilityQueryHandler(
     public async Task<DeskAvailabilityResponse> Handle(GetDeskAvailabilityQuery request, CancellationToken ct)
     {
         var coworking = await GetCoworkingMetaAsync(request.DeskId, ct);
-        var (startUtc, endUtc) = ToUtcBoundaries(request.TargetDate, coworking.TimeZone);
+        var (startUtc, endUtc) = ToUtcBoundaries(request.DateFrom, request.DateTo, coworking.TimeZone);
 
         var desk = await repository.FetchDeskWithBookingsAsync(request.DeskId, startUtc, endUtc, ct)
             ?? throw new NotFoundException($"Desk {request.DeskId} not found.");
 
-        var slots = BuildSlots(request.TargetDate, coworking, desk.Bookings);
+        var slots = BuildSlots(request.DateFrom, request.DateTo, coworking, desk.Bookings);
 
         return new DeskAvailabilityResponse
         {
             DeskId = desk.Id,
-            AvailableSlots = slots
+            Slots = slots
         };
     }
 
@@ -56,30 +56,38 @@ internal sealed class GetDeskAvailabilityQueryHandler(
     }
 
     private static (DateTimeOffset Start, DateTimeOffset End) ToUtcBoundaries(
-        DateOnly date, TimeZoneInfo timeZone)
+        DateOnly dateFrom, DateOnly dateTo, TimeZoneInfo timeZone)
     {
         DateTimeOffset ToUtc(DateTime local) =>
             new(TimeZoneInfo.ConvertTimeToUtc(local, timeZone), TimeSpan.Zero);
 
         return (
-            ToUtc(date.ToDateTime(TimeOnly.MinValue)),
-            ToUtc(date.AddDays(1).ToDateTime(TimeOnly.MinValue)));
+            ToUtc(dateFrom.ToDateTime(TimeOnly.MinValue)),
+            ToUtc(dateTo.AddDays(1).ToDateTime(TimeOnly.MinValue)));
     }
 
     private List<TimeSlotDto> BuildSlots(
-        DateOnly date, CoworkingMeta coworking, IEnumerable<Booking> bookings)
+        DateOnly dateFrom, DateOnly dateTo, CoworkingMeta coworking, IEnumerable<Booking> bookings)
     {
         var booked = bookings
             .Select(b => (b.StartTime, b.EndTime))
             .ToList();
 
-        return slotGenerator
-            .GenerateSlots(date, coworking.OpenTime, coworking.CloseTime, coworking.SlotSize, coworking.TimeZoneId)
-            .Select(slot => new TimeSlotDto(
-                slot.Start,
-                slot.End,
-                IsAvailable: !booked.Any(b => DateRangeOverlap.Check(slot.Start, slot.End, b.StartTime, b.EndTime))))
+        return EachDay(dateFrom, dateTo)
+            .SelectMany(date => slotGenerator
+                .GenerateSlots(date, coworking.OpenTime, coworking.CloseTime, coworking.SlotSize, coworking.TimeZoneId)
+                .Select(slot => new TimeSlotDto(
+                    slot.Start,
+                    slot.End,
+                    IsAvailable: !booked.Any(b => DateRangeOverlap.Check(slot.Start, slot.End, b.StartTime, b.EndTime)))))
+            .OrderBy(s => s.Start)
             .ToList();
+    }
+
+    private static IEnumerable<DateOnly> EachDay(DateOnly from, DateOnly to)
+    {
+        for (var d = from; d <= to; d = d.AddDays(1))
+            yield return d;
     }
 
     private sealed record CoworkingMeta(

@@ -41,7 +41,7 @@ internal class CreateBookingCommandHandler(
 
         Booking? booking;
 
-        // Deadlocks as a guarantee in overlaps. Indexes for boosting + retry policy. 
+        // Deadlocks as a guarantee in overlaps (MSSQL) or SSI conflict at commit (PostgreSQL). Indexes for boosting + retry policy.
         await using var transaction =
             await dataContext.BeginTransactionAsync(TransactionIsolationLevel.Serializable, ct);
 
@@ -60,16 +60,15 @@ internal class CreateBookingCommandHandler(
             await bookingRepo.AddAsync(booking, ct);
             await dataContext.SaveChangesAsync(ct);
 
-            await transaction.CommitAsync(ct);
+            await PublishBookingCreatedAsync(request, desk, start, end, ct);
 
+            await transaction.CommitAsync(ct);
         }
         catch
         {
             await transaction.RollbackAsync(ct);
             throw;
         }
-
-        await PublishBookingCreatedAsync(request, desk, start, end, ct);
 
         return new(booking.AccessCode, booking.Id);
     }

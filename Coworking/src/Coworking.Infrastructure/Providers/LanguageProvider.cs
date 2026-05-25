@@ -10,7 +10,7 @@ public class LanguageProvider(IHttpContextAccessor accessor) : ILanguageProvider
     {
         get
         {
-            throw new NotImplementedException("LanguageProvider.CurrentLanguage is configured yet. ");
+            throw new NotImplementedException("LanguageProvider.CurrentLanguage has not configured yet. ");
             // TODO: implement language detection based on Accept-Language header or user preferences.
             // See webApplication.UseRequestLocalization in Program.cs for supported cultures setup.
             // SquidexLocaleProvider can be used as a reference for supported locales and default locale.

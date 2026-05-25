@@ -10,7 +10,6 @@ using Coworking.Infrastructure.External.Squidex;
 using Coworking.Infrastructure.Providers;
 using Coworking.Infrastructure.Repositories;
 using Coworking.Infrastructure.Services.Email.Messaging;
-using Coworking.Infrastructure.Services.Email.Messaging.Background;
 using Coworking.Infrastructure.Services.Email.Messaging.Interfaces;
 using Coworking.Infrastructure.Services.Email.Options;
 using Coworking.Infrastructure.Services.Email.Senders;
@@ -28,6 +27,9 @@ public static class DependencyInjection
         this IServiceCollection services,
         IConfiguration configuration)
     {
+        //services.AddMemoryCache();
+        services.AddLazyCache(); // thread-safe GetOrAdd
+
         services
             .AddOptions(configuration)
             .AddRepositories()
@@ -91,21 +93,22 @@ public static class DependencyInjection
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        //services.AddMemoryCache();
-        services.AddLazyCache();
-
         services.AddOptions<SmtpOptions>()
             .Bind(configuration.GetSection($"Services:{SmtpOptions.SectionName}"))
             .ValidateDataAnnotations()
             .ValidateOnStart();
 
-        services.AddSingleton<EmailChannel>();
-        services.AddSingleton<IEmailChannel>(sp => sp.GetRequiredService<EmailChannel>());
-
         services
             .AddSingleton<IEmailTemplateService, EmailTemplateService>()
-            .AddScoped<IEmailNotificationService, EmailNotificationService>()
             .AddTransient<IEmailSender, SmtpEmailSender>();
+
+        //// using Channel for single app instance.
+        //services
+        //    .AddSingleton<EmailChannel>()
+        //    .AddSingleton<IEmailChannel>(sp => sp.GetRequiredService<EmailChannel>())
+        //    .AddScoped<IEmailNotificationService, EmailNotificationService>();
+
+        services.AddScoped<IEmailNotificationService, DirectEmailNotificationService>();
 
         return services;
     }
@@ -113,7 +116,7 @@ public static class DependencyInjection
     private static IServiceCollection AddHostedServices(this IServiceCollection services)
     {
         services.AddHostedService<BookingLockExpiryCleaner>();
-        services.AddHostedService<EmailBackgroundWorker>();
+        //services.AddHostedService<EmailBackgroundWorker>(); // replaced by RabbitMQ consumer + DirectEmailNotificationService
 
         return services;
     }

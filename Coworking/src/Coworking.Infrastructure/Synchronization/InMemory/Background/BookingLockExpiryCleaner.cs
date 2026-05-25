@@ -9,10 +9,15 @@ internal sealed class BookingLockExpiryCleaner(InMemoryBookingAccessCoordinator 
 
     protected override async Task ExecuteAsync(CancellationToken ct)
     {
-        while (ct.IsCancellationRequested is false)
+        try
         {
-            await Task.Delay(Interval, ct);
-            await synchronizer.CleanExpiredAsync();
+            while (ct.IsCancellationRequested is false)
+            {
+                await Task.Delay(Interval, ct);
+                await synchronizer.CleanExpiredAsync();
+            }
         }
+        catch (OperationCanceledException) { }
+        catch (Exception) { throw; }
     }
 }
