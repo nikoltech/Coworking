@@ -40,8 +40,15 @@ namespace Coworking.API.Infrastructure.Extensions
                         }
                     }
 
-                    ctx.ProblemDetails.Extensions["instance"] = $"{ctx.HttpContext.Request.Method} {ctx.HttpContext.Request.Path}";
-                    ctx.ProblemDetails.Extensions["environment"] = env.EnvironmentName;
+                    if (env.IsDevelopment())
+                    {
+                        ctx.ProblemDetails.Extensions["instance"] = $"{ctx.HttpContext.Request.Method} {ctx.HttpContext.Request.Path}";
+                        ctx.ProblemDetails.Extensions["environment"] = env.EnvironmentName;
+                    }
+                    else
+                    {
+                        ctx.ProblemDetails.Extensions.Remove("traceId");
+                    }
                 });
         }
 
