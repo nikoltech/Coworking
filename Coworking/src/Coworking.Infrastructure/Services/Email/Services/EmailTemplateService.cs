@@ -22,7 +22,7 @@ internal sealed class EmailTemplateService(IAppCache cache)
 
         var sanitizedFileName = SanitizeFileName(templateFileName);
         var cacheKey = FileTemplateCachePrefix + sanitizedFileName;
-        var localCache = cache; // Capture the cache reference for use in the factory method to avoid potential issues with closures.
+        var localCache = cache; // prevent closure from capturing 'this' (this.cache), allowing GC to collect current service instance .
 
         var template = await cache.GetOrAddAsync(cacheKey, async entry =>
         {

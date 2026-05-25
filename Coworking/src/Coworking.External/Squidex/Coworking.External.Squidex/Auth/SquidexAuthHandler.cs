@@ -10,9 +10,9 @@ namespace Coworking.External.Squidex.Auth;
 /// </summary>
 public sealed class SquidexAuthHandler(SquidexTokenService tokenService) : DelegatingHandler
 {
-    internal const string AppNameKey = "SquidexAppName";
-    internal const string ClientNameKey = "SquidexClientName";
-    internal const string DefaultClient = "Default";
+    public const string AppNameKey = "SquidexAppName";
+    public const string ClientNameKey = "SquidexClientName";
+    public const string DefaultClient = "Default";
 
     protected override async Task<HttpResponseMessage> SendAsync(
         HttpRequestMessage request, CancellationToken ct)
