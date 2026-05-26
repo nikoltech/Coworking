@@ -1,0 +1,19 @@
+services:
+  coworking.api:
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_HTTP_PORTS=8080
+      - ASPNETCORE_HTTPS_PORTS=8081
+      - ConnectionStrings__DefaultConnection=Server=db;Port=5432;Database=${POSTGRES_DB};User Id=${POSTGRES_USER};Password=${POSTGRES_PASSWORD};Trust Server Certificate=true;
+      - RabbitMq__Host=rabbitmq
+      - RabbitMq__Username=${RABBITMQ_USER}
+      - RabbitMq__Password=${RABBITMQ_PASSWORD}
+      - Services__Smtp__Host=${SMTP_HOST}
+      - Services__Smtp__Port=${SMTP_PORT}
+      - Services__Smtp__Username=${SMTP_USERNAME}
+      - Services__Smtp__Password=${SMTP_PASSWORD}
+      - Services__Smtp__FromEmail=${SMTP_FROM_EMAIL}
+      - Services__Smtp__FromName=${SMTP_FROM_NAME}
+      - Squidex__Apps__Main__Clients__Default__ClientSecret=${SQUIDEX_MAIN_DEFAULT_SECRET}
+      - Squidex__Apps__Main__Clients__Frontend__ClientSecret=${SQUIDEX_MAIN_FRONTEND_SECRET}
+      - Squidex__Apps__Blog__Clients__Default__ClientSecret=${SQUIDEX_BLOG_DEFAULT_SECRET}
