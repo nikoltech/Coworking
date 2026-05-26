@@ -5,7 +5,7 @@ namespace Coworking.Messaging;
 
 internal static class ConsumerPipelines
 {
-    public static void Email(IConsumePipeConfigurator c)
+    public static void Email<T>(IConsumerConfigurator<T> c) where T : class
     {
         // Tier 1: delayed redelivery — releases the consumer slot, handles all transient failures.
         c.UseDelayedRedelivery(r =>

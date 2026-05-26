@@ -128,7 +128,10 @@ public static class DependencyInjection
 
     private static void ConfigureConsumers(this IBusRegistrationConfigurator x)
     {
-        x.AddConsumer<BookingCreatedConsumer>(ConsumerPipelines.Email);
-        x.AddConsumer<BookingCancelledConsumer>(ConsumerPipelines.Email);
+        x.AddConsumer<BookingCreatedConsumer>(c => ConsumerPipelines.Email(c));
+        x.AddConsumer<BookingCancelledConsumer>(c => ConsumerPipelines.Email(c));
+
+        x.AddConsumer<BrokerTestConsumerA>();
+        x.AddConsumer<BrokerTestConsumerB>();
     }
 }
