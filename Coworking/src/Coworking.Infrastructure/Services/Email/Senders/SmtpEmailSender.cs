@@ -13,11 +13,16 @@ namespace Coworking.Infrastructure.Services.Email.Senders;
 internal sealed class SmtpEmailSender : IEmailSender
 {
     private readonly SmtpOptions _options;
+    private readonly ISmtpConnectionLimiter _connectionLimiter;
     private readonly ILogger<SmtpEmailSender> _logger;
 
-    public SmtpEmailSender(IOptions<SmtpOptions> options, ILogger<SmtpEmailSender> logger)
+    public SmtpEmailSender(
+        IOptions<SmtpOptions> options,
+        ISmtpConnectionLimiter connectionLimiter,
+        ILogger<SmtpEmailSender> logger)
     {
         _options = options?.Value ?? throw new ArgumentNullException(nameof(options));
+        _connectionLimiter = connectionLimiter ?? throw new ArgumentNullException(nameof(connectionLimiter));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
 #if DEBUG
@@ -27,13 +32,11 @@ internal sealed class SmtpEmailSender : IEmailSender
 
     public async Task SendRawEmailAsync(string to, string subject, string body, CancellationToken ct = default)
     {
-        ValidateParameters(
-            to: to,
-            subject: subject,
-            body: body
-            );
+        ValidateParameters(to, subject, body);
 
         var message = BuildMessage(to, subject, body);
+
+        await using var _ = await _connectionLimiter.AcquireAsync(ct);
 
         try
         {

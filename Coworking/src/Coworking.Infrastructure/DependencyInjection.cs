@@ -18,6 +18,7 @@ using Coworking.Infrastructure.Synchronization.InMemory;
 using Coworking.Infrastructure.Synchronization.InMemory.Background;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace Coworking.Infrastructure;
 
@@ -100,6 +101,8 @@ public static class DependencyInjection
 
         services
             .AddSingleton<IEmailTemplateService, EmailTemplateService>()
+            .AddSingleton<ISmtpConnectionLimiter>(sp => new SmtpConnectionLimiter(
+                sp.GetRequiredService<IOptions<SmtpOptions>>().Value.MaxConcurrentConnections))
             .AddTransient<IEmailSender, SmtpEmailSender>();
 
         //// using Channel for single app instance.

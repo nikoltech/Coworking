@@ -1,25 +1,8 @@
-services:
-  coworking.api:
-    image: ${DOCKER_REGISTRY-}coworkingapi
-    build:
-      context: .
-      dockerfile: Coworking/src/Coworking.API/Dockerfile
-    environment:
-      - ASPNETCORE_HTTP_PORTS=8080
-      - ASPNETCORE_HTTPS_PORTS=8081
-      - ConnectionStrings__DefaultConnection=Server=db;Port=5432;Database=${POSTGRES_DB};User Id=${POSTGRES_USER};Password=${POSTGRES_PASSWORD};Trust Server Certificate=true;Include Error Detail=true;
-      - RabbitMq__Host=rabbitmq
-      - RabbitMq__Username=${RABBITMQ_USER}
-      - RabbitMq__Password=${RABBITMQ_PASSWORD}
-    ports:
-      - "8080:8080"
-      - "8081:8081"
-    depends_on:
-      db:
-        condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
+# Infrastructure-only compose file for local development.
+# Run: docker compose -f docker-compose.infra.yml up -d
+# Then start the app via the "LocalInfra" launch profile in IDE or dotnet run.
 
+services:
   rabbitmq:
     image: rabbitmq:3-management
     container_name: coworking_rabbitmq
