@@ -5,8 +5,6 @@ using MassTransit;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
-using System.Net.Mail;
-
 namespace Coworking.Messaging;
 
 public static class DependencyInjection
@@ -130,40 +128,7 @@ public static class DependencyInjection
 
     private static void ConfigureConsumers(this IBusRegistrationConfigurator x)
     {
-        // Retry is configured per-consumer, not globally.
-        // Global retry is dangerous: permanent errors (data bugs, ArgumentException)
-        // will be retried N times with the same result, only delaying arrival to DLQ.
-
-        x.AddConsumer<BookingCreatedConsumer>(c => c.UseMessageRetry(ConfigureRetry));
-        x.AddConsumer<BookingCancelledConsumer>(c => c.UseMessageRetry(ConfigureRetry));
+        x.AddConsumer<BookingCreatedConsumer>(ConsumerPipelines.Email);
+        x.AddConsumer<BookingCancelledConsumer>(ConsumerPipelines.Email);
     }
-
-    // Shared retry policy for all consumers.
-    // Only transient errors are retried (network, timeout).
-    // Permanent errors (data bugs) go straight to DLQ without wasted attempts.
-    private static void ConfigureRetry(IRetryConfigurator r)
-    {
-        r.Exponential(5, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(5));
-
-        r.Ignore<ArgumentException>();
-        r.Ignore<InvalidOperationException>();
-        r.Handle<HttpRequestException>();
-        r.Handle<TimeoutException>();
-
-        r.Ignore<SmtpException>(ex => IsTransientSmtpCode(ex)); // Transient SMTP codes are already handled by Polly.
-        r.Handle<SmtpException>(ex => !IsTransientSmtpCode(ex)); // Permanent SMTP codes — straight to DLQ.
-    }
-
-    // Duplicated from DirectEmailNotificationService — intentionally.
-    // SmtpStatusCode is a stable BCL enum; sharing via a common project is not worth the coupling.
-    private static bool IsTransientSmtpCode(SmtpException ex) =>
-        ex.StatusCode switch
-        {
-            SmtpStatusCode.GeneralFailure => true,
-            SmtpStatusCode.MailboxBusy => true,
-            SmtpStatusCode.ServiceNotAvailable => true,
-            SmtpStatusCode.TransactionFailed => true,
-            SmtpStatusCode.ExceededStorageAllocation => true,
-            _ => false
-        };
 }
