@@ -1,4 +1,6 @@
 using Coworking.API.Controllers.Abstractions;
+using Coworking.Application.Abstractions;
+using Coworking.Infrastructure.Persistence.Contexts;
 using Coworking.Messaging.Contracts;
 using MassTransit;
 using Microsoft.AspNetCore.Mvc;
@@ -8,7 +10,7 @@ namespace Coworking.API.Controllers;
 
 [Route("api/broker-test")]
 [Tags("Dev")]
-public sealed class BrokerTestController(IPublishEndpoint publishEndpoint) : ApiControllerBase
+public sealed class BrokerTestController(IPublishEndpoint publishEndpoint, IAppDbContext dbContext) : ApiControllerBase
 {
     private const int MaxPayloadLength = 500;
 
@@ -16,13 +18,14 @@ public sealed class BrokerTestController(IPublishEndpoint publishEndpoint) : Api
     /// Publishes a test message to the broker. Both consumers will receive it.
     /// </summary>
     [HttpPost]
-    [Consumes("application/json")]
+    //[Consumes("application/json")]
     [ProducesResponseType(StatusCodes.Status202Accepted)]
-    public async Task<IActionResult> Publish([FromBody] BrokerTestRequest request, CancellationToken ct)
+    public async Task<IActionResult> Publish([FromForm] BrokerTestRequest request, CancellationToken ct)
     {
         var payload = Sanitize(request.Message);
 
         await publishEndpoint.Publish(new BrokerTestMessage(payload), ct);
+        await dbContext.SaveChangesAsync(ct);
 
         return Accepted();
     }

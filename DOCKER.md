@@ -10,7 +10,7 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml down
 ## Full stack (app + infra)
 
 ```bash
-docker compose up -d
+docker compose up -d --build
 docker compose down
 ```
 
