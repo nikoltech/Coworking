@@ -35,8 +35,8 @@ internal class CancelBookingCommandHandler(
 
             booking.SetStatus(BookingStatus.Cancelled);
 
-            await dataContext.SaveChangesAsync(ct);
             await PublishBookingCancelledAsync(booking, ct);
+            await dataContext.SaveChangesAsync(ct);
 
             await transaction.CommitAsync(ct);
         }

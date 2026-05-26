@@ -58,9 +58,8 @@ internal class CreateBookingCommandHandler(
 
             // RangeS-U (level-up locking)
             await bookingRepo.AddAsync(booking, ct);
-            await dataContext.SaveChangesAsync(ct);
-
             await PublishBookingCreatedAsync(request, desk, start, end, ct);
+            await dataContext.SaveChangesAsync(ct);
 
             await transaction.CommitAsync(ct);
         }
