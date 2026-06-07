@@ -30,7 +30,11 @@ internal sealed class SmtpEmailSender : IEmailSender
 #endif
     }
 
-    public async Task SendRawEmailAsync(string to, string subject, string body, CancellationToken ct = default)
+    public async Task SendRawEmailAsync(
+        string to,
+        string subject,
+        string body,
+        CancellationToken ct = default)
     {
         ValidateParameters(to, subject, body);
 
@@ -77,7 +81,9 @@ internal sealed class SmtpEmailSender : IEmailSender
         return message;
     }
 
-    private async Task ExecuteSmtpOperationAsync(Func<SmtpClient, Task> operation, CancellationToken ct)
+    private async Task ExecuteSmtpOperationAsync(
+        Func<SmtpClient, Task> operation,
+        CancellationToken ct)
     {
         using var client = new SmtpClient();
 

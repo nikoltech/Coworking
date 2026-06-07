@@ -28,9 +28,7 @@ public sealed class SquidexAssetClient
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
     };
 
-    public SquidexAssetClient(
-        HttpClient http,
-        SquidexOptions options,
+    public SquidexAssetClient(HttpClient http, SquidexOptions options,
         string clientName)
     {
         _http = http;
@@ -47,8 +45,7 @@ public sealed class SquidexAssetClient
         return SendAndDeserializeAsync<ResponseSchema<AssetDto>>(request, ct);
     }
 
-    public async Task<AssetDto?> GetByIdAsync(
-        string id, CancellationToken ct = default)
+    public async Task<AssetDto?> GetByIdAsync(string id, CancellationToken ct = default)
     {
         var request = BuildRequest(HttpMethod.Get, $"{AssetsUrl()}/{id}");
         var response = await SendWithRetryAsync(request, ct);
@@ -60,8 +57,9 @@ public sealed class SquidexAssetClient
         return await response.Content.ReadFromJsonAsync<AssetDto>(Json, ct);
     }
 
-    public async Task<AssetDto> UploadAsync(
-        Stream stream, string fileName, string mimeType, CancellationToken ct = default)
+    public async Task<AssetDto> UploadAsync(Stream stream, string fileName,
+        string mimeType,
+        CancellationToken ct = default)
     {
         var content = new MultipartFormDataContent();
         content.Add(new StreamContent(stream), "file", fileName);
@@ -77,7 +75,8 @@ public sealed class SquidexAssetClient
     }
 
     public async Task<AssetDto> UpdateMetadataAsync(
-        string id, UpdateAssetRequest update, CancellationToken ct = default)
+        string id, UpdateAssetRequest update,
+        CancellationToken ct = default)
     {
         var request = BuildRequest(HttpMethod.Put, $"{AssetsUrl()}/{id}");
         request.Content = JsonContent.Create(update, options: Json);
@@ -89,8 +88,9 @@ public sealed class SquidexAssetClient
                ?? throw new InvalidOperationException("Empty response from Squidex Assets.");
     }
 
-    public async Task DeleteAsync(
-        string id, bool permanent = false, CancellationToken ct = default)
+    public async Task DeleteAsync(string id,
+        bool permanent = false,
+        CancellationToken ct = default)
     {
         var url = $"{AssetsUrl()}/{id}" + (permanent ? "?permanent=true" : string.Empty);
         var request = BuildRequest(HttpMethod.Delete, url);
@@ -100,8 +100,7 @@ public sealed class SquidexAssetClient
 
     // ── private ──────────────────────────────────────────────────────────────
 
-    private async Task<T> SendAndDeserializeAsync<T>(
-        HttpRequestMessage request, CancellationToken ct)
+    private async Task<T> SendAndDeserializeAsync<T>(HttpRequestMessage request, CancellationToken ct)
     {
         var response = await SendWithRetryAsync(request, ct);
         await response.EnsureSquidexSuccessAsync(ct);
@@ -110,8 +109,7 @@ public sealed class SquidexAssetClient
                ?? throw new InvalidOperationException($"Empty Squidex response for {typeof(T).Name}.");
     }
 
-    private async Task<HttpResponseMessage> SendWithRetryAsync(
-        HttpRequestMessage request, CancellationToken ct)
+    private async Task<HttpResponseMessage> SendWithRetryAsync(HttpRequestMessage request, CancellationToken ct)
     {
         const int maxAttempts = 3;
 

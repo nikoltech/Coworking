@@ -15,7 +15,9 @@ namespace Coworking.Application.Behaviors
     {
         private const int MaxRetries = 3;
 
-        public async Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken ct)
+        public async Task<TResponse> Handle(TRequest request,
+            RequestHandlerDelegate<TResponse> next,
+            CancellationToken ct)
         {
             var retryPolicy = Policy
                 .Handle<DbUpdateException>(dbConflictDetector.IsTransient)

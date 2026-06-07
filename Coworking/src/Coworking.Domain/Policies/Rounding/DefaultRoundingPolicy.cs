@@ -14,7 +14,10 @@ public class DefaultRoundingPolicy : IBookingRoundingPolicy
     public DateTimeOffset RoundEnd(DateTimeOffset end, SlotSize slotSize)
         => DateTimeRounding.CeilToSlot(end, slotSize);
 
-    public (DateTimeOffset Start, DateTimeOffset End) RoundInterval(DateTimeOffset start, DateTimeOffset end, SlotSize slotSize)
+    public (DateTimeOffset Start, DateTimeOffset End) RoundInterval(
+        DateTimeOffset start, 
+        DateTimeOffset end, 
+        SlotSize slotSize)
     {
         return (RoundStart(start, slotSize), RoundEnd(end, slotSize));
     }

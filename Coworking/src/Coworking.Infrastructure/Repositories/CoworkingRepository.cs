@@ -8,15 +8,16 @@ namespace Coworking.Infrastructure.Repositories;
 
 internal sealed class CoworkingRepository(AppDbContext context) : ICoworkingRepository
 {
-    public async Task<Desk> GetDeskWithCoworkingAsync(int deskId, CancellationToken cancellationToken = default) =>
+    public async Task<Desk> GetDeskWithCoworkingAsync(
+        int deskId,
+        CancellationToken cancellationToken = default) =>
         await context.Set<Desk>()
             .Where(d => d.Id == deskId)
             .Include(d => d.Coworking)
             .SingleAsync(cancellationToken)
             .ConfigureAwait(false);
 
-    public async Task<List<Desk>> ListDesksAsync(
-        int coworkingId,
+    public async Task<List<Desk>> ListDesksAsync(int coworkingId,
         Expression<Func<Desk, bool>>? predicate = null,
         CancellationToken ct = default)
     {
@@ -43,8 +44,7 @@ internal sealed class CoworkingRepository(AppDbContext context) : ICoworkingRepo
             .ToListAsync(ct);
     }
 
-    public async Task<Desk?> FetchDeskWithBookingsAsync(
-        int deskId,
+    public async Task<Desk?> FetchDeskWithBookingsAsync(int deskId,
         DateTimeOffset startUtc,
         DateTimeOffset endUtc,
         CancellationToken ct = default)

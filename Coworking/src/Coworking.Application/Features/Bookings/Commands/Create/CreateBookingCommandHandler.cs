@@ -21,7 +21,9 @@ internal class CreateBookingCommandHandler(
     IBookingAccessCoordinator bookingAccessCoordinator)
     : IRequestHandler<CreateBookingCommand, CreateBookingCommandResponse>
 {
-    public async Task<CreateBookingCommandResponse> Handle(CreateBookingCommand request, CancellationToken ct)
+    public async Task<CreateBookingCommandResponse> Handle(
+        CreateBookingCommand request,
+        CancellationToken ct)
     {
         var desk = await coworkingRepo.GetDeskWithCoworkingAsync(request.DeskId, ct)
             ?? throw new NotFoundException($"Desk with id {request.DeskId} not found.");
@@ -72,8 +74,7 @@ internal class CreateBookingCommandHandler(
         return new(booking.AccessCode, booking.Id);
     }
 
-    private Task PublishBookingCreatedAsync(
-        CreateBookingCommand request,
+    private Task PublishBookingCreatedAsync(CreateBookingCommand request,
         Desk desk,
         DateTimeOffset start,
         DateTimeOffset end,
@@ -103,8 +104,7 @@ internal class CreateBookingCommandHandler(
         return roundingPolicy.RoundInterval(startLocal, endLocal, coworking.SlotSize);
     }
 
-    private static Booking CreateAndInitializeBooking(
-        CreateBookingCommand request,
+    private static Booking CreateAndInitializeBooking(CreateBookingCommand request,
         DateTimeOffset start,
         DateTimeOffset end)
     {
@@ -119,8 +119,7 @@ internal class CreateBookingCommandHandler(
         return booking;
     }
 
-    private static void ValidateWithinWorkingHours(
-        DateTimeOffset start,
+    private static void ValidateWithinWorkingHours(DateTimeOffset start,
         DateTimeOffset end,
         Domain.Entities.Coworking coworking)
     {

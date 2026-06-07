@@ -33,8 +33,7 @@ public class Booking : ITrackEntity
 
     public DateTime? UpdatedAt { get; set; }
 
-    public static Booking Create(
-        int deskId,
+    public static Booking Create(int deskId,
         string userName, // ValueObject? depend of choosen user design
         string userEmail,  // ValueObject?
         DateTimeOffset startTime,

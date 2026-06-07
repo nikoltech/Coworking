@@ -18,19 +18,22 @@ public class SquidexAssetRepository(SquidexAssetClient client)
         CancellationToken ct = default) =>
         Client.QueryAsync(query, ct);
 
-    public Task<AssetDto?> GetByIdAsync(
-        string id, CancellationToken ct = default) =>
+    public Task<AssetDto?> GetByIdAsync(string id, CancellationToken ct = default) =>
         Client.GetByIdAsync(id, ct);
 
-    public Task<AssetDto> UploadAsync(
-        Stream stream, string fileName, string mimeType, CancellationToken ct = default) =>
+    public Task<AssetDto> UploadAsync(Stream stream, string fileName,
+        string mimeType,
+        CancellationToken ct = default) =>
         Client.UploadAsync(stream, fileName, mimeType, ct);
 
     public Task<AssetDto> UpdateMetadataAsync(
-        string id, UpdateAssetRequest request, CancellationToken ct = default) =>
+        string id,
+        UpdateAssetRequest request,
+        CancellationToken ct = default) =>
         Client.UpdateMetadataAsync(id, request, ct);
 
-    public Task DeleteAsync(
-        string id, bool permanent = false, CancellationToken ct = default) =>
+    public Task DeleteAsync(string id,
+        bool permanent = false,
+        CancellationToken ct = default) =>
         Client.DeleteAsync(id, permanent, ct);
 }
