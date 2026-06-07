@@ -9,8 +9,7 @@ public sealed class SlotGenerator : ISlotGenerator
     /// DST gaps are skipped entirely — slots overlapping invalid times are excluded.
     /// DST folds use standard (winter) UTC offset for ambiguous times.
     /// </summary>
-    public IReadOnlyList<TimeSlot> GenerateSlots(
-        DateOnly targetDate,
+    public IReadOnlyList<TimeSlot> GenerateSlots(DateOnly targetDate,
         TimeOnly openTime,
         TimeOnly closeTime,
         SlotSize slotSize,
@@ -40,8 +39,7 @@ public sealed class SlotGenerator : ISlotGenerator
      * period boundary
      *******************************************************/
 
-    private static DateTime ResolvePeriodEnd(
-        DateOnly date, TimeOnly openTime, TimeOnly closeTime)
+    private static DateTime ResolvePeriodEnd(DateOnly date, TimeOnly openTime, TimeOnly closeTime)
     {
         // 24/7 mode
         if (openTime == closeTime)
@@ -59,8 +57,7 @@ public sealed class SlotGenerator : ISlotGenerator
      * slot construction
      *******************************************************/
 
-    private static bool TryBuildSlot(
-        TimeZoneInfo timeZone,
+    private static bool TryBuildSlot(TimeZoneInfo timeZone,
         DateTime localStart,
         DateTime localEnd,
         out TimeSlot slot)

@@ -20,4 +20,6 @@ public sealed record SquidexAppOptions
 
     [Required]
     public Dictionary<string, SquidexClientCredentials> Clients { get; init; } = new();
+
+    public SquidexRetryOptions Retry { get; init; } = new();
 }

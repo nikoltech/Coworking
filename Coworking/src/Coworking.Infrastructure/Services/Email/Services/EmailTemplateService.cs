@@ -53,7 +53,8 @@ internal sealed class EmailTemplateService(IAppCache cache)
         return template(model);
     }
 
-    private static async Task<string> ReadTemplateFileAsync(IAppCache localCache, string templateFileName)
+    private static async Task<string> ReadTemplateFileAsync(IAppCache localCache,
+        string templateFileName)
     {
         var sanitizedFileName = SanitizeFileName(templateFileName);
         var cacheKey = RawTemplateCachePrefix + sanitizedFileName;

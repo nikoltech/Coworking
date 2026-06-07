@@ -19,9 +19,7 @@ public abstract class SquidexContext : ISquidexContext
     private readonly SquidexClientFactory _clientFactory;
     private readonly string _appName;
 
-    protected SquidexContext(
-        ISquidexApiClient defaultClient,
-        ISquidexPaginator paginator,
+    protected SquidexContext(ISquidexApiClient defaultClient, ISquidexPaginator paginator,
         SquidexClientFactory clientFactory,
         string appName)
     {

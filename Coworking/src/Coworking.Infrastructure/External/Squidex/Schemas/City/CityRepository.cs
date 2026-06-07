@@ -21,8 +21,7 @@ public sealed class CityRepository(ISquidexApiClient client, ISquidexPaginator p
         return result.Items.FirstOrDefault();
     }
 
-    public Task<ResponseSchema<CitySchema>> GetRegionCitiesAsync(
-        CancellationToken ct = default) =>
+    public Task<ResponseSchema<CitySchema>> GetRegionCitiesAsync(CancellationToken ct = default) =>
         GetAllAsync(
             RequestQuery.Create()
                 .WithFilter(SquidexFilter.Eq(CityPaths.IsRegionCity, true))

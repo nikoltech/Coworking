@@ -1,4 +1,4 @@
-﻿using Coworking.External.Squidex.Abstractions.Models;
+using Coworking.External.Squidex.Abstractions.Models;
 using Coworking.External.Squidex.Abstractions.Options;
 using Coworking.External.Squidex.Abstractions.Repository;
 using Coworking.External.Squidex.Auth;
@@ -8,9 +8,9 @@ using System.Diagnostics;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Web;
 
 namespace Coworking.External.Squidex.Client;
 
@@ -29,11 +29,14 @@ public sealed class SquidexApiClient : ISquidexApiClient
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
     };
 
+    private static readonly JsonSerializerOptions JsonWrite = new()
+    {
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+    };
+
     public SquidexAppOptions AppOptions { get; }
 
-    internal SquidexApiClient(
-        HttpClient http,
-        SquidexAppOptions appOptions,
+    internal SquidexApiClient(HttpClient http, SquidexAppOptions appOptions,
         string clientName,
         SquidexLocaleProvider locales)
     {
@@ -45,8 +48,14 @@ public sealed class SquidexApiClient : ISquidexApiClient
 
     // ── JSON query ────────────────────────────────────────────────────────────
 
-    public Task<ResponseSchema<T>> QueryAsync<T>(
-        string schema, RequestQuery query,
+    /// <summary>
+    /// Queries content items by a JSON filter serialized into the URL query string.
+    /// </summary>
+    /// <remarks>
+    /// For complex filters whose serialized JSON exceeds ~2 KB, prefer
+    /// <see cref="QueryPostAsync{T}"/> to avoid 414 / 431 HTTP errors.
+    /// </remarks>
+    public Task<ResponseSchema<T>> QueryAsync<T>(string schema, RequestQuery query,
         QueryOptions? queryOptions = null,
         CancellationToken ct = default)
     {
@@ -60,8 +69,7 @@ public sealed class SquidexApiClient : ISquidexApiClient
 
     // ── OData query ───────────────────────────────────────────────────────────
 
-    public Task<ResponseSchema<T>> QueryODataAsync<T>(
-        string schema, ODataQuery query,
+    public Task<ResponseSchema<T>> QueryODataAsync<T>(string schema, ODataQuery query,
         QueryOptions? queryOptions = null,
         CancellationToken ct = default)
     {
@@ -75,8 +83,7 @@ public sealed class SquidexApiClient : ISquidexApiClient
 
     // ── POST query ────────────────────────────────────────────────────────────
 
-    public Task<ResponseSchema<T>> QueryPostAsync<T>(
-        string schema, RequestQuery query,
+    public Task<ResponseSchema<T>> QueryPostAsync<T>(string schema, RequestQuery query,
         QueryOptions? queryOptions = null,
         CancellationToken ct = default)
     {
@@ -90,13 +97,14 @@ public sealed class SquidexApiClient : ISquidexApiClient
 
     // ── IDs query (batched) ───────────────────────────────────────────────────
 
-    public async Task<ResponseSchema<T>> GetByIdsAsync<T>(
-        string schema, IEnumerable<string> ids,
+    public async Task<ResponseSchema<T>> GetByIdsAsync<T>(string schema, IEnumerable<string> ids,
         QueryOptions? queryOptions = null,
         CancellationToken ct = default)
     {
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+
         var tasks = ids.Chunk(IdsBatchSize)
-            .Select(batch => QueryByIdsBatchAsync<T>(schema, batch, queryOptions, ct));
+            .Select(batch => QueryByIdsBatchWithCancelAsync<T>(schema, batch, queryOptions, cts));
 
         var results = await Task.WhenAll(tasks);
         var allItems = results.SelectMany(r => r.Items).ToList();
@@ -106,8 +114,7 @@ public sealed class SquidexApiClient : ISquidexApiClient
 
     // ── Single item ───────────────────────────────────────────────────────────
 
-    public async Task<ContentDto<T>?> GetByIdAsync<T>(
-        string schema, string id,
+    public async Task<ContentDto<T>?> GetByIdAsync<T>(string schema, string id,
         QueryOptions? queryOptions = null,
         CancellationToken ct = default)
     {
@@ -122,7 +129,7 @@ public sealed class SquidexApiClient : ISquidexApiClient
     }
 
     /// <summary>
-    /// For conditional GET — client caches ETag and sends it as If-None-Match header. 
+    /// For conditional GET — client caches ETag and sends it as If-None-Match header.
     /// </summary>
     /// <param name="knownVersion">Optional ETag for conditional GET</param>
     /// <returns>If content is not modified, returns NotModified=true and null content. Otherwise, returns content with NotModified=false.</returns>
@@ -151,8 +158,9 @@ public sealed class SquidexApiClient : ISquidexApiClient
 
     // ── Mutations ────────────────────────────────────────────────────────────
 
-    public Task<ContentDto<T>> CreateAsync<T>(
-        string schema, T data, bool publish = true, CancellationToken ct = default)
+    public Task<ContentDto<T>> CreateAsync<T>(string schema, T data,
+        bool publish = true,
+        CancellationToken ct = default)
     {
         var url = ContentUrl(schema) + (publish ? "?publish=true" : string.Empty);
         var request = BuildRequest(HttpMethod.Post, url);
@@ -165,8 +173,7 @@ public sealed class SquidexApiClient : ISquidexApiClient
     /// </summary>
     /// <param name="expectedVersion">Optional ETag for concurrency control</param>
     /// <returns></returns>
-    public Task<ContentDto<T>> UpdateAsync<T>(
-        string schema, string id, T data,
+    public Task<ContentDto<T>> UpdateAsync<T>(string schema, string id, T data,
         int? expectedVersion = null,
         CancellationToken ct = default)
     {
@@ -182,15 +189,17 @@ public sealed class SquidexApiClient : ISquidexApiClient
     }
 
     public Task<ContentDto<T>> PatchAsync<T>(
-        string schema, string id, T data, CancellationToken ct = default)
+        string schema, string id, T data,
+        CancellationToken ct = default)
     {
         var request = BuildRequest(HttpMethod.Patch, $"{ContentUrl(schema)}/{id}");
         request.Content = JsonContent.Create(data, options: Json);
         return SendAndDeserializeAsync<ContentDto<T>>(request, ct);
     }
 
-    public async Task DeleteAsync(
-        string schema, string id, bool permanent = false, CancellationToken ct = default)
+    public async Task DeleteAsync(string schema, string id,
+        bool permanent = false,
+        CancellationToken ct = default)
     {
         var url = $"{ContentUrl(schema)}/{id}" + (permanent ? "?permanent=true" : string.Empty);
         var request = BuildRequest(HttpMethod.Delete, url);
@@ -198,8 +207,9 @@ public sealed class SquidexApiClient : ISquidexApiClient
         await response.EnsureSquidexSuccessAsync(ct);
     }
 
-    public Task<ContentDto<T>> ChangeStatusAsync<T>(
-        string schema, string id, string newStatus, CancellationToken ct = default)
+    public Task<ContentDto<T>> ChangeStatusAsync<T>(string schema, string id,
+        string newStatus,
+        CancellationToken ct = default)
     {
         var request = BuildRequest(HttpMethod.Put, $"{ContentUrl(schema)}/{id}/status");
         request.Content = JsonContent.Create(new { status = newStatus }, options: Json);
@@ -208,8 +218,7 @@ public sealed class SquidexApiClient : ISquidexApiClient
 
     // ── App ──────────────────────────────────────────────────────────────────
 
-    public async Task<IReadOnlyList<SquidexLocaleInfo>> GetAppLocalesAsync(
-        CancellationToken ct = default)
+    public async Task<IReadOnlyList<SquidexLocaleInfo>> GetAppLocalesAsync(CancellationToken ct = default)
     {
         var url = $"{AppOptions.BaseUrl.TrimEnd('/')}/api/apps/{AppOptions.AppName}/languages";
         var request = BuildRequest(HttpMethod.Get, url);
@@ -227,24 +236,23 @@ public sealed class SquidexApiClient : ISquidexApiClient
 
     // ── Retry ────────────────────────────────────────────────────────────────
 
-    private async Task<HttpResponseMessage> SendWithRetryAsync(
-        HttpRequestMessage request, CancellationToken ct)
+    private async Task<HttpResponseMessage> SendWithRetryAsync(HttpRequestMessage request, CancellationToken ct)
     {
-        const int maxAttempts = 3;
+        var retry = AppOptions.Retry;
 
-        for (var attempt = 1; attempt <= maxAttempts; attempt++)
+        for (var attempt = 1; attempt <= retry.MaxAttempts; attempt++)
         {
             var requestToSend = attempt == 1
                 ? request
                 : await CloneAsync(request, ct);
 
-            var response = await _http.SendAsync(requestToSend, ct);
+            using var response = await _http.SendAsync(requestToSend, ct);
 
-            if (!IsTransient(response.StatusCode) || attempt == maxAttempts)
+            if (!IsTransient(response.StatusCode) || attempt == retry.MaxAttempts)
                 return response;
 
-            response.Dispose();
-            await Task.Delay(TimeSpan.FromSeconds(Math.Pow(2, attempt - 1)), ct);
+            await Task.Delay(
+                TimeSpan.FromSeconds(retry.BaseDelaySeconds * Math.Pow(2, attempt - 1)), ct);
         }
 
         throw new UnreachableException();
@@ -252,9 +260,9 @@ public sealed class SquidexApiClient : ISquidexApiClient
 
     // ── Private ──────────────────────────────────────────────────────────────
 
-    private Task<ResponseSchema<T>> QueryByIdsBatchAsync<T>(
-        string schema, string[] batch,
-        QueryOptions? queryOptions, CancellationToken ct)
+    private Task<ResponseSchema<T>> QueryByIdsBatchAsync<T>(string schema, string[] batch,
+        QueryOptions? queryOptions,
+        CancellationToken ct)
     {
         var ids = string.Join(",", batch);
         var request = BuildRequest(
@@ -265,8 +273,22 @@ public sealed class SquidexApiClient : ISquidexApiClient
         return SendAndDeserializeAsync<ResponseSchema<T>>(request, ct);
     }
 
-    private async Task<T> SendAndDeserializeAsync<T>(
-        HttpRequestMessage request, CancellationToken ct)
+    private async Task<ResponseSchema<T>> QueryByIdsBatchWithCancelAsync<T>(string schema, string[] batch,
+        QueryOptions? queryOptions,
+        CancellationTokenSource cts)
+    {
+        try
+        {
+            return await QueryByIdsBatchAsync<T>(schema, batch, queryOptions, cts.Token);
+        }
+        catch
+        {
+            cts.Cancel();
+            throw;
+        }
+    }
+
+    private async Task<T> SendAndDeserializeAsync<T>(HttpRequestMessage request, CancellationToken ct)
     {
         var response = await SendWithRetryAsync(request, ct);
         await response.EnsureSquidexSuccessAsync(ct);
@@ -276,8 +298,8 @@ public sealed class SquidexApiClient : ISquidexApiClient
                    $"Empty Squidex response for {typeof(T).Name}.");
     }
 
-    private HttpRequestMessage BuildRequest(
-        HttpMethod method, string url, QueryOptions? queryOptions = null)
+    private HttpRequestMessage BuildRequest(HttpMethod method, string url,
+        QueryOptions? queryOptions = null)
     {
         var request = new HttpRequestMessage(method, url);
         var opts = queryOptions ?? QueryOptions.Default;
@@ -314,24 +336,21 @@ public sealed class SquidexApiClient : ISquidexApiClient
 
     private static string ToJsonQueryString(RequestQuery query)
     {
-        var json = JsonSerializer.Serialize(query, new JsonSerializerOptions
-        {
-            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-        });
+        var json = JsonSerializer.Serialize(query, JsonWrite);
         return "q=" + Uri.EscapeDataString(json);
     }
 
     private static string ToODataQueryString(ODataQuery query)
     {
-        var sb = new StringBuilder();
+        var qs = HttpUtility.ParseQueryString(string.Empty);
 
-        if (query.Top.HasValue) sb.Append($"$top={query.Top}&");
-        if (query.Skip > 0) sb.Append($"$skip={query.Skip}&");
-        if (query.Filter is not null) sb.Append($"$filter={Uri.EscapeDataString(query.Filter)}&");
-        if (query.OrderBy is not null) sb.Append($"$orderby={Uri.EscapeDataString(query.OrderBy)}&");
-        if (query.Search is not null) sb.Append($"$search={Uri.EscapeDataString(query.Search)}&");
+        if (query.Top.HasValue)        qs["$top"]     = query.Top.Value.ToString();
+        if (query.Skip > 0)            qs["$skip"]    = query.Skip.ToString();
+        if (query.Filter  is not null) qs["$filter"]  = query.Filter;
+        if (query.OrderBy is not null) qs["$orderby"] = query.OrderBy;
+        if (query.Search  is not null) qs["$search"]  = query.Search;
 
-        return sb.ToString().TrimEnd('&');
+        return qs.ToString()!;
     }
 
     private string ContentUrl(string schema) =>

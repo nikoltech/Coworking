@@ -30,8 +30,12 @@ public sealed class InMemoryBookingAccessCoordinator : IBookingAccessCoordinator
         CancellationToken ct) =>
         await WaitIfOverlappingAsync(DefaultAcquireTimeout, deskId, start, end, ct);
 
-    public async Task<IAsyncDisposable> WaitIfOverlappingAsync(TimeSpan? ttl,
-        int deskId, DateTimeOffset start, DateTimeOffset end, CancellationToken ct)
+    public async Task<IAsyncDisposable> WaitIfOverlappingAsync(
+        TimeSpan? ttl,
+        int deskId,
+        DateTimeOffset start,
+        DateTimeOffset end,
+        CancellationToken ct)
     {
         while (true)
         {

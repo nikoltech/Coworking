@@ -9,7 +9,9 @@ public static class BookingSpecifications
     /// <summary>
     /// Can book at border times
     /// </summary>
-    public static Expression<Func<Booking, bool>> OverlappingWith(int deskId, DateTimeOffset newStart, DateTimeOffset newEnd)
+    public static Expression<Func<Booking, bool>> OverlappingWith(int deskId, 
+        DateTimeOffset newStart, 
+        DateTimeOffset newEnd)
     {
         return booking =>
             booking.DeskId == deskId &&
@@ -20,8 +22,7 @@ public static class BookingSpecifications
     /// <summary>
     /// Represents access entitlement during coworking working hours.
     /// </summary>
-    public static void ValidateAccessPeriod(
-        DateTimeOffset start,
+    public static void ValidateAccessPeriod(DateTimeOffset start,
         DateTimeOffset end,
         Domain.Entities.Coworking coworking)
     {
@@ -58,8 +59,7 @@ public static class BookingSpecifications
         }
     }
 
-    public static bool IsWithinWorkingWindow(
-        TimeOnly time,
+    public static bool IsWithinWorkingWindow(TimeOnly time,
         TimeOnly openTime,
         TimeOnly closeTime)
     {
@@ -80,8 +80,7 @@ public static class BookingSpecifications
                time <= closeTime;
     }
 
-    public static bool IsNonStopWorkingHours(
-        Domain.Entities.Coworking coworking)
+    public static bool IsNonStopWorkingHours(Domain.Entities.Coworking coworking)
     {
         return coworking.OpenTime ==
                coworking.CloseTime;

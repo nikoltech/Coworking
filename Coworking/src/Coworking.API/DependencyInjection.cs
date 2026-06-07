@@ -5,8 +5,7 @@ namespace Coworking.API;
 
 public static class DependencyInjection
 {
-    public static IServiceCollection ConfigureApi(
-        this IServiceCollection services,
+    public static IServiceCollection ConfigureApi(this IServiceCollection services,
         IConfiguration configuration)
     {
         services.AddProxySettings(configuration);

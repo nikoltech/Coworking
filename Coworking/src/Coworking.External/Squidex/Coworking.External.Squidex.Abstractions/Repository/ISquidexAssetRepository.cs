@@ -9,13 +9,9 @@ public interface ISquidexAssetRepository
         AssetQuery? query = null,
         CancellationToken ct = default);
 
-    Task<AssetDto?> GetByIdAsync(
-        string id,
-        CancellationToken ct = default);
+    Task<AssetDto?> GetByIdAsync(string id, CancellationToken ct = default);
 
-    Task<AssetDto> UploadAsync(
-        Stream stream,
-        string fileName,
+    Task<AssetDto> UploadAsync(Stream stream, string fileName,
         string mimeType,
         CancellationToken ct = default);
 
@@ -24,8 +20,7 @@ public interface ISquidexAssetRepository
         UpdateAssetRequest request,
         CancellationToken ct = default);
 
-    Task DeleteAsync(
-        string id,
+    Task DeleteAsync(string id,
         bool permanent = false,
         CancellationToken ct = default);
 }

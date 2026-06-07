@@ -4,36 +4,31 @@ namespace Coworking.External.Squidex.Abstractions.Repository;
 
 public interface ISquidexRepository<T> where T : class
 {
-    Task<ResponseSchema<T>> QueryAsync(
-        RequestQuery query,
+    Task<ResponseSchema<T>> QueryAsync(RequestQuery query,
         QueryOptions? queryOptions = null,
         CancellationToken ct = default);
 
     /// <summary>OData query — slash path separator (data/Title/iv).</summary>
-    Task<ResponseSchema<T>> QueryODataAsync(
-        ODataQuery query,
+    Task<ResponseSchema<T>> QueryODataAsync(ODataQuery query,
         QueryOptions? queryOptions = null,
         CancellationToken ct = default);
 
     /// <summary>POST body query — avoids URL length limit for complex queries.</summary>
-    Task<ResponseSchema<T>> QueryPostAsync(
-        RequestQuery query,
+    Task<ResponseSchema<T>> QueryPostAsync(RequestQuery query,
         QueryOptions? queryOptions = null,
         CancellationToken ct = default);
 
-    Task<ResponseSchema<T>> GetAllAsync(
-        RequestQuery? query = null,
+    Task<ResponseSchema<T>> GetAllAsync(RequestQuery? query = null,
         QueryOptions? queryOptions = null,
         CancellationToken ct = default);
 
     /// <summary>Fetch by IDs — batched at 80 IDs per request.</summary>
-    Task<ResponseSchema<T>> GetByIdsAsync(
-        IEnumerable<string> ids,
+    Task<ResponseSchema<T>> GetByIdsAsync(IEnumerable<string> ids,
         QueryOptions? queryOptions = null,
         CancellationToken ct = default);
 
-    Task<ContentDto<T>?> GetByIdAsync(
-        string id, QueryOptions? queryOptions = null,
+    Task<ContentDto<T>?> GetByIdAsync(string id,
+        QueryOptions? queryOptions = null,
         CancellationToken ct = default);
 
     /// <summary>
@@ -41,24 +36,26 @@ public interface ISquidexRepository<T> where T : class
     /// </summary>
     /// <param name="knownVersion">Optional ETag for conditional GET.</param>
     /// <returns>If content is not modified, returns NotModified=true and null content. Otherwise, returns content with NotModified=false.</returns>
-    Task<(ContentDto<T>? Content, bool NotModified)> GetByIdConditionalAsync(
-        string id,
+    Task<(ContentDto<T>? Content, bool NotModified)> GetByIdConditionalAsync(string id,
         int? knownVersion = null,
         QueryOptions? queryOptions = null,
         CancellationToken ct = default);
 
-    Task<ContentDto<T>> CreateAsync(T data, bool publish = true, CancellationToken ct = default);
+    Task<ContentDto<T>> CreateAsync(T data,
+        bool publish = true,
+        CancellationToken ct = default);
 
-    Task<ContentDto<T>> UpdateAsync(
-       string id, T data,
-       int? expectedVersion = null,
-       CancellationToken ct = default);
+    Task<ContentDto<T>> UpdateAsync(string id, T data,
+        int? expectedVersion = null,
+        CancellationToken ct = default);
 
     Task<ContentDto<T>> PatchAsync(string id, T data, CancellationToken ct = default);
 
-    Task DeleteAsync(string id, bool permanent = false, CancellationToken ct = default);
+    Task DeleteAsync(string id,
+        bool permanent = false,
+        CancellationToken ct = default);
 
-    Task<bool> ExistsAsync(
-        object filter, bool includeUnpublished = false,
+    Task<bool> ExistsAsync(object filter,
+        bool includeUnpublished = false,
         CancellationToken ct = default);
 }

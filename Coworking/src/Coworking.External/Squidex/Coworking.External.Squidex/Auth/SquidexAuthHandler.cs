@@ -39,7 +39,8 @@ public sealed class SquidexAuthHandler(SquidexTokenService tokenService) : Deleg
     // ── private ──────────────────────────────────────────────────────────────
 
     private async Task<AuthenticationHeaderValue> GetAuthHeaderAsync(
-        string appName, string clientName, CancellationToken ct)
+        string appName, string clientName,
+        CancellationToken ct)
     {
         var token = await tokenService.GetTokenAsync(appName, clientName, ct);
         return new AuthenticationHeaderValue("Bearer", token);

@@ -139,8 +139,7 @@ internal static class DevDataSeeder
         return [central, riverside, nightOwl];
     }
 
-    private static Booking BuildBooking(
-        string userName,
+    private static Booking BuildBooking(string userName,
         string userEmail,
         DateTimeOffset start,
         DateTimeOffset end,

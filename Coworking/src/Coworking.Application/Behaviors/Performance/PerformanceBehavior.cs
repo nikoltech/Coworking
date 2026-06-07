@@ -10,7 +10,9 @@ public class PerformanceBehavior<TRequest, TResponse>(
     IOptions<PerformanceSettings> options)
     : IPipelineBehavior<TRequest, TResponse> where TRequest : IRequest<TResponse>
 {
-    public async Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken ct)
+    public async Task<TResponse> Handle(TRequest request,
+        RequestHandlerDelegate<TResponse> next,
+        CancellationToken ct)
     {
         var settings = options.Value;
 

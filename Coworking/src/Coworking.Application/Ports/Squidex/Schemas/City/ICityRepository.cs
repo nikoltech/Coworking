@@ -8,6 +8,5 @@ public interface ICityRepository : ISquidexRepository<CitySchema>
     Task<ContentDto<CitySchema>?> GetByTitleAsync(
         string title, CancellationToken ct = default);
 
-    Task<ResponseSchema<CitySchema>> GetRegionCitiesAsync(
-        CancellationToken ct = default);
+    Task<ResponseSchema<CitySchema>> GetRegionCitiesAsync(CancellationToken ct = default);
 }

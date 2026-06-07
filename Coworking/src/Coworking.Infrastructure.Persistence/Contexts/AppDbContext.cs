@@ -55,7 +55,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         return new EfTransactionWrapper(efTransaction);
     }
 
-    public async Task<ITransaction> BeginTransactionAsync(TransactionIsolationLevel isolationLevel, CancellationToken ct = default)
+    public async Task<ITransaction> BeginTransactionAsync(
+        TransactionIsolationLevel isolationLevel,
+        CancellationToken ct = default)
     {
         var efTransaction = await Database.BeginTransactionAsync(isolationLevel.ToSqlType(), ct);
         return new EfTransactionWrapper(efTransaction);

@@ -50,7 +50,8 @@ public static class DependencyInjection
     /// MediatR publishers + Outbox + RabbitMQ bus (no consumers).
     /// Use in the service that owns the DB and the domain transactions.
     /// </summary>
-    public static IServiceCollection AddMessagingPublishers(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddMessagingPublishers(this IServiceCollection services,
+        IConfiguration configuration)
     {
         services.AddRabbitMqOptions(configuration);
 
@@ -84,7 +85,8 @@ public static class DependencyInjection
     /// RabbitMQ consumers + per-consumer retry (no Outbox, no MediatR).
     /// Use in a dedicated notification service.
     /// </summary>
-    public static IServiceCollection AddMessagingConsumers(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddMessagingConsumers(this IServiceCollection services,
+        IConfiguration configuration)
     {
         services.AddRabbitMqOptions(configuration);
 
@@ -99,7 +101,8 @@ public static class DependencyInjection
 
     /** private **********************/
 
-    private static IServiceCollection AddRabbitMqOptions( this IServiceCollection services, IConfiguration configuration)
+    private static IServiceCollection AddRabbitMqOptions(this IServiceCollection services,
+        IConfiguration configuration)
     {
         services.AddOptions<RabbitMqOptions>()
             .Bind(configuration.GetSection(RabbitMqOptions.SectionName))
@@ -109,7 +112,8 @@ public static class DependencyInjection
         return services;
     }
 
-    private static void ConfigureRabbitMq(IBusRegistrationContext ctx, IRabbitMqBusFactoryConfigurator cfg)
+    private static void ConfigureRabbitMq(IBusRegistrationContext ctx,
+        IRabbitMqBusFactoryConfigurator cfg)
     {
         var options = ctx.GetRequiredService<IOptions<RabbitMqOptions>>().Value;
 

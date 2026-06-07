@@ -23,7 +23,8 @@ public sealed class SquidexTokenService(
     private readonly SquidexGlobalOptions _options = options.Value;
 
     public async Task<string> GetTokenAsync(
-        string appName, string clientName, CancellationToken ct)
+        string appName, string clientName,
+        CancellationToken ct)
     {
         var cacheKey = CacheKey(appName, clientName);
 
@@ -74,7 +75,8 @@ public sealed class SquidexTokenService(
     }
 
     private async Task<TokenResponse> RequestTokenAsync(
-        string baseUrl, SquidexClientCredentials credentials, CancellationToken ct)
+        string baseUrl, SquidexClientCredentials credentials,
+        CancellationToken ct)
     {
         var http = httpClientFactory.CreateClient(SquidexHttpClientNames.Auth);
         var url = $"{baseUrl.TrimEnd('/')}/identity-server/connect/token";
