@@ -53,7 +53,7 @@ public sealed class SquidexApiClient : ISquidexApiClient
     /// </summary>
     /// <remarks>
     /// For complex filters whose serialized JSON exceeds ~2 KB, prefer
-    /// <see cref="QueryPostAsync{T}"/> to avoid 414 / 431 HTTP errors.
+    /// <see cref="QueryPostAsync{T}"/> to avoid a 414 URI Too Long error.
     /// </remarks>
     public Task<ResponseSchema<T>> QueryAsync<T>(string schema, RequestQuery query,
         QueryOptions? queryOptions = null,
