@@ -1,7 +1,7 @@
 ﻿using Coworking.External.Squidex.Abstractions.Client;
 using Coworking.External.Squidex.Abstractions.Models;
 
-namespace Coworking.External.Squidex.Abstractions.Repository;
+namespace Coworking.External.Squidex.Abstractions.Pagination;
 
 public interface ISquidexPaginator
 {

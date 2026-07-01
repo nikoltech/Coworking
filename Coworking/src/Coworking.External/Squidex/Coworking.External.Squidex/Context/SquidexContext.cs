@@ -1,7 +1,9 @@
-﻿using Coworking.External.Squidex.Abstractions.Context;
-using Coworking.External.Squidex.Abstractions.Client;
-using Coworking.External.Squidex.Abstractions.Repository;
+﻿using Coworking.External.Squidex.Abstractions.Client;
+using Coworking.External.Squidex.Abstractions.Context;
+using Coworking.External.Squidex.Abstractions.Pagination;
+using Coworking.External.Squidex.Abstractions.Set;
 using Coworking.External.Squidex.Client;
+using Coworking.External.Squidex.Set;
 
 namespace Coworking.External.Squidex.Context;
 
@@ -31,7 +33,7 @@ public abstract class SquidexContext : ISquidexContext
     }
 
     /// <inheritdoc/>
-    public ISquidexRepository<T> Set<T>(string schema) where T : class =>
+    public ISquidexSet<T> Set<T>(string schema) where T : class =>
         new SquidexSet<T>(_defaultClient, _paginator, schema);
 
     /// <inheritdoc/>
@@ -60,6 +62,6 @@ internal sealed class SquidexClientScope(
     ISquidexPaginator paginator)
     : ISquidexClientScope
 {
-    public ISquidexRepository<T> Set<T>(string schema) where T : class =>
+    public ISquidexSet<T> Set<T>(string schema) where T : class =>
         new SquidexSet<T>(client, paginator, schema);
 }

@@ -2,8 +2,8 @@
 using Coworking.External.Squidex.Abstractions.Filters;
 using Coworking.External.Squidex.Abstractions.Models;
 using Coworking.External.Squidex.Abstractions.Client;
-using Coworking.External.Squidex.Abstractions.Repository;
-using Coworking.External.Squidex.Context;
+using Coworking.External.Squidex.Abstractions.Pagination;
+using Coworking.External.Squidex.Set;
 
 namespace Coworking.Infrastructure.External.Squidex.Schemas.Email;
 

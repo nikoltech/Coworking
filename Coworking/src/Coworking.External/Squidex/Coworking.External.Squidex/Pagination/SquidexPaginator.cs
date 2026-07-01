@@ -1,6 +1,6 @@
-using Coworking.External.Squidex.Abstractions.Models;
 using Coworking.External.Squidex.Abstractions.Client;
-using Coworking.External.Squidex.Abstractions.Repository;
+using Coworking.External.Squidex.Abstractions.Models;
+using Coworking.External.Squidex.Abstractions.Pagination;
 
 namespace Coworking.External.Squidex.Pagination;
 

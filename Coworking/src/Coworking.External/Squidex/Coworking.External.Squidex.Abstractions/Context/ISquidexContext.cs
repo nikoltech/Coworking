@@ -1,4 +1,4 @@
-﻿using Coworking.External.Squidex.Abstractions.Repository;
+﻿using Coworking.External.Squidex.Abstractions.Set;
 
 namespace Coworking.External.Squidex.Abstractions.Context;
 
@@ -12,7 +12,7 @@ public interface ISquidexContext
     /// Returns a queryable/writable set for the given schema.
     /// Analogous to EF DbContext.Set&lt;T&gt;().
     /// </summary>
-    ISquidexRepository<T> Set<T>(string schema) where T : class;
+    ISquidexSet<T> Set<T>(string schema) where T : class;
 
     /// <summary>
     /// Returns a context accessor using the specified client credentials.
@@ -26,5 +26,5 @@ public interface ISquidexContext
 /// </summary>
 public interface ISquidexClientScope
 {
-    ISquidexRepository<T> Set<T>(string schema) where T : class;
+    ISquidexSet<T> Set<T>(string schema) where T : class;
 }

@@ -1,15 +1,15 @@
 using Coworking.External.Squidex.Abstractions.Client;
 using Coworking.External.Squidex.Abstractions.Models;
-using Coworking.External.Squidex.Abstractions.Repository;
+using Coworking.External.Squidex.Abstractions.Set;
 
-namespace Coworking.External.Squidex.Repository;
+namespace Coworking.External.Squidex.Set;
 
 /// <summary>
-/// Base implementation for Squidex Assets repository.
+/// Base implementation for the Squidex Assets set.
 /// Inherit to add project-specific asset methods.
 /// </summary>
-public class SquidexAssetRepository(ISquidexAssetClient client)
-    : ISquidexAssetRepository
+public class SquidexAssetSet(ISquidexAssetClient client)
+    : ISquidexAssetSet
 {
     protected readonly ISquidexAssetClient Client = client;
 

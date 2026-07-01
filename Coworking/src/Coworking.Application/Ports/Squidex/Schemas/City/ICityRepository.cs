@@ -1,9 +1,9 @@
 ﻿using Coworking.External.Squidex.Abstractions.Models;
-using Coworking.External.Squidex.Abstractions.Repository;
+using Coworking.External.Squidex.Abstractions.Set;
 
 namespace Coworking.Application.Ports.Squidex.Schemas.City;
 
-public interface ICityRepository : ISquidexRepository<CitySchema>
+public interface ICityRepository : ISquidexSet<CitySchema>
 {
     Task<ContentDto<CitySchema>?> GetByTitleAsync(
         string title, CancellationToken ct = default);

@@ -1,9 +1,9 @@
 using Coworking.External.Squidex.Abstractions.Client;
 using Coworking.External.Squidex.Abstractions.Models;
 
-namespace Coworking.External.Squidex.Abstractions.Repository;
+namespace Coworking.External.Squidex.Abstractions.Set;
 
-public interface ISquidexAssetRepository
+public interface ISquidexAssetSet
 {
     Task<AssetsResponse> QueryAsync(
         AssetQuery? query = null,

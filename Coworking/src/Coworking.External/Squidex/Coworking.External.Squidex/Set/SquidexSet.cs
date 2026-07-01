@@ -1,15 +1,16 @@
-﻿using Coworking.External.Squidex.Abstractions.Models;
-using Coworking.External.Squidex.Abstractions.Client;
-using Coworking.External.Squidex.Abstractions.Repository;
+﻿using Coworking.External.Squidex.Abstractions.Client;
+using Coworking.External.Squidex.Abstractions.Models;
+using Coworking.External.Squidex.Abstractions.Pagination;
+using Coworking.External.Squidex.Abstractions.Set;
 
-namespace Coworking.External.Squidex.Context;
+namespace Coworking.External.Squidex.Set;
 
 /// <summary>
 /// Queryable and writable set for a Squidex schema.
 /// Analogous to EF DbSet&lt;T&gt;.
 /// Returned by SquidexContext.Set&lt;T&gt;(schema).
 /// </summary>
-public class SquidexSet<T> : ISquidexRepository<T> where T : class
+public class SquidexSet<T> : ISquidexSet<T> where T : class
 {
     protected readonly ISquidexApiClient Client;
     protected readonly ISquidexPaginator Paginator;

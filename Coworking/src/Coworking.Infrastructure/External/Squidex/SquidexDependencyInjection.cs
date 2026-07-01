@@ -1,6 +1,6 @@
 ﻿using Coworking.Application.Ports.Squidex;
 using Coworking.Application.Ports.Squidex.Clients;
-using Coworking.External.Squidex.Abstractions.Repository;
+using Coworking.External.Squidex.Abstractions.Pagination;
 using Coworking.External.Squidex.Client;
 using Coworking.Infrastructure.External.Squidex.Contexts;
 using Microsoft.Extensions.DependencyInjection;

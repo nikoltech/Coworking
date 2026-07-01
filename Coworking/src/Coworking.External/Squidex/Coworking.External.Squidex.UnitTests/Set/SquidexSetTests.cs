@@ -1,22 +1,21 @@
-﻿// Repository/SquidexRepositoryTests.cs
+﻿// Set/SquidexSetTests.cs
+using Coworking.External.Squidex.Abstractions.Client;
 using Coworking.External.Squidex.Abstractions.Filters;
 using Coworking.External.Squidex.Abstractions.Models;
-using Coworking.External.Squidex.Abstractions.Client;
-using Coworking.External.Squidex.Abstractions.Repository;
-using Coworking.External.Squidex.Context;
-using Coworking.External.Squidex.Repository;
+using Coworking.External.Squidex.Abstractions.Pagination;
+using Coworking.External.Squidex.Set;
 using Coworking.External.Squidex.UnitTests.Helpers;
 using FluentAssertions;
 using NSubstitute;
 
-namespace Coworking.External.Squidex.UnitTests.Repository;
+namespace Coworking.External.Squidex.UnitTests.Set;
 
-public sealed class SquidexRepositoryTests
+public sealed class SquidexSetTests
 {
     private readonly ISquidexApiClient _client = Substitute.For<ISquidexApiClient>();
     private readonly ISquidexPaginator _paginator = Substitute.For<ISquidexPaginator>();
 
-    public SquidexRepositoryTests() =>
+    public SquidexSetTests() =>
         _client.AppOptions.Returns(SquidexFakes.DefaultAppOptions());
 
     private SquidexSet<SquidexFakes.TestSchema> CreateRepo(string schema = "test-schema") =>
