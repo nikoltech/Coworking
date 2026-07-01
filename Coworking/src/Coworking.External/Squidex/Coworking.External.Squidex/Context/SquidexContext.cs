@@ -1,5 +1,6 @@
-﻿using Coworking.External.Squidex.Abstractions.Client;
+using Coworking.External.Squidex.Abstractions.Client;
 using Coworking.External.Squidex.Abstractions.Context;
+using Coworking.External.Squidex.Abstractions.Models;
 using Coworking.External.Squidex.Abstractions.Pagination;
 using Coworking.External.Squidex.Abstractions.Set;
 using Coworking.External.Squidex.Client;
@@ -8,60 +9,54 @@ using Coworking.External.Squidex.Set;
 namespace Coworking.External.Squidex.Context;
 
 /// <summary>
-/// Base Squidex context.
-/// One subclass per Squidex app.
+/// Squidex app context. Analogous to EF DbContext.
+/// Ready to use straight from DI (keyed by app name), or subclass to expose typed
+/// set properties (e.g. <c>Cities</c>).
 ///
 /// Usage:
-///   var cities = await context.Set&lt;CitySchema&gt;("city").QueryAsync(...);
-///   var cities = await context.UsingClient("Frontend").Set&lt;CitySchema&gt;("city").QueryAsync(...);
+///   var cities = await context.Set&lt;CitySchema&gt;().QueryAsync(...);
+///   var cities = await context.UsingClient("Frontend").Set&lt;CitySchema&gt;().QueryAsync(...);
 /// </summary>
-public abstract class SquidexContext : ISquidexContext
+public class SquidexContext : ISquidexContext
 {
-    private readonly ISquidexApiClient _defaultClient;
     private readonly ISquidexPaginator _paginator;
     private readonly SquidexClientFactory _clientFactory;
     private readonly string _appName;
+    private readonly ISquidexSets _default;
 
-    protected SquidexContext(ISquidexApiClient defaultClient, ISquidexPaginator paginator,
+    public SquidexContext(ISquidexApiClient defaultClient, ISquidexPaginator paginator,
         SquidexClientFactory clientFactory,
         string appName)
     {
-        _defaultClient = defaultClient;
         _paginator = paginator;
         _clientFactory = clientFactory;
         _appName = appName;
+        _default = new SquidexSets(defaultClient, paginator);
     }
 
     /// <inheritdoc/>
     public ISquidexSet<T> Set<T>(string schema) where T : class =>
-        new SquidexSet<T>(_defaultClient, _paginator, schema);
+        _default.Set<T>(schema);
 
     /// <inheritdoc/>
-    public ISquidexClientScope UsingClient(string clientName) =>
-        new SquidexClientScope(
-            _clientFactory.CreateForApp(_appName, clientName),
-            _paginator);
+    public ISquidexSet<T> Set<T>() where T : class, ISquidexSchema =>
+        _default.Set<T>();
 
-    // ── Protected helpers ─────────────────────────────────────────────────────
-
-    /// <summary>
-    /// Creates a typed repository for a schema. Use for exposing typed properties on the context.
-    /// Analogous to EF DbSet&lt;T&gt; properties.
-    /// </summary>
-    protected TSet CreateSet<TSet, TData>(string schema)
-        where TSet : SquidexSet<TData>
-        where TData : class =>
-        (TSet)Activator.CreateInstance(typeof(TSet), _defaultClient, _paginator, schema)!;
+    /// <inheritdoc/>
+    public ISquidexSets UsingClient(string clientName) =>
+        new SquidexSets(_clientFactory.CreateForApp(_appName, clientName), _paginator);
 }
 
 /// <summary>
-/// Scoped accessor for a specific named client within an app context.
+/// Set accessor bound to a single client (credentials). Shared by the context's
+/// default client and by <see cref="ISquidexContext.UsingClient"/>.
 /// </summary>
-internal sealed class SquidexClientScope(
-    ISquidexApiClient client,
-    ISquidexPaginator paginator)
-    : ISquidexClientScope
+internal sealed class SquidexSets(ISquidexApiClient client, ISquidexPaginator paginator)
+    : ISquidexSets
 {
     public ISquidexSet<T> Set<T>(string schema) where T : class =>
         new SquidexSet<T>(client, paginator, schema);
+
+    public ISquidexSet<T> Set<T>() where T : class, ISquidexSchema =>
+        Set<T>(T.SchemaName);
 }

@@ -140,8 +140,10 @@ internal static class SquidexFakes
 
 	// ── Test schemas ──────────────────────────────────────────────────────────
 
-	public sealed class TestSchema
+	public sealed class TestSchema : ISquidexSchema
 	{
+		public static string SchemaName => "test-schema";
+
 		[JsonPropertyName("Name")]
 		public IvField<string>? Name { get; set; }
 

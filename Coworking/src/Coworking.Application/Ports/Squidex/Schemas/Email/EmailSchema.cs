@@ -3,9 +3,9 @@ using System.Text.Json.Serialization;
 
 namespace Coworking.Application.Ports.Squidex.Schemas.Email;
 
-public sealed class EmailSchema
+public sealed class EmailSchema : ISquidexSchema
 {
-    public const string SchemaName = "emails";
+    public static string SchemaName => "emails";
 
     [JsonPropertyName("Name")] public IvField<string>? Name { get; set; }
     [JsonPropertyName("Value")] public IvField<string>? Value { get; set; }

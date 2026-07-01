@@ -1,12 +1,12 @@
-﻿using Coworking.External.Squidex.Abstractions.Set;
+using Coworking.External.Squidex.Abstractions.Models;
+using Coworking.External.Squidex.Abstractions.Set;
 
 namespace Coworking.External.Squidex.Abstractions.Context;
 
 /// <summary>
-/// Entry point for Squidex schema access. Analogous to EF DbContext.
-/// One context per Squidex app.
+/// Access to Squidex schemas over one client (credentials).
 /// </summary>
-public interface ISquidexContext
+public interface ISquidexSets
 {
     /// <summary>
     /// Returns a queryable/writable set for the given schema.
@@ -15,16 +15,21 @@ public interface ISquidexContext
     ISquidexSet<T> Set<T>(string schema) where T : class;
 
     /// <summary>
-    /// Returns a context accessor using the specified client credentials.
-    /// Use when a schema requires non-default credentials.
+    /// Returns a queryable/writable set for a schema DTO that declares its own name.
+    /// Shorthand for <see cref="Set{T}(string)"/> with <c>T.SchemaName</c>.
     /// </summary>
-    ISquidexClientScope UsingClient(string clientName);
+    ISquidexSet<T> Set<T>() where T : class, ISquidexSchema;
 }
 
 /// <summary>
-/// Scoped accessor for a specific client within an app context.
+/// Entry point for Squidex schema access. Analogous to EF DbContext.
+/// Ready to use from DI (keyed by app name), or subclass to expose typed set properties.
 /// </summary>
-public interface ISquidexClientScope
+public interface ISquidexContext : ISquidexSets
 {
-    ISquidexSet<T> Set<T>(string schema) where T : class;
+    /// <summary>
+    /// Returns a set accessor using the specified client credentials.
+    /// Use when a schema requires non-default credentials.
+    /// </summary>
+    ISquidexSets UsingClient(string clientName);
 }

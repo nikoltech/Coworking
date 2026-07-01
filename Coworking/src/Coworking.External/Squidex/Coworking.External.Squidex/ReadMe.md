@@ -1,6 +1,6 @@
 # Coworking.External.Squidex
 
-Status: unit-tested (119 tests green).
+Status: unit-tested (120 tests green).
 
 A typed, performance-oriented client for the Squidex CMS built on a custom
 `HttpClient`-based transport (no third-party Squidex SDK).
@@ -12,13 +12,15 @@ A typed, performance-oriented client for the Squidex CMS built on a custom
 - Fluent API for building queries, filters and field paths
 - Ready-to-use `SquidexSet<T>` base with CRUD/query operations; extend it for
   domain-specific repositories (via inheritance or injection)
+- Schema name resolved from the DTO (`ISquidexSchema`) — `context.Set<T>()` needs no string
 - Separate Assets API (`ISquidexAssetClient` / `SquidexAssetSet`)
 - Configurable retry with exponential backoff (`SquidexRetryOptions`)
 - Configuration via `appsettings.json`
 
 ## Configuration
 
-### appsettings.json
+<details>
+<summary><b>appsettings.json</b></summary>
 
 ```json
 {
@@ -62,7 +64,10 @@ A typed, performance-oriented client for the Squidex CMS built on a custom
 }
 ```
 
-### Program.cs
+</details>
+
+<details>
+<summary><b>Program.cs — registration</b></summary>
 
 ```csharp
 builder.Services.AddSquidex(builder.Configuration);
@@ -99,7 +104,10 @@ private static IServiceCollection AddMainAppContexts(this IServiceCollection ser
 }
 ```
 
-### Locale synchronization
+</details>
+
+<details>
+<summary><b>Locale synchronization</b></summary>
 
 The simplest way is to set the supported locales and the default locale in
 `appsettings.json`. Otherwise they are fetched from the Squidex app on startup:
@@ -145,9 +153,12 @@ private static async Task InitializeSquidexLocalesAsync(IServiceProvider service
 }
 ```
 
+</details>
+
 ## Usage
 
-### Helpers
+<details>
+<summary><b>Helpers</b></summary>
 
 ```text
 LocalizedField<T> - fields with localization support
@@ -162,11 +173,19 @@ SquidexFilter     - fluent complex filters
 SquidexPaths      - fluent paths to nested fields
 ```
 
-### Squidex schema (DTO)
+</details>
+
+<details>
+<summary><b>Squidex schema (DTO)</b></summary>
+
+Implement `ISquidexSchema` so the schema name is resolved from the type
+(`context.Set<CitySchema>()` — no string needed):
 
 ```csharp
-public sealed class CitySchema
+public sealed class CitySchema : ISquidexSchema
 {
+    public static string SchemaName => "city";
+
     [JsonPropertyName("Title")]
     public LocalizedField<string>? Title { get; set; }
 
@@ -175,34 +194,153 @@ public sealed class CitySchema
 }
 ```
 
-### Querying data
+</details>
+
+<details>
+<summary><b>Querying data</b></summary>
 
 ```csharp
 public class GetCitiesQueryHandler(ISquidexContext squidex)
 {
-    string schemaName = "city";
-
+    // schema resolved from CitySchema.SchemaName — no string at the call site
     // OData
-    string odataPath = $"data/Title/iv";
-
-    await squidex.Set<CitySchema>(schemaName).QueryODataAsync(
-            ODataQuery.Create()
-                .WithFilter($"{odataPath} eq 'test'"));
+    await squidex.Set<CitySchema>().QueryODataAsync(
+            ODataQuery.Create().WithFilter("data/Title/iv eq 'test'"));
 
     // json
-    string jsonPath = $"data.Title.iv";
+    await squidex.Set<CitySchema>().QueryAsync(RequestQuery.Create()
+        .WithFilter(SquidexFilter.Eq("data.Title.iv", "test")));
 
-    await squidex.Set<CitySchema>(schemaName).QueryAsync(RequestQuery.Create()
-        .WithFilter(SquidexFilter.Eq(jsonPath, "test")));
+    // explicit schema string still available (e.g. one DTO mapped to several schemas)
+    await squidex.Set<CitySchema>("city").QueryAsync(RequestQuery.Create());
 }
 ```
 
+</details>
+
+<details>
+<summary><b>Reading results</b></summary>
+
+`QueryAsync` returns `ResponseSchema<T>` (`Total` + `Items` of `ContentDto<T>`).
+Read localized fields via `Get`/`GetLocalized`, invariant fields via `.Value`:
+
+```csharp
+ResponseSchema<CitySchema> result = await squidex.Set<CitySchema>()
+    .QueryAsync(RequestQuery.Create());
+
+foreach (ContentDto<CitySchema> item in result.Items)
+{
+    string? title  = item.Data.Title?.GetLocalized("uk-UA", "en"); // localized
+    bool isRegion  = item.Data.IsRegionCity?.Value ?? false;        // invariant
+
+    string id      = item.Id;       // item metadata
+    int version    = item.Version;
+    string status  = item.Status;
+}
+```
+
+</details>
+
+<details>
+<summary><b>Filtering, sorting, paging</b></summary>
+
+```csharp
+await squidex.Set<CitySchema>().QueryAsync(
+    RequestQuery.Create()
+        .WithFilter(SquidexFilter.Eq(CityPaths.IsRegionCity, true))
+        .WithSort([SortOption.Asc(CityPaths.SOrder)])
+        .WithTake(20)
+        .WithSkip(0));
+
+// fetch every page at once (paginator uses AppOptions.MaxPageSize)
+ResponseSchema<CitySchema> all = await squidex.Set<CitySchema>().GetAllAsync();
+
+// existence check (Take=1 + NoSlowTotal applied automatically)
+bool exists = await squidex.Set<CitySchema>()
+    .ExistsAsync(SquidexFilter.Eq(CityPaths.PlaceId, "abc123"));
+```
+
+</details>
+
+<details>
+<summary><b>Query options</b></summary>
+
+```csharp
+// include drafts / unpublished content
+await squidex.Set<CitySchema>()
+    .QueryAsync(query, new QueryOptions { IncludeUnpublished = true });
+
+// restrict returned locales (X-Languages)
+await squidex.Set<CitySchema>()
+    .QueryAsync(query, new QueryOptions { Languages = ["uk-UA"] });
+```
+
+> `QueryOptions.Flatten` / `QueryOptions.ForLocale(locale)` return scalar values
+> instead of `IvField`/`LocalizedField` — use only with a flat DTO shape.
+
+</details>
+
+<details>
+<summary><b>Mutations</b></summary>
+
+```csharp
+var draft = new CitySchema
+{
+    Title = new LocalizedField<string> { ["uk-UA"] = "Львів", ["en"] = "Lviv" },
+    IsRegionCity = new IvField<bool?>(true),
+};
+
+ContentDto<CitySchema> created = await squidex.Set<CitySchema>().CreateAsync(draft, publish: true);
+
+// optimistic concurrency via expectedVersion
+await squidex.Set<CitySchema>().UpdateAsync(created.Id, draft, expectedVersion: created.Version);
+
+await squidex.Set<CitySchema>().DeleteAsync(created.Id);
+```
+
+</details>
+
+<details>
+<summary><b>Typed context properties</b></summary>
+
+`IMainSquidexContext` exposes named repositories as properties:
+
+```csharp
+public class GetCityHandler(IMainSquidexContext squidex)
+{
+    public async Task Handle(CancellationToken ct)
+    {
+        ContentDto<CitySchema>? kyiv = await squidex.Cities.GetByTitleAsync("Київ", ct);
+        // squidex.Emails, squidex.Set<T>() and squidex.UsingClient(...) are available too
+    }
+}
+```
+
+</details>
+
+<details>
+<summary><b>Other client credentials</b></summary>
+
+```csharp
+// one-off, for a single call
+await squidex.UsingClient(SquidexClientNames.Frontend)
+             .Set<CitySchema>()
+             .QueryAsync(RequestQuery.Create());
+
+// or a separately registered keyed context (see Program.cs above)
+public class PublicHandler(
+    [FromKeyedServices(SquidexClientNames.Frontend)] IMainSquidexContext squidex) { }
+```
+
+</details>
+
 ## Extended usage
 
-`context.Set<T>(schema)` returns a ready-to-use `ISquidexSet<T>`. For
-domain-specific operations, define an interface and derive from `SquidexSet<T>`.
+`context.Set<T>()` / `context.Set<T>(schema)` return a ready-to-use `ISquidexSet<T>`.
+For domain-specific operations, define an interface and derive from `SquidexSet<T>`.
 
-### Interface for a specific schema
+<details>
+<summary><b>Interface for a specific schema</b></summary>
 
 ```csharp
 public interface ICityRepository : ISquidexSet<CitySchema>
@@ -211,7 +349,10 @@ public interface ICityRepository : ISquidexSet<CitySchema>
 }
 ```
 
-### Base implementation
+</details>
+
+<details>
+<summary><b>Base implementation</b></summary>
 
 Basic CRUD/query operations come from the `SquidexSet<T>` base class:
 
@@ -232,10 +373,15 @@ public sealed class CityRepository(ISquidexApiClient client, ISquidexPaginator p
 }
 ```
 
+</details>
+
 ## Assets
 
 The Assets API is separate from schema content (different endpoint and a flat
-response shape). Create a client via the factory:
+response shape).
+
+<details>
+<summary><b>Client operations</b></summary>
 
 ```csharp
 ISquidexAssetClient assets = factory.CreateAssetClientForApp("Main");
@@ -248,6 +394,11 @@ await assets.UpdateMetadataAsync(uploaded.Id, new UpdateAssetRequest(Tags: ["her
 await assets.DeleteAsync(uploaded.Id);
 ```
 
+</details>
+
+<details>
+<summary><b>Extending the base set</b></summary>
+
 Extend the ready-to-use `SquidexAssetSet` base for project-specific methods:
 
 ```csharp
@@ -256,3 +407,5 @@ public sealed class MediaAssets(ISquidexAssetClient client) : SquidexAssetSet(cl
     // custom asset helpers...
 }
 ```
+
+</details>

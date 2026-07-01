@@ -7,9 +7,9 @@ namespace Coworking.Application.Ports.Squidex.Schemas.City;
 /// Squidex "city" schema DTO.
 /// Localized fields use LocalizedField — returned locales controlled by X-Languages.
 /// </summary>
-public sealed class CitySchema
+public sealed class CitySchema : ISquidexSchema
 {
-    public const string SchemaName = "city";
+    public static string SchemaName => "city";
 
     [JsonPropertyName("Title")]
     public LocalizedField<string>? Title { get; set; }
