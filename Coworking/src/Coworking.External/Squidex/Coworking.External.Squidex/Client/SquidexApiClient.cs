@@ -1,6 +1,6 @@
 using Coworking.External.Squidex.Abstractions.Models;
 using Coworking.External.Squidex.Abstractions.Options;
-using Coworking.External.Squidex.Abstractions.Repository;
+using Coworking.External.Squidex.Abstractions.Client;
 using Coworking.External.Squidex.Auth;
 using Coworking.External.Squidex.Exceptions;
 using Coworking.External.Squidex.Localization;
@@ -10,7 +10,6 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Web;
 
 namespace Coworking.External.Squidex.Client;
 
@@ -59,10 +58,8 @@ public sealed class SquidexApiClient : ISquidexApiClient
         QueryOptions? queryOptions = null,
         CancellationToken ct = default)
     {
-        var request = BuildRequest(
-            HttpMethod.Get,
-            $"{ContentUrl(schema)}?{ToJsonQueryString(query)}",
-            queryOptions);
+        var uri = new UriBuilder(ContentUrl(schema)) { Query = ToJsonQueryString(query) }.Uri;
+        var request = BuildRequest(HttpMethod.Get, uri, queryOptions);
 
         return SendAndDeserializeAsync<ResponseSchema<T>>(request, ct);
     }
@@ -73,10 +70,8 @@ public sealed class SquidexApiClient : ISquidexApiClient
         QueryOptions? queryOptions = null,
         CancellationToken ct = default)
     {
-        var request = BuildRequest(
-            HttpMethod.Get,
-            $"{ContentUrl(schema)}?{ToODataQueryString(query)}",
-            queryOptions);
+        var uri = new UriBuilder(ContentUrl(schema)) { Query = ToODataQueryString(query) }.Uri;
+        var request = BuildRequest(HttpMethod.Get, uri, queryOptions);
 
         return SendAndDeserializeAsync<ResponseSchema<T>>(request, ct);
     }
@@ -246,11 +241,12 @@ public sealed class SquidexApiClient : ISquidexApiClient
                 ? request
                 : await CloneAsync(request, ct);
 
-            using var response = await _http.SendAsync(requestToSend, ct);
+            var response = await _http.SendAsync(requestToSend, ct);
 
             if (!IsTransient(response.StatusCode) || attempt == retry.MaxAttempts)
                 return response;
 
+            response.Dispose();
             await Task.Delay(
                 TimeSpan.FromSeconds(retry.BaseDelaySeconds * Math.Pow(2, attempt - 1)), ct);
         }
@@ -299,9 +295,16 @@ public sealed class SquidexApiClient : ISquidexApiClient
     }
 
     private HttpRequestMessage BuildRequest(HttpMethod method, string url,
-        QueryOptions? queryOptions = null)
+        QueryOptions? queryOptions = null) =>
+        ConfigureRequest(new HttpRequestMessage(method, url), queryOptions);
+
+    private HttpRequestMessage BuildRequest(HttpMethod method, Uri uri,
+        QueryOptions? queryOptions = null) =>
+        ConfigureRequest(new HttpRequestMessage(method, uri), queryOptions);
+
+    private HttpRequestMessage ConfigureRequest(HttpRequestMessage request,
+        QueryOptions? queryOptions)
     {
-        var request = new HttpRequestMessage(method, url);
         var opts = queryOptions ?? QueryOptions.Default;
 
         // Tell auth handler which app+client to use
@@ -342,15 +345,18 @@ public sealed class SquidexApiClient : ISquidexApiClient
 
     private static string ToODataQueryString(ODataQuery query)
     {
-        var qs = HttpUtility.ParseQueryString(string.Empty);
+        // Param names ($top, $filter, ...) must stay literal — OData servers match on
+        // them unescaped. Values are escaped in one place below, so a new param can't
+        // be added here without going through Uri.EscapeDataString.
+        var parameters = new Dictionary<string, string>();
 
-        if (query.Top.HasValue)        qs["$top"]     = query.Top.Value.ToString();
-        if (query.Skip > 0)            qs["$skip"]    = query.Skip.ToString();
-        if (query.Filter  is not null) qs["$filter"]  = query.Filter;
-        if (query.OrderBy is not null) qs["$orderby"] = query.OrderBy;
-        if (query.Search  is not null) qs["$search"]  = query.Search;
+        if (query.Top.HasValue)        parameters["$top"]     = query.Top.Value.ToString();
+        if (query.Skip > 0)            parameters["$skip"]    = query.Skip.ToString();
+        if (query.Filter  is not null) parameters["$filter"]  = query.Filter;
+        if (query.OrderBy is not null) parameters["$orderby"] = query.OrderBy;
+        if (query.Search  is not null) parameters["$search"]  = query.Search;
 
-        return qs.ToString()!;
+        return string.Join('&', parameters.Select(p => $"{p.Key}={Uri.EscapeDataString(p.Value)}"));
     }
 
     private string ContentUrl(string schema) =>

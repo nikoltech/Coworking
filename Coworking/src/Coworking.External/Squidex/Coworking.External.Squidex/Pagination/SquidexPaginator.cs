@@ -1,4 +1,5 @@
 using Coworking.External.Squidex.Abstractions.Models;
+using Coworking.External.Squidex.Abstractions.Client;
 using Coworking.External.Squidex.Abstractions.Repository;
 
 namespace Coworking.External.Squidex.Pagination;

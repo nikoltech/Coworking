@@ -14,6 +14,17 @@ internal static class TestClientNames
     public const string Unknown = "UnknownClient";
 }
 
+internal static class TestApps
+{
+    public const string Default = "test-app";
+    public const string Unknown = "UnknownApp";
+}
+
+internal static class TestUrls
+{
+    public const string BaseUrl = "https://fake.cloud.squidex.io";
+}
+
 internal static class TestLocales
 {
     public const string UkUA = SquidexLocales.UkUA; // "uk-UA"

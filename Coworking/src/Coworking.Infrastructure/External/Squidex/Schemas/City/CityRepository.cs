@@ -1,6 +1,7 @@
 ﻿using Coworking.Application.Ports.Squidex.Schemas.City;
 using Coworking.External.Squidex.Abstractions.Filters;
 using Coworking.External.Squidex.Abstractions.Models;
+using Coworking.External.Squidex.Abstractions.Client;
 using Coworking.External.Squidex.Abstractions.Repository;
 using Coworking.External.Squidex.Context;
 

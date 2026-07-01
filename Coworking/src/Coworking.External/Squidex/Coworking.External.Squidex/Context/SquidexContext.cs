@@ -1,4 +1,5 @@
 ﻿using Coworking.External.Squidex.Abstractions.Context;
+using Coworking.External.Squidex.Abstractions.Client;
 using Coworking.External.Squidex.Abstractions.Repository;
 using Coworking.External.Squidex.Client;
 

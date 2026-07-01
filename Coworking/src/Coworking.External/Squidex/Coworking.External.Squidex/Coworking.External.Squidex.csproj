@@ -19,4 +19,8 @@
     <ProjectReference Include="..\Coworking.External.Squidex.Abstractions\Coworking.External.Squidex.Abstractions.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="Coworking.External.Squidex.UnitTests" />
+  </ItemGroup>
+
 </Project>

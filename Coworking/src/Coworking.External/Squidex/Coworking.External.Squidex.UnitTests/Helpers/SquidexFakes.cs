@@ -1,6 +1,6 @@
 ﻿// Helpers/SquidexFakes.cs
 using Coworking.External.Squidex.Abstractions.Models;
-using Coworking.External.Squidex.Options;
+using Coworking.External.Squidex.Abstractions.Options;
 using Microsoft.Extensions.Options;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -11,9 +11,9 @@ internal static class SquidexFakes
 {
 	// ── Options ──────────────────────────────────────────────────────────────
 
-	public static SquidexOptions DefaultOptions(
-		string baseUrl = "https://cloud.squidex.io",
-		string appName = "test-app") =>
+	public static SquidexAppOptions DefaultAppOptions(
+		string baseUrl = TestUrls.BaseUrl,
+		string appName = TestApps.Default) =>
 		new()
 		{
 			BaseUrl = baseUrl,
@@ -28,13 +28,19 @@ internal static class SquidexFakes
 			}
 		};
 
-	public static SquidexOptions OptionsWithoutLocales(
-		string baseUrl = "https://cloud.squidex.io",
-		string appName = "test-app") =>
-		DefaultOptions(baseUrl, appName) with { SupportedLocales = [] };
+	public static SquidexAppOptions AppOptionsWithoutLocales(
+		string baseUrl = TestUrls.BaseUrl,
+		string appName = TestApps.Default) =>
+		DefaultAppOptions(baseUrl, appName) with { SupportedLocales = [] };
 
-	public static IOptions<SquidexOptions> OptionsMock(SquidexOptions? options = null) =>
-		Microsoft.Extensions.Options.Options.Create(options ?? DefaultOptions());
+	public static IOptions<SquidexGlobalOptions> GlobalOptionsMock(SquidexAppOptions? appOptions = null)
+	{
+		var app = appOptions ?? DefaultAppOptions();
+		return Microsoft.Extensions.Options.Options.Create(new SquidexGlobalOptions
+		{
+			Apps = new Dictionary<string, SquidexAppOptions> { [app.AppName] = app }
+		});
+	}
 
 	// ── Content factories ─────────────────────────────────────────────────────
 

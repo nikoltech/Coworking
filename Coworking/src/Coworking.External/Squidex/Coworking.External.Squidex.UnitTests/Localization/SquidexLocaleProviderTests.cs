@@ -1,6 +1,7 @@
 ﻿// Localization/SquidexLocaleProviderTests.cs
+using Coworking.External.Squidex.Abstractions.Localization;
 using Coworking.External.Squidex.Abstractions.Models;
-using Coworking.External.Squidex.Abstractions.Repository;
+using Coworking.External.Squidex.Abstractions.Client;
 using Coworking.External.Squidex.Localization;
 using Coworking.External.Squidex.UnitTests.Helpers;
 using FluentAssertions;
@@ -18,7 +19,7 @@ public sealed class SquidexLocaleProviderTests
     [Fact]
     public void SupportedLocales_ReturnsFromAppsettings_WhenConfigured()
     {
-        var provider = new SquidexLocaleProvider(SquidexFakes.OptionsMock());
+        var provider = new SquidexLocaleProvider(SquidexFakes.DefaultAppOptions());
 
         provider.SupportedLocales.Should()
             .BeEquivalentTo([TestLocales.UkUA, TestLocales.En]);
@@ -27,8 +28,8 @@ public sealed class SquidexLocaleProviderTests
     [Fact]
     public void SupportedLocales_ReturnsDefaultLocale_WhenNoLocalesConfigured()
     {
-        var options = SquidexFakes.OptionsWithoutLocales();
-        var provider = new SquidexLocaleProvider(SquidexFakes.OptionsMock(options));
+        var options = SquidexFakes.AppOptionsWithoutLocales();
+        var provider = new SquidexLocaleProvider(options);
 
         provider.SupportedLocales.Should().BeEquivalentTo([TestLocales.UkUA]);
     }
@@ -36,7 +37,7 @@ public sealed class SquidexLocaleProviderTests
     [Fact]
     public void DefaultLocale_ReturnsValueFromOptions_BeforeInitialize()
     {
-        var provider = new SquidexLocaleProvider(SquidexFakes.OptionsMock());
+        var provider = new SquidexLocaleProvider(SquidexFakes.DefaultAppOptions());
 
         provider.DefaultLocale.Should().Be(TestLocales.UkUA);
     }
@@ -47,7 +48,7 @@ public sealed class SquidexLocaleProviderTests
     public async Task InitializeAsync_UsesAppsettings_DoesNotCallSquidex()
     {
         // Arrange — SupportedLocales configured in appsettings
-        var provider = new SquidexLocaleProvider(SquidexFakes.OptionsMock());
+        var provider = new SquidexLocaleProvider(SquidexFakes.DefaultAppOptions());
 
         // Act
         await provider.InitializeAsync(_client);
@@ -61,8 +62,8 @@ public sealed class SquidexLocaleProviderTests
     public async Task InitializeAsync_KeepsDefaultLocaleFromAppsettings_WhenLocalesConfigured()
     {
         // Arrange — DefaultLocale explicitly set + SupportedLocales set
-        var options = SquidexFakes.DefaultOptions() with { DefaultLocale = TestLocales.En };
-        var provider = new SquidexLocaleProvider(SquidexFakes.OptionsMock(options));
+        var options = SquidexFakes.DefaultAppOptions() with { DefaultLocale = TestLocales.En };
+        var provider = new SquidexLocaleProvider(options);
 
         // Act
         await provider.InitializeAsync(_client);
@@ -78,8 +79,8 @@ public sealed class SquidexLocaleProviderTests
     public async Task InitializeAsync_FetchesFromSquidex_WhenSupportedLocalesNotConfigured()
     {
         // Arrange
-        var options = SquidexFakes.OptionsWithoutLocales();
-        var provider = new SquidexLocaleProvider(SquidexFakes.OptionsMock(options));
+        var options = SquidexFakes.AppOptionsWithoutLocales();
+        var provider = new SquidexLocaleProvider(options);
 
         _client.GetAppLocalesAsync(Arg.Any<CancellationToken>())
                .Returns(SquidexFakes.MakeLocales(TestLocales.UkUA, TestLocales.En, TestLocales.De));
@@ -95,30 +96,31 @@ public sealed class SquidexLocaleProviderTests
     [Fact]
     public async Task InitializeAsync_SetsDefaultLocale_FromIsMasterField()
     {
-        // Arrange — appsettings DefaultLocale is default constant (UkUA)
-        // Squidex says "en" is master
-        var options = SquidexFakes.OptionsWithoutLocales();
-        var provider = new SquidexLocaleProvider(SquidexFakes.OptionsMock(options));
+        // Arrange — appsettings DefaultLocale left at the library default ("en"),
+        // which SquidexLocaleProvider treats as "not explicitly configured".
+        // Squidex says "uk-UA" is master
+        var options = SquidexFakes.AppOptionsWithoutLocales() with { DefaultLocale = SquidexLocales.Default };
+        var provider = new SquidexLocaleProvider(options);
 
         _client.GetAppLocalesAsync(Arg.Any<CancellationToken>())
                .Returns(SquidexFakes.MakeLocales(
-                   masterLocale: TestLocales.En,
-                   TestLocales.UkUA));
+                   masterLocale: TestLocales.UkUA,
+                   TestLocales.En));
 
         // Act
         await provider.InitializeAsync(_client);
 
         // Assert — DefaultLocale set from IsMaster
-        provider.DefaultLocale.Should().Be(TestLocales.En);
+        provider.DefaultLocale.Should().Be(TestLocales.UkUA);
     }
 
     [Fact]
     public async Task InitializeAsync_KeepsDefaultLocaleFromAppsettings_WhenExplicitlySet()
     {
-        // Arrange — DefaultLocale explicitly set to "en" in appsettings
+        // Arrange — DefaultLocale explicitly set to "de" in appsettings (not the library default "en")
         // Squidex says "uk-UA" is master — appsettings wins
-        var options = SquidexFakes.OptionsWithoutLocales() with { DefaultLocale = TestLocales.En };
-        var provider = new SquidexLocaleProvider(SquidexFakes.OptionsMock(options));
+        var options = SquidexFakes.AppOptionsWithoutLocales() with { DefaultLocale = TestLocales.De };
+        var provider = new SquidexLocaleProvider(options);
 
         _client.GetAppLocalesAsync(Arg.Any<CancellationToken>())
                .Returns(SquidexFakes.MakeLocales(
@@ -129,15 +131,15 @@ public sealed class SquidexLocaleProviderTests
         await provider.InitializeAsync(_client);
 
         // Assert — appsettings DefaultLocale wins over IsMaster
-        provider.DefaultLocale.Should().Be(TestLocales.En);
+        provider.DefaultLocale.Should().Be(TestLocales.De);
     }
 
     [Fact]
     public async Task InitializeAsync_FallsBackToDefaultLocale_WhenSquidexUnreachable()
     {
         // Arrange
-        var options = SquidexFakes.OptionsWithoutLocales();
-        var provider = new SquidexLocaleProvider(SquidexFakes.OptionsMock(options));
+        var options = SquidexFakes.AppOptionsWithoutLocales();
+        var provider = new SquidexLocaleProvider(options);
 
         _client.GetAppLocalesAsync(Arg.Any<CancellationToken>())
                .Throws(new HttpRequestException("Connection refused"));
@@ -154,8 +156,8 @@ public sealed class SquidexLocaleProviderTests
     public async Task InitializeAsync_FallsBackToDefaultLocale_WhenSquidexReturnsEmpty()
     {
         // Arrange
-        var options = SquidexFakes.OptionsWithoutLocales();
-        var provider = new SquidexLocaleProvider(SquidexFakes.OptionsMock(options));
+        var options = SquidexFakes.AppOptionsWithoutLocales();
+        var provider = new SquidexLocaleProvider(options);
 
         _client.GetAppLocalesAsync(Arg.Any<CancellationToken>())
                .Returns(new List<SquidexLocaleInfo>() as IReadOnlyList<SquidexLocaleInfo>);
@@ -171,8 +173,8 @@ public sealed class SquidexLocaleProviderTests
     public async Task InitializeAsync_IsIdempotent_CallsSquidexOnlyOnce()
     {
         // Arrange
-        var options = SquidexFakes.OptionsWithoutLocales();
-        var provider = new SquidexLocaleProvider(SquidexFakes.OptionsMock(options));
+        var options = SquidexFakes.AppOptionsWithoutLocales();
+        var provider = new SquidexLocaleProvider(options);
 
         _client.GetAppLocalesAsync(Arg.Any<CancellationToken>())
                .Returns(SquidexFakes.MakeLocales(TestLocales.UkUA, TestLocales.En));

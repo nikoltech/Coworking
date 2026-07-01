@@ -1,6 +1,7 @@
 ﻿using Coworking.Application.Ports.Squidex;
 using Coworking.Application.Ports.Squidex.Schemas.City;
 using Coworking.Application.Ports.Squidex.Schemas.Email;
+using Coworking.External.Squidex.Abstractions.Client;
 using Coworking.External.Squidex.Abstractions.Repository;
 using Coworking.External.Squidex.Client;
 using Coworking.External.Squidex.Context;

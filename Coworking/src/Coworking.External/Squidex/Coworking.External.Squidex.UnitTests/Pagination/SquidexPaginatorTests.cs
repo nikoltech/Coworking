@@ -1,7 +1,7 @@
 ﻿// Pagination/SquidexPaginatorTests.cs
 using Coworking.External.Squidex.Abstractions.Filters;
 using Coworking.External.Squidex.Abstractions.Models;
-using Coworking.External.Squidex.Abstractions.Repository;
+using Coworking.External.Squidex.Abstractions.Client;
 using Coworking.External.Squidex.Pagination;
 using Coworking.External.Squidex.UnitTests.Helpers;
 using FluentAssertions;
@@ -11,8 +11,8 @@ namespace Coworking.External.Squidex.UnitTests.Pagination;
 
 public sealed class SquidexPaginatorTests
 {
-    // MaxPageSize = 3 from SquidexFakes.DefaultOptions
-    private readonly SquidexPaginator _paginator = new(SquidexFakes.OptionsMock());
+    private readonly SquidexPaginator _paginator = new();
+    private const int PageSize = 3; // matches SquidexFakes.DefaultAppOptions().MaxPageSize
     private readonly ISquidexApiClient _client = Substitute.For<ISquidexApiClient>();
 
     [Fact]
@@ -29,7 +29,7 @@ public sealed class SquidexPaginatorTests
 
         // Act
         var result = await _paginator.FetchAllAsync<SquidexFakes.TestSchema>(
-            "cities", _client, RequestQuery.Create());
+            "cities", _client, RequestQuery.Create(), PageSize);
 
         // Assert
         result.Total.Should().Be(2);
@@ -63,7 +63,7 @@ public sealed class SquidexPaginatorTests
 
         // Act
         var result = await _paginator.FetchAllAsync<SquidexFakes.TestSchema>(
-            "cities", _client, RequestQuery.Create());
+            "cities", _client, RequestQuery.Create(), PageSize);
 
         // Assert
         result.Total.Should().Be(7);
@@ -95,7 +95,7 @@ public sealed class SquidexPaginatorTests
 
         // Act
         await _paginator.FetchAllAsync<SquidexFakes.TestSchema>(
-            "cities", _client, baseQuery);
+            "cities", _client, baseQuery, PageSize);
 
         // Assert — filter and sort preserved on all pages
         captured.Should().AllSatisfy(q =>
@@ -120,7 +120,7 @@ public sealed class SquidexPaginatorTests
 
         // Act
         await _paginator.FetchAllAsync<SquidexFakes.TestSchema>(
-            "cities", _client, RequestQuery.Create());
+            "cities", _client, RequestQuery.Create(), PageSize);
 
         // Assert
         capturedSkips.Should().BeEquivalentTo([0, 3, 6]);
@@ -145,7 +145,7 @@ public sealed class SquidexPaginatorTests
 
         // Act
         await _paginator.FetchAllAsync<SquidexFakes.TestSchema>(
-            "cities", _client, RequestQuery.Create(), opts);
+            "cities", _client, RequestQuery.Create(), PageSize, opts);
 
         // Assert — all pages get same options
         capturedOptions.Should().AllSatisfy(o =>

@@ -1,7 +1,7 @@
-﻿using Coworking.External.Squidex.Abstractions.Models;
+using Coworking.External.Squidex.Abstractions.Models;
 using Coworking.External.Squidex.Abstractions.Options;
 
-namespace Coworking.External.Squidex.Abstractions.Repository;
+namespace Coworking.External.Squidex.Abstractions.Client;
 
 public interface ISquidexApiClient
 {

@@ -1,8 +1,8 @@
 ﻿using Coworking.External.Squidex.Abstractions.Models;
+using Coworking.External.Squidex.Abstractions.Options;
 using Coworking.External.Squidex.Client;
 using Coworking.External.Squidex.Exceptions;
 using Coworking.External.Squidex.Localization;
-using Coworking.External.Squidex.Options;
 using Coworking.External.Squidex.UnitTests.Helpers;
 using FluentAssertions;
 using RichardSzalay.MockHttp;
@@ -15,12 +15,12 @@ namespace Coworking.External.Squidex.UnitTests.Client;
 public sealed class SquidexApiClientTests
 {
     private readonly MockHttpMessageHandler _mockHttp = new();
-    private readonly SquidexOptions _options = SquidexFakes.DefaultOptions();
+    private readonly SquidexAppOptions _options = SquidexFakes.DefaultAppOptions();
     private readonly SquidexLocaleProvider _locales;
 
     public SquidexApiClientTests()
     {
-        _locales = new SquidexLocaleProvider(SquidexFakes.OptionsMock(_options));
+        _locales = new SquidexLocaleProvider(_options);
     }
 
     private SquidexApiClient CreateClient() =>

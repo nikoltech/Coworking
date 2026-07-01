@@ -1,6 +1,7 @@
 ﻿// Repository/SquidexRepositoryTests.cs
 using Coworking.External.Squidex.Abstractions.Filters;
 using Coworking.External.Squidex.Abstractions.Models;
+using Coworking.External.Squidex.Abstractions.Client;
 using Coworking.External.Squidex.Abstractions.Repository;
 using Coworking.External.Squidex.Context;
 using Coworking.External.Squidex.Repository;
@@ -14,6 +15,9 @@ public sealed class SquidexRepositoryTests
 {
     private readonly ISquidexApiClient _client = Substitute.For<ISquidexApiClient>();
     private readonly ISquidexPaginator _paginator = Substitute.For<ISquidexPaginator>();
+
+    public SquidexRepositoryTests() =>
+        _client.AppOptions.Returns(SquidexFakes.DefaultAppOptions());
 
     private SquidexSet<SquidexFakes.TestSchema> CreateRepo(string schema = "test-schema") =>
         new(_client, _paginator, schema);
@@ -46,7 +50,7 @@ public sealed class SquidexRepositoryTests
             SquidexFakes.MakeTestSchema("b"));
 
         _paginator.FetchAllAsync<SquidexFakes.TestSchema>(
-                "test-schema", _client, Arg.Any<RequestQuery>(),
+                "test-schema", _client, Arg.Any<RequestQuery>(), Arg.Any<int>(),
                 Arg.Any<QueryOptions?>(), Arg.Any<CancellationToken>())
             .Returns(expected);
 
@@ -119,7 +123,7 @@ public sealed class SquidexRepositoryTests
         var schema = SquidexFakes.MakeTestSchema("updated");
         var expected = SquidexFakes.MakeContent(schema, "upd-id");
 
-        _client.UpdateAsync("test-schema", "upd-id", schema, Arg.Any<CancellationToken>())
+        _client.UpdateAsync("test-schema", "upd-id", schema, Arg.Any<int?>(), Arg.Any<CancellationToken>())
                .Returns(expected);
 
         // Act
