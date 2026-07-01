@@ -67,6 +67,30 @@ internal static class SquidexFakes
 		new(total,
 			items.Select((item, i) => MakeContent(item, $"id-{i + 1}", status)).ToList());
 
+	// ── Asset factories ─────────────────────────────────────────────────────────
+
+	public static AssetDto MakeAsset(
+		string id = "asset-1",
+		string fileName = "photo.png",
+		string mimeType = "image/png",
+		params string[] tags) =>
+		new(
+			Id: id,
+			FileName: fileName,
+			FileSize: 1024,
+			MimeType: mimeType,
+			Url: $"https://fake.cloud.squidex.io/api/assets/{id}",
+			Tags: tags.ToList(),
+			Version: 1,
+			Created: DateTime.UtcNow,
+			LastModified: DateTime.UtcNow,
+			Metadata: new AssetMetadata(PixelWidth: 800, PixelHeight: 600),
+			IsProtected: false,
+			FileHash: "hash-1");
+
+	public static AssetsResponse MakeAssetsResponse(params AssetDto[] items) =>
+		new(items.Length, items.ToList());
+
 	// ── Locale factories ──────────────────────────────────────────────────────
 
 	public static SquidexLocaleInfo MakeMasterLocale(string iso2Code = TestLocales.UkUA) =>

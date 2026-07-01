@@ -1,10 +1,8 @@
+using Coworking.External.Squidex.Abstractions.Client;
 using Coworking.External.Squidex.Abstractions.Models;
 using Coworking.External.Squidex.Abstractions.Options;
-using Coworking.External.Squidex.Abstractions.Client;
-using Coworking.External.Squidex.Auth;
 using Coworking.External.Squidex.Exceptions;
 using Coworking.External.Squidex.Localization;
-using System.Diagnostics;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -13,35 +11,24 @@ using System.Text.Json.Serialization;
 
 namespace Coworking.External.Squidex.Client;
 
-public sealed class SquidexApiClient : ISquidexApiClient
+internal sealed class SquidexApiClient : SquidexHttpClientBase, ISquidexApiClient
 {
-    private readonly HttpClient _http;
-    private readonly string _clientName;
     private readonly SquidexLocaleProvider _locales;
 
     /// <summary>Safe batch size for IDs query — respects URL length limits.</summary>
     private const int IdsBatchSize = 80;
 
-    private static readonly JsonSerializerOptions Json = new()
-    {
-        PropertyNameCaseInsensitive = true,
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-    };
-
+    /// <summary>Write-only options for the JSON serialized into the ?q= query string.</summary>
     private static readonly JsonSerializerOptions JsonWrite = new()
     {
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
     };
 
-    public SquidexAppOptions AppOptions { get; }
-
     internal SquidexApiClient(HttpClient http, SquidexAppOptions appOptions,
         string clientName,
         SquidexLocaleProvider locales)
+        : base(http, appOptions, clientName)
     {
-        _http = http;
-        AppOptions = appOptions;
-        _clientName = clientName;
         _locales = locales;
     }
 
@@ -229,31 +216,6 @@ public sealed class SquidexApiClient : ISquidexApiClient
             .ToList() ?? [];
     }
 
-    // ── Retry ────────────────────────────────────────────────────────────────
-
-    private async Task<HttpResponseMessage> SendWithRetryAsync(HttpRequestMessage request, CancellationToken ct)
-    {
-        var retry = AppOptions.Retry;
-
-        for (var attempt = 1; attempt <= retry.MaxAttempts; attempt++)
-        {
-            var requestToSend = attempt == 1
-                ? request
-                : await CloneAsync(request, ct);
-
-            var response = await _http.SendAsync(requestToSend, ct);
-
-            if (!IsTransient(response.StatusCode) || attempt == retry.MaxAttempts)
-                return response;
-
-            response.Dispose();
-            await Task.Delay(
-                TimeSpan.FromSeconds(retry.BaseDelaySeconds * Math.Pow(2, attempt - 1)), ct);
-        }
-
-        throw new UnreachableException();
-    }
-
     // ── Private ──────────────────────────────────────────────────────────────
 
     private Task<ResponseSchema<T>> QueryByIdsBatchAsync<T>(string schema, string[] batch,
@@ -284,36 +246,18 @@ public sealed class SquidexApiClient : ISquidexApiClient
         }
     }
 
-    private async Task<T> SendAndDeserializeAsync<T>(HttpRequestMessage request, CancellationToken ct)
-    {
-        var response = await SendWithRetryAsync(request, ct);
-        await response.EnsureSquidexSuccessAsync(ct);
-
-        return await response.Content.ReadFromJsonAsync<T>(Json, ct)
-               ?? throw new InvalidOperationException(
-                   $"Empty Squidex response for {typeof(T).Name}.");
-    }
-
     private HttpRequestMessage BuildRequest(HttpMethod method, string url,
         QueryOptions? queryOptions = null) =>
-        ConfigureRequest(new HttpRequestMessage(method, url), queryOptions);
+        ApplyQueryHeaders(CreateRequest(method, url), queryOptions);
 
     private HttpRequestMessage BuildRequest(HttpMethod method, Uri uri,
         QueryOptions? queryOptions = null) =>
-        ConfigureRequest(new HttpRequestMessage(method, uri), queryOptions);
+        ApplyQueryHeaders(CreateRequest(method, uri), queryOptions);
 
-    private HttpRequestMessage ConfigureRequest(HttpRequestMessage request,
+    private HttpRequestMessage ApplyQueryHeaders(HttpRequestMessage request,
         QueryOptions? queryOptions)
     {
         var opts = queryOptions ?? QueryOptions.Default;
-
-        // Tell auth handler which app+client to use
-        request.Options.Set(
-            new HttpRequestOptionsKey<string>(SquidexAuthHandler.AppNameKey),
-            AppOptions.AppName);
-        request.Options.Set(
-            new HttpRequestOptionsKey<string>(SquidexAuthHandler.ClientNameKey),
-            _clientName);
 
         if (opts.IncludeUnpublished)
             request.Headers.Add("X-Unpublished", "true");
@@ -361,37 +305,6 @@ public sealed class SquidexApiClient : ISquidexApiClient
 
     private string ContentUrl(string schema) =>
         $"{AppOptions.BaseUrl.TrimEnd('/')}/api/content/{AppOptions.AppName}/{schema}";
-
-    private static bool IsTransient(HttpStatusCode code) => code is
-        HttpStatusCode.RequestTimeout or
-        HttpStatusCode.TooManyRequests or
-        HttpStatusCode.InternalServerError or
-        HttpStatusCode.BadGateway or
-        HttpStatusCode.ServiceUnavailable or
-        HttpStatusCode.GatewayTimeout;
-
-    private static async Task<HttpRequestMessage> CloneAsync(
-        HttpRequestMessage source, CancellationToken ct)
-    {
-        var clone = new HttpRequestMessage(source.Method, source.RequestUri);
-
-        foreach (var header in source.Headers)
-            clone.Headers.TryAddWithoutValidation(header.Key, header.Value);
-
-        foreach (var option in source.Options)
-            clone.Options.Set(new HttpRequestOptionsKey<object?>(option.Key), option.Value);
-
-        if (source.Content is null)
-            return clone;
-
-        var bytes = await source.Content.ReadAsByteArrayAsync(ct);
-        clone.Content = new ByteArrayContent(bytes);
-
-        foreach (var header in source.Content.Headers)
-            clone.Content.Headers.TryAddWithoutValidation(header.Key, header.Value);
-
-        return clone;
-    }
 
     // ── Response types ────────────────────────────────────────────────────────
 

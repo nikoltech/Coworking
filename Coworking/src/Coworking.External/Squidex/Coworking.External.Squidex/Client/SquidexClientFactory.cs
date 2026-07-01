@@ -6,7 +6,7 @@ using Microsoft.Extensions.Options;
 namespace Coworking.External.Squidex.Client;
 
 /// <summary>
-/// Creates SquidexApiClient instances for app+client combinations.
+/// Creates Squidex client instances for app+client combinations.
 /// Locale providers are cached per app to avoid redundant Squidex API calls.
 /// </summary>
 public sealed class SquidexClientFactory(
@@ -24,6 +24,18 @@ public sealed class SquidexClientFactory(
         var http = httpClientFactory.CreateClient(SquidexHttpClientNames.Api);
 
         return new SquidexApiClient(http, appOptions, client, locales);
+    }
+
+    /// <summary>
+    /// Creates an Assets API client for an app+client combination. Assets need no locale provider.
+    /// </summary>
+    public ISquidexAssetClient CreateAssetClientForApp(string appName, string? clientName = null)
+    {
+        var appOptions = GetAppOptions(appName);
+        var client = clientName ?? appOptions.DefaultClient;
+        var http = httpClientFactory.CreateClient(SquidexHttpClientNames.Api);
+
+        return new SquidexAssetClient(http, appOptions, client);
     }
 
     // ── private ──────────────────────────────────────────────────────────────

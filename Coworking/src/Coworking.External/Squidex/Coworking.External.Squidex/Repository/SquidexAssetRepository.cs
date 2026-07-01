@@ -1,6 +1,6 @@
-﻿using Coworking.External.Squidex.Abstractions.Models;
+using Coworking.External.Squidex.Abstractions.Client;
+using Coworking.External.Squidex.Abstractions.Models;
 using Coworking.External.Squidex.Abstractions.Repository;
-using Coworking.External.Squidex.Client;
 
 namespace Coworking.External.Squidex.Repository;
 
@@ -8,12 +8,12 @@ namespace Coworking.External.Squidex.Repository;
 /// Base implementation for Squidex Assets repository.
 /// Inherit to add project-specific asset methods.
 /// </summary>
-public class SquidexAssetRepository(SquidexAssetClient client)
+public class SquidexAssetRepository(ISquidexAssetClient client)
     : ISquidexAssetRepository
 {
-    protected readonly SquidexAssetClient Client = client;
+    protected readonly ISquidexAssetClient Client = client;
 
-    public Task<ResponseSchema<AssetDto>> QueryAsync(
+    public Task<AssetsResponse> QueryAsync(
         AssetQuery? query = null,
         CancellationToken ct = default) =>
         Client.QueryAsync(query, ct);

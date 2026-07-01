@@ -1,11 +1,11 @@
-﻿using Coworking.External.Squidex.Abstractions.Models;
-using System.Text.Json.Serialization;
+using Coworking.External.Squidex.Abstractions.Client;
+using Coworking.External.Squidex.Abstractions.Models;
 
 namespace Coworking.External.Squidex.Abstractions.Repository;
 
 public interface ISquidexAssetRepository
 {
-    Task<ResponseSchema<AssetDto>> QueryAsync(
+    Task<AssetsResponse> QueryAsync(
         AssetQuery? query = null,
         CancellationToken ct = default);
 
@@ -24,9 +24,3 @@ public interface ISquidexAssetRepository
         bool permanent = false,
         CancellationToken ct = default);
 }
-
-public sealed record UpdateAssetRequest(
-    [property: JsonPropertyName("fileName")] string? FileName = null,
-    [property: JsonPropertyName("tags")] List<string>? Tags = null,
-    [property: JsonPropertyName("isProtected")] bool? IsProtected = null,
-    [property: JsonPropertyName("metadata")] object? Metadata = null);

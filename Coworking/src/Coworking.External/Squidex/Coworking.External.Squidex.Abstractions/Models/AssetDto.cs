@@ -19,3 +19,11 @@ public sealed record AssetDto(
 public sealed record AssetMetadata(
     [property: JsonPropertyName("pixelWidth")] int? PixelWidth,
     [property: JsonPropertyName("pixelHeight")] int? PixelHeight);
+
+/// <summary>
+/// Response shape for the Squidex Assets query endpoint.
+/// Assets are returned flat — not wrapped in <see cref="ContentDto{T}"/> like schema content.
+/// </summary>
+public sealed record AssetsResponse(
+    [property: JsonPropertyName("total")] long Total,
+    [property: JsonPropertyName("items")] List<AssetDto> Items);

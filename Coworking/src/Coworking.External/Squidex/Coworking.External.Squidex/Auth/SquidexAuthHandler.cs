@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using Coworking.External.Squidex.Client;
+using System.Net;
 using System.Net.Http.Headers;
 
 namespace Coworking.External.Squidex.Auth;
@@ -30,7 +31,7 @@ public sealed class SquidexAuthHandler(SquidexTokenService tokenService) : Deleg
         tokenService.InvalidateToken(appName, clientName);
         response.Dispose();
 
-        var retryRequest = await CloneAsync(request, ct);
+        var retryRequest = await request.CloneAsync(ct);
         retryRequest.Headers.Authorization = await GetAuthHeaderAsync(appName, clientName, ct);
 
         return await base.SendAsync(retryRequest, ct);
@@ -51,27 +52,4 @@ public sealed class SquidexAuthHandler(SquidexTokenService tokenService) : Deleg
             new HttpRequestOptionsKey<string>(key), out var value)
             ? value
             : null;
-
-    private static async Task<HttpRequestMessage> CloneAsync(
-        HttpRequestMessage source, CancellationToken ct)
-    {
-        var clone = new HttpRequestMessage(source.Method, source.RequestUri);
-
-        foreach (var header in source.Headers)
-            clone.Headers.TryAddWithoutValidation(header.Key, header.Value);
-
-        foreach (var option in source.Options)
-            clone.Options.Set(new HttpRequestOptionsKey<object?>(option.Key), option.Value);
-
-        if (source.Content is null)
-            return clone;
-
-        var bytes = await source.Content.ReadAsByteArrayAsync(ct);
-        clone.Content = new ByteArrayContent(bytes);
-
-        foreach (var header in source.Content.Headers)
-            clone.Content.Headers.TryAddWithoutValidation(header.Key, header.Value);
-
-        return clone;
-    }
 }
