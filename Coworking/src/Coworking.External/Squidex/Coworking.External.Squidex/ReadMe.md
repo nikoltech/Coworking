@@ -1,22 +1,25 @@
-﻿
---# Coworking.External.Squidex
-Status: Need testing
+# Coworking.External.Squidex
 
--- Features
-- Designed for operations with focus on performance and ease of use
-- Multiple apps support
-- Multiple clients support
-- Locales synchronization
-- Fluent API for building queries, filters and paths
-- Repository pattern support with basic CRUD operations provided by base classes
-- Extensible architecture for custom implementations and overrides
-- Built on top of Squidex.Client library for low-level API interactions
-- Configuration via appsettings.json for easy setup and management of Squidex apps and clients
+Status: unit-tested (119 tests green).
 
+A typed, performance-oriented client for the Squidex CMS built on a custom
+`HttpClient`-based transport (no third-party Squidex SDK).
 
--- Configuration
+## Features
 
----- appsettings.json
+- Multiple apps and multiple clients (credentials) per app
+- Locale synchronization (from `appsettings.json` or the Squidex app languages)
+- Fluent API for building queries, filters and field paths
+- Ready-to-use `SquidexSet<T>` base with CRUD/query operations; extend it for
+  domain-specific repositories (via inheritance or injection)
+- Separate Assets API (`ISquidexAssetClient` / `SquidexAssetSet`)
+- Configurable retry with exponential backoff (`SquidexRetryOptions`)
+- Configuration via `appsettings.json`
+
+## Configuration
+
+### appsettings.json
+
 ```json
 {
   "Squidex": {
@@ -28,6 +31,10 @@ Status: Need testing
         "DefaultClient": "Default",
         "SupportedLocales": [ "uk-UA", "en" ],
         "DefaultLocale": "en",
+        "Retry": {
+          "MaxAttempts": 3,
+          "BaseDelaySeconds": 1.0
+        },
         "Clients": {
           "Default": {
             "ClientId": "my-app:default",
@@ -55,9 +62,9 @@ Status: Need testing
 }
 ```
 
----- Program.cs
-```csharp
+### Program.cs
 
+```csharp
 builder.Services.AddSquidex(builder.Configuration);
 builder.Services.AddSquidexContexts();
 
@@ -90,13 +97,14 @@ private static IServiceCollection AddMainAppContexts(this IServiceCollection ser
 
     return services;
 }
-
 ```
 
-Locales synchronization code. 
-The simpliest way is to set in appsettings.json the list of supported locales and default locale.
-```csharp
+### Locale synchronization
 
+The simplest way is to set the supported locales and the default locale in
+`appsettings.json`. Otherwise they are fetched from the Squidex app on startup:
+
+```csharp
 var app = builder.Build();
 
 // Initialize Squidex locales once before serving requests
@@ -132,36 +140,30 @@ private static async Task InitializeSquidexLocalesAsync(IServiceProvider service
             logger.LogInformation("Locales initialization for Squidex app '{AppName}' completed.", appName);
         }
     }
-    
+
     logger.LogInformation("Squidex locales initialization completed.");
 }
-
-
 ```
 
--- Usage example
+## Usage
 
+### Helpers
 
---- Usage helpers
+```text
+LocalizedField<T> - fields with localization support
+IvField<T>        - invariant fields (no localization)
 
-```csharp
+ISquidexContext   - main entry point for API access
 
-LocalizedField<> - for fields with localization support
-IvField<> - for invariant fields without localization support
+RequestQuery      - JSON representation of queries
+ODataQuery        - fluent OData queries
 
-
-ISquidexContext - main point for API access.
-
-RequestQuery - for json representation of queries
-ODataQuery - for building OData queries in a fluent way
-
-SquidexFilter - for building complex filters in a fluent way
-SquidexPaths - for building paths to nested fields in a fluent way
-
-
+SquidexFilter     - fluent complex filters
+SquidexPaths      - fluent paths to nested fields
 ```
 
----- Squidex schema (DTO)
+### Squidex schema (DTO)
+
 ```csharp
 public sealed class CitySchema
 {
@@ -173,8 +175,7 @@ public sealed class CitySchema
 }
 ```
 
-
----- Querying data
+### Querying data
 
 ```csharp
 public class GetCitiesQueryHandler(ISquidexContext squidex)
@@ -194,25 +195,64 @@ public class GetCitiesQueryHandler(ISquidexContext squidex)
     await squidex.Set<CitySchema>(schemaName).QueryAsync(RequestQuery.Create()
         .WithFilter(SquidexFilter.Eq(jsonPath, "test")));
 }
-
 ```
 
+## Extended usage
 
--- Extended usage
+`context.Set<T>(schema)` returns a ready-to-use `ISquidexSet<T>`. For
+domain-specific operations, define an interface and derive from `SquidexSet<T>`.
 
----- Interfaces for processing specific schemas DTOs
+### Interface for a specific schema
+
 ```csharp
-public interface ICityRepository : ISquidexRepository<CitySchema>
-````
+public interface ICityRepository : ISquidexSet<CitySchema>
+{
+    Task<ContentDto<CitySchema>?> GetByTitleAsync(string title, CancellationToken ct = default);
+}
+```
 
----- Repository implementation with basic CRUD operations provided by SquidexRepository base class
+### Base implementation
+
+Basic CRUD/query operations come from the `SquidexSet<T>` base class:
+
 ```csharp
-
 public sealed class CityRepository(ISquidexApiClient client, ISquidexPaginator paginator)
     : SquidexSet<CitySchema>(client, paginator, CitySchema.SchemaName), ICityRepository
+{
+    public async Task<ContentDto<CitySchema>?> GetByTitleAsync(string title, CancellationToken ct = default)
+    {
+        var result = await QueryAsync(
+            RequestQuery.Create()
+                .WithTake(1)
+                .WithFilter(SquidexFilter.Eq(CityPaths.Title, title)),
+            ct: ct);
 
-
+        return result.Items.FirstOrDefault();
+    }
+}
 ```
 
+## Assets
 
+The Assets API is separate from schema content (different endpoint and a flat
+response shape). Create a client via the factory:
 
+```csharp
+ISquidexAssetClient assets = factory.CreateAssetClientForApp("Main");
+
+AssetsResponse page = await assets.QueryAsync(
+    AssetQuery.Create().WithTop(50).WithTags(["logo"]));
+
+AssetDto uploaded = await assets.UploadAsync(stream, "photo.png", "image/png");
+await assets.UpdateMetadataAsync(uploaded.Id, new UpdateAssetRequest(Tags: ["hero"]));
+await assets.DeleteAsync(uploaded.Id);
+```
+
+Extend the ready-to-use `SquidexAssetSet` base for project-specific methods:
+
+```csharp
+public sealed class MediaAssets(ISquidexAssetClient client) : SquidexAssetSet(client)
+{
+    // custom asset helpers...
+}
+```
