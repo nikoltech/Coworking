@@ -40,15 +40,16 @@ internal sealed class SmtpEmailSender : IEmailSender
 
         var message = BuildMessage(to, subject, body);
 
-        await using var _ = await _connectionLimiter.AcquireAsync(ct);
-
         try
         {
+            await using var _ = await _connectionLimiter.AcquireAsync(ct);
+
             await ExecuteSmtpOperationAsync(async client =>
             {
                 await client.SendAsync(message, ct);
 
-                _logger.LogTrace("Email sent to {Recipient}", to);
+                if (_logger.IsEnabled(LogLevel.Trace) && _logger.IsEnabled(LogLevel.Debug))
+                    _logger.LogTrace("Email sent to {Recipient}", to);
             }, ct);
         }
         catch (Exception ex)

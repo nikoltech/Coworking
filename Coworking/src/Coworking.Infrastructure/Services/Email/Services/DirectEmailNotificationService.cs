@@ -32,9 +32,6 @@ internal sealed class DirectEmailNotificationService(
             model.To,
             $"Booking created — {model.CoworkingName}. Waiting for payment confirmation.",
             body, ct);
-
-        if (logger.IsEnabled(LogLevel.Trace))
-            logger.LogTrace("Email sent to {To}", model.To);
     }
 
     public async Task SendBookingCancelledAsync(BookingCancelledEmailModel model, CancellationToken ct)
@@ -55,8 +52,5 @@ internal sealed class DirectEmailNotificationService(
             model.To,
             $"Booking cancelled — {model.CoworkingName}",
             body, ct);
-
-        if (logger.IsEnabled(LogLevel.Trace))
-            logger.LogTrace("Email sent to {To}", model.To);
     }
 }
