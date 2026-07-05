@@ -46,6 +46,7 @@ public interface ISquidexApiClient
 
     Task<ContentDto<T>> PatchAsync<T>(
         string schema, string id, T data,
+        int? expectedVersion = null,
         CancellationToken ct = default);
 
     Task DeleteAsync(string schema, string id,

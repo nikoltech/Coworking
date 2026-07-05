@@ -49,7 +49,9 @@ public interface ISquidexSet<T> where T : class
         int? expectedVersion = null,
         CancellationToken ct = default);
 
-    Task<ContentDto<T>> PatchAsync(string id, T data, CancellationToken ct = default);
+    Task<ContentDto<T>> PatchAsync(string id, T data,
+        int? expectedVersion = null,
+        CancellationToken ct = default);
 
     Task DeleteAsync(string id,
         bool permanent = false,

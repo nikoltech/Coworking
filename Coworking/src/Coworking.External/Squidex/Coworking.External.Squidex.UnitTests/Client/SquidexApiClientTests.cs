@@ -350,6 +350,86 @@ public sealed class SquidexApiClientTests
     }
 
     [Fact]
+    public async Task UpdateAsync_AddsIfMatchHeader_WhenExpectedVersionProvided()
+    {
+        var schema = SquidexFakes.MakeTestSchema("updated");
+        var expected = SquidexFakes.MakeContent(schema, "upd-id");
+
+        string? capturedIfMatch = null;
+        _mockHttp
+            .When(HttpMethod.Put, "*/api/content/test-app/cities/upd-id")
+            .Respond(req =>
+            {
+                capturedIfMatch = req.Headers.IfMatch.FirstOrDefault()?.Tag;
+                return OkResponse(expected);
+            });
+
+        await CreateClient().UpdateAsync("cities", "upd-id", schema, expectedVersion: 5);
+
+        capturedIfMatch.Should().Be("\"5\"");
+    }
+
+    [Fact]
+    public async Task UpdateAsync_OmitsIfMatchHeader_WhenExpectedVersionNotProvided()
+    {
+        var schema = SquidexFakes.MakeTestSchema("updated");
+        var expected = SquidexFakes.MakeContent(schema, "upd-id");
+
+        var hadIfMatch = false;
+        _mockHttp
+            .When(HttpMethod.Put, "*/api/content/test-app/cities/upd-id")
+            .Respond(req =>
+            {
+                hadIfMatch = req.Headers.IfMatch.Any();
+                return OkResponse(expected);
+            });
+
+        await CreateClient().UpdateAsync("cities", "upd-id", schema);
+
+        hadIfMatch.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task PatchAsync_AddsIfMatchHeader_WhenExpectedVersionProvided()
+    {
+        var schema = SquidexFakes.MakeTestSchema("patched");
+        var expected = SquidexFakes.MakeContent(schema, "patch-id");
+
+        string? capturedIfMatch = null;
+        _mockHttp
+            .When(HttpMethod.Patch, "*/api/content/test-app/cities/patch-id")
+            .Respond(req =>
+            {
+                capturedIfMatch = req.Headers.IfMatch.FirstOrDefault()?.Tag;
+                return OkResponse(expected);
+            });
+
+        await CreateClient().PatchAsync("cities", "patch-id", schema, expectedVersion: 7);
+
+        capturedIfMatch.Should().Be("\"7\"");
+    }
+
+    [Fact]
+    public async Task PatchAsync_OmitsIfMatchHeader_WhenExpectedVersionNotProvided()
+    {
+        var schema = SquidexFakes.MakeTestSchema("patched");
+        var expected = SquidexFakes.MakeContent(schema, "patch-id");
+
+        var hadIfMatch = false;
+        _mockHttp
+            .When(HttpMethod.Patch, "*/api/content/test-app/cities/patch-id")
+            .Respond(req =>
+            {
+                hadIfMatch = req.Headers.IfMatch.Any();
+                return OkResponse(expected);
+            });
+
+        await CreateClient().PatchAsync("cities", "patch-id", schema);
+
+        hadIfMatch.Should().BeFalse();
+    }
+
+    [Fact]
     public async Task DeleteAsync_SendsDeleteRequest()
     {
         _mockHttp

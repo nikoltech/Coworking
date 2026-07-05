@@ -139,7 +139,7 @@ public sealed class SquidexSetTests
         var schema = SquidexFakes.MakeTestSchema("patched");
         var expected = SquidexFakes.MakeContent(schema, "patch-id");
 
-        _client.PatchAsync("test-schema", "patch-id", schema, Arg.Any<CancellationToken>())
+        _client.PatchAsync("test-schema", "patch-id", schema, Arg.Any<int?>(), Arg.Any<CancellationToken>())
                .Returns(expected);
 
         // Act

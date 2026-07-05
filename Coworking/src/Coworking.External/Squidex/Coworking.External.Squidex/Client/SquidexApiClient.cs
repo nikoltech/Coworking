@@ -170,12 +170,22 @@ internal sealed class SquidexApiClient : SquidexHttpClientBase, ISquidexApiClien
         return SendAndDeserializeAsync<ContentDto<T>>(request, ct);
     }
 
+    /// <summary>
+    /// Partially updates content item with optimistic concurrency control using ETag.
+    /// </summary>
+    /// <param name="expectedVersion">Optional ETag for concurrency control</param>
     public Task<ContentDto<T>> PatchAsync<T>(
         string schema, string id, T data,
+        int? expectedVersion = null,
         CancellationToken ct = default)
     {
         var request = BuildRequest(HttpMethod.Patch, $"{ContentUrl(schema)}/{id}");
         request.Content = JsonContent.Create(data, options: Json);
+
+        if (expectedVersion.HasValue)
+            request.Headers.IfMatch.Add(
+                new EntityTagHeaderValue($"\"{expectedVersion}\""));
+
         return SendAndDeserializeAsync<ContentDto<T>>(request, ct);
     }
 

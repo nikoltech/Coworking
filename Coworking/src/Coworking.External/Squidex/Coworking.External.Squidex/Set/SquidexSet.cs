@@ -83,8 +83,10 @@ public class SquidexSet<T> : ISquidexSet<T> where T : class
         CancellationToken ct = default) =>
         Client.UpdateAsync(Schema, id, data, expectedVersion, ct);
 
-    public Task<ContentDto<T>> PatchAsync(string id, T data, CancellationToken ct = default) =>
-        Client.PatchAsync(Schema, id, data, ct);
+    public Task<ContentDto<T>> PatchAsync(string id, T data,
+        int? expectedVersion = null,
+        CancellationToken ct = default) =>
+        Client.PatchAsync(Schema, id, data, expectedVersion, ct);
 
     public Task DeleteAsync(string id,
         bool permanent = false,
