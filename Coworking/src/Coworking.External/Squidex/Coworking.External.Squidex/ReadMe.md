@@ -1,62 +1,29 @@
 # Coworking.External.Squidex
 
-Status: unit-tested (120 tests green).
+Status: unit-tested (139 tests green).
 
-A typed, performance-oriented client for the Squidex CMS built on a custom
-`HttpClient`-based transport (no third-party Squidex SDK).
-
-## Features
-
-- Multiple apps and multiple clients (credentials) per app
-- Locale synchronization (from `appsettings.json` or the Squidex app languages)
-- Fluent API for building queries, filters and field paths
-- Ready-to-use `SquidexSet<T>` base with CRUD/query operations; extend it for
-  domain-specific repositories (via inheritance or injection)
-- Schema name resolved from the DTO (`ISquidexSchema`) — `context.Set<T>()` needs no string
-- Separate Assets API (`ISquidexAssetClient` / `SquidexAssetSet`)
-- Configurable retry with exponential backoff (`SquidexRetryOptions`)
-- Configuration via `appsettings.json`
+A typed client for the Squidex CMS built on a custom `HttpClient` transport (no third-party
+Squidex SDK). Multi-app, multi-client, retry, and locale sync are first-class; schema
+management, GraphQL, bulk ops and streaming are out of scope — this is a narrow client for a
+known set of schemas, not a full Squidex SDK.
 
 ## Configuration
-
-<details>
-<summary><b>appsettings.json</b></summary>
 
 ```json
 {
   "Squidex": {
+    "DefaultApp": "Main",
     "Apps": {
       "Main": {
         "BaseUrl": "https://fake.cloud.squidex.io",
         "AppName": "my-main-app",
-        "MaxPageSize": 200,
         "DefaultClient": "Default",
         "SupportedLocales": [ "uk-UA", "en" ],
         "DefaultLocale": "en",
-        "Retry": {
-          "MaxAttempts": 3,
-          "BaseDelaySeconds": 1.0
-        },
+        "Retry": { "MaxAttempts": 3, "BaseDelaySeconds": 1.0 },
         "Clients": {
-          "Default": {
-            "ClientId": "my-app:default",
-            "ClientSecret": "secret"
-          },
-          "Frontend": {
-            "ClientId": "my-app:frontend",
-            "ClientSecret": "secret"
-          }
-        }
-      },
-      "Blog": {
-        "BaseUrl": "https://fake.cloud.squidex.io",
-        "AppName": "my-blog",
-        "DefaultLocale": "en",
-        "Clients": {
-          "Default": {
-            "ClientId": "blog:default",
-            "ClientSecret": "secret"
-          }
+          "Default":  { "ClientId": "my-app:default",  "ClientSecret": "secret" },
+          "Frontend": { "ClientId": "my-app:frontend", "ClientSecret": "secret" }
         }
       }
     }
@@ -64,348 +31,127 @@ A typed, performance-oriented client for the Squidex CMS built on a custom
 }
 ```
 
-</details>
-
-<details>
-<summary><b>Program.cs — registration</b></summary>
-
 ```csharp
 builder.Services.AddSquidex(builder.Configuration);
-builder.Services.AddSquidexContexts();
-
-internal static IServiceCollection AddSquidexContexts(this IServiceCollection services)
-{
-    services.AddMainAppContexts();
-
-    return services;
-}
-
-private static IServiceCollection AddMainAppContexts(this IServiceCollection services)
-{
-    const string AppName = MainSquidexContext.AppName;
-
-    services.AddScoped<IMainSquidexContext>(sp =>
-    {
-        var factory = sp.GetRequiredService<SquidexClientFactory>();
-        var paginator = sp.GetRequiredService<ISquidexPaginator>();
-        var client = factory.CreateForApp(AppName);
-        return new MainSquidexContext(client, paginator, factory);
-    });
-
-    services.AddKeyedScoped<IMainSquidexContext>(SquidexClientNames.Frontend, (sp, _) =>
-    {
-        var factory = sp.GetRequiredService<SquidexClientFactory>();
-        var paginator = sp.GetRequiredService<ISquidexPaginator>();
-        var client = factory.CreateForApp(AppName, SquidexClientNames.Frontend);
-        return new MainSquidexContext(client, paginator, factory);
-    });
-
-    return services;
-}
 ```
 
-</details>
+That's the whole setup. `ISquidexContext` is then ready to inject:
+- **One app configured** → `ISquidexContext` is registered unkeyed.
+- **Several apps** → registered keyed by app name (`[FromKeyedServices("Blog")]`); set
+  `DefaultApp` if one of them should *also* be available unkeyed.
 
-<details>
-<summary><b>Locale synchronization</b></summary>
-
-The simplest way is to set the supported locales and the default locale in
-`appsettings.json`. Otherwise they are fetched from the Squidex app on startup:
-
-```csharp
-var app = builder.Build();
-
-// Initialize Squidex locales once before serving requests
-await InitializeSquidexLocalesAsync(app.Services, app, app.Logger);
-
-private static async Task InitializeSquidexLocalesAsync(IServiceProvider services, WebApplication webApp, ILogger logger)
-{
-    logger.LogInformation("Initializing Squidex locales...");
-
-    var localeProvider = services.GetRequiredService<SquidexLocaleProvider>();
-    var squidexClientFactory = services.GetRequiredService<SquidexClientFactory>();
-
-    var globalSqOptions = services.GetRequiredService<IOptions<SquidexGlobalOptions>>();
-    var squidexApps = globalSqOptions?.Value.Apps;
-
-    if (squidexApps is not null)
-    {
-        foreach (var appOptions in squidexApps)
-        {
-            var app = appOptions.Value;
-            var appName = app.AppName;
-
-            logger.LogInformation("Initializing locales for Squidex app '{AppName}'...", appName);
-
-            if (app.Clients is not null && app.Clients.Count > 0)
-            {
-                var client = app.Clients.First();
-
-                var squidexClient = squidexClientFactory.CreateForApp(appName, client.Value?.ClientId);
-                await localeProvider.InitializeAsync(squidexClient, webApp.Lifetime.ApplicationStopping);
-            }
-
-            logger.LogInformation("Locales initialization for Squidex app '{AppName}' completed.", appName);
-        }
-    }
-
-    logger.LogInformation("Squidex locales initialization completed.");
-}
-```
-
-</details>
+`DefaultLocale`/`SupportedLocales` can be omitted — they're then fetched from the Squidex app
+on startup (see `SquidexLocaleProvider.InitializeAsync`).
 
 ## Usage
 
-<details>
-<summary><b>Helpers</b></summary>
-
-```text
-LocalizedField<T> - fields with localization support
-IvField<T>        - invariant fields (no localization)
-
-ISquidexContext   - main entry point for API access
-
-RequestQuery      - JSON representation of queries
-ODataQuery        - fluent OData queries
-
-SquidexFilter     - fluent complex filters
-SquidexPaths      - fluent paths to nested fields
-```
-
-</details>
-
-<details>
-<summary><b>Squidex schema (DTO)</b></summary>
-
-Implement `ISquidexSchema` so the schema name is resolved from the type
-(`context.Set<CitySchema>()` — no string needed):
+Give a schema DTO a name via `ISquidexSchema` so `Set<T>()` needs no schema string:
 
 ```csharp
 public sealed class CitySchema : ISquidexSchema
 {
     public static string SchemaName => "city";
 
-    [JsonPropertyName("Title")]
-    public LocalizedField<string>? Title { get; set; }
-
-    [JsonPropertyName("Synonyms")]
-    public IvField<string>? Synonyms { get; set; }
+    [JsonPropertyName("Title")] public LocalizedField<string>? Title { get; set; }
+    [JsonPropertyName("IsRegionCity")] public IvField<bool?>? IsRegionCity { get; set; }
 }
 ```
 
-</details>
-
-<details>
-<summary><b>Querying data</b></summary>
-
 ```csharp
-public class GetCitiesQueryHandler(ISquidexContext squidex)
-{
-    // schema resolved from CitySchema.SchemaName — no string at the call site
-    // OData
-    await squidex.Set<CitySchema>().QueryODataAsync(
-            ODataQuery.Create().WithFilter("data/Title/iv eq 'test'"));
-
-    // json
-    await squidex.Set<CitySchema>().QueryAsync(RequestQuery.Create()
-        .WithFilter(SquidexFilter.Eq("data.Title.iv", "test")));
-
-    // explicit schema string still available (e.g. one DTO mapped to several schemas)
-    await squidex.Set<CitySchema>("city").QueryAsync(RequestQuery.Create());
-}
-```
-
-</details>
-
-<details>
-<summary><b>Reading results</b></summary>
-
-`QueryAsync` returns `ResponseSchema<T>` (`Total` + `Items` of `ContentDto<T>`).
-Read localized fields via `Get`/`GetLocalized`, invariant fields via `.Value`:
-
-```csharp
-ResponseSchema<CitySchema> result = await squidex.Set<CitySchema>()
-    .QueryAsync(RequestQuery.Create());
-
-foreach (ContentDto<CitySchema> item in result.Items)
-{
-    string? title  = item.Data.Title?.GetLocalized("uk-UA", "en"); // localized
-    bool isRegion  = item.Data.IsRegionCity?.Value ?? false;        // invariant
-
-    string id      = item.Id;       // item metadata
-    int version    = item.Version;
-    string status  = item.Status;
-}
-```
-
-</details>
-
-<details>
-<summary><b>Filtering, sorting, paging</b></summary>
-
-```csharp
-await squidex.Set<CitySchema>().QueryAsync(
-    RequestQuery.Create()
-        .WithFilter(SquidexFilter.Eq(CityPaths.IsRegionCity, true))
-        .WithSort([SortOption.Asc(CityPaths.SOrder)])
-        .WithTake(20)
-        .WithSkip(0));
-
-// fetch every page at once (paginator uses AppOptions.MaxPageSize)
-ResponseSchema<CitySchema> all = await squidex.Set<CitySchema>().GetAllAsync();
-
-// existence check (Take=1 + NoSlowTotal applied automatically)
-bool exists = await squidex.Set<CitySchema>()
-    .ExistsAsync(SquidexFilter.Eq(CityPaths.PlaceId, "abc123"));
-```
-
-</details>
-
-<details>
-<summary><b>Query options</b></summary>
-
-```csharp
-// include drafts / unpublished content
-await squidex.Set<CitySchema>()
-    .QueryAsync(query, new QueryOptions { IncludeUnpublished = true });
-
-// restrict returned locales (X-Languages)
-await squidex.Set<CitySchema>()
-    .QueryAsync(query, new QueryOptions { Languages = ["uk-UA"] });
-```
-
-> `QueryOptions.Flatten` / `QueryOptions.ForLocale(locale)` return scalar values
-> instead of `IvField`/`LocalizedField` — use only with a flat DTO shape.
-
-</details>
-
-<details>
-<summary><b>Mutations</b></summary>
-
-```csharp
-var draft = new CitySchema
-{
-    Title = new LocalizedField<string> { ["uk-UA"] = "Львів", ["en"] = "Lviv" },
-    IsRegionCity = new IvField<bool?>(true),
-};
-
-ContentDto<CitySchema> created = await squidex.Set<CitySchema>().CreateAsync(draft, publish: true);
-
-// optimistic concurrency via expectedVersion
-await squidex.Set<CitySchema>().UpdateAsync(created.Id, draft, expectedVersion: created.Version);
-
-await squidex.Set<CitySchema>().DeleteAsync(created.Id);
-```
-
-</details>
-
-<details>
-<summary><b>Typed context properties</b></summary>
-
-`IMainSquidexContext` exposes named repositories as properties:
-
-```csharp
-public class GetCityHandler(IMainSquidexContext squidex)
+public class GetCitiesHandler(ISquidexContext squidex)
 {
     public async Task Handle(CancellationToken ct)
     {
-        ContentDto<CitySchema>? kyiv = await squidex.Cities.GetByTitleAsync("Київ", ct);
-        // squidex.Emails, squidex.Set<T>() and squidex.UsingClient(...) are available too
+        var set = squidex.Set<CitySchema>();
+
+        // query — filter, sort, page
+        var page = await set.QueryAsync(
+            RequestQuery.Create()
+                .WithFilter(SquidexFilter.Eq(CityPaths.IsRegionCity, true))
+                .WithSort([SortOption.Asc(CityPaths.SOrder)])
+                .WithTake(20), ct: ct);
+
+        var title = page.Items[0].Data.Title?.GetLocalized("uk-UA", "en"); // localized field
+        var region = page.Items[0].Data.IsRegionCity?.Value ?? false;       // invariant field
+
+        // every page at once, or a cheap existence check
+        var all = await set.GetAllAsync(ct: ct);
+        var exists = await set.ExistsAsync(SquidexFilter.Eq(CityPaths.PlaceId, "abc"), ct: ct);
+
+        // mutate — Update/Patch take an optional expectedVersion for optimistic concurrency (ETag)
+        var created = await set.CreateAsync(new CitySchema { IsRegionCity = new IvField<bool?>(true) }, ct: ct);
+        await set.UpdateAsync(created.Id, created.Data, expectedVersion: created.Version, ct: ct);
+        await set.DeleteAsync(created.Id, ct: ct);
+
+        // a different client's credentials, one-off
+        await squidex.UsingClient(SquidexClientNames.Frontend).Set<CitySchema>().QueryAsync(RequestQuery.Create());
     }
 }
 ```
 
-</details>
+`RequestQuery`/`SquidexFilter`/`SquidexPaths` build JSON queries; `ODataQuery` is the fluent
+alternative for OData (`QueryODataAsync`). `QueryOptions` controls `X-Languages`,
+`X-Unpublished`, `X-NoSlowTotal`, `X-Flatten` per call.
 
-<details>
-<summary><b>Other client credentials</b></summary>
+### Domain-specific repositories
 
-```csharp
-// one-off, for a single call
-await squidex.UsingClient(SquidexClientNames.Frontend)
-             .Set<CitySchema>()
-             .QueryAsync(RequestQuery.Create());
-
-// or a separately registered keyed context (see Program.cs above)
-public class PublicHandler(
-    [FromKeyedServices(SquidexClientNames.Frontend)] IMainSquidexContext squidex) { }
-```
-
-</details>
-
-## Extended usage
-
-`context.Set<T>()` / `context.Set<T>(schema)` return a ready-to-use `ISquidexSet<T>`.
-For domain-specific operations, define an interface and derive from `SquidexSet<T>`.
-
-<details>
-<summary><b>Interface for a specific schema</b></summary>
+`Set<T>()` is ready to use as-is. For extra methods on a schema, derive from `SquidexSet<T>`:
 
 ```csharp
 public interface ICityRepository : ISquidexSet<CitySchema>
 {
     Task<ContentDto<CitySchema>?> GetByTitleAsync(string title, CancellationToken ct = default);
 }
-```
 
-</details>
-
-<details>
-<summary><b>Base implementation</b></summary>
-
-Basic CRUD/query operations come from the `SquidexSet<T>` base class:
-
-```csharp
 public sealed class CityRepository(ISquidexApiClient client, ISquidexPaginator paginator)
     : SquidexSet<CitySchema>(client, paginator, CitySchema.SchemaName), ICityRepository
 {
-    public async Task<ContentDto<CitySchema>?> GetByTitleAsync(string title, CancellationToken ct = default)
-    {
-        var result = await QueryAsync(
-            RequestQuery.Create()
-                .WithTake(1)
-                .WithFilter(SquidexFilter.Eq(CityPaths.Title, title)),
-            ct: ct);
-
-        return result.Items.FirstOrDefault();
-    }
+    public async Task<ContentDto<CitySchema>?> GetByTitleAsync(string title, CancellationToken ct = default) =>
+        (await QueryAsync(RequestQuery.Create().WithTake(1)
+            .WithFilter(SquidexFilter.Eq(CityPaths.Title, title)), ct: ct)).Items.FirstOrDefault();
 }
 ```
 
-</details>
+Expose repositories as typed properties by subclassing `SquidexContext` (see
+`MainSquidexContext` for a full example) — optional, only needed for the `.Cities`-style
+shortcut on top of the DI-provided `ISquidexContext`.
 
 ## Assets
 
-The Assets API is separate from schema content (different endpoint and a flat
-response shape).
-
-<details>
-<summary><b>Client operations</b></summary>
+Separate API — different endpoint, flat response shape, no schema.
 
 ```csharp
 ISquidexAssetClient assets = factory.CreateAssetClientForApp("Main");
 
-AssetsResponse page = await assets.QueryAsync(
-    AssetQuery.Create().WithTop(50).WithTags(["logo"]));
-
-AssetDto uploaded = await assets.UploadAsync(stream, "photo.png", "image/png");
+var page = await assets.QueryAsync(AssetQuery.Create().WithTop(50).WithTags(["logo"]));
+var uploaded = await assets.UploadAsync(stream, "photo.png", "image/png");
 await assets.UpdateMetadataAsync(uploaded.Id, new UpdateAssetRequest(Tags: ["hero"]));
 await assets.DeleteAsync(uploaded.Id);
 ```
 
-</details>
+Extend `SquidexAssetSet` the same way as `SquidexSet<T>` for project-specific asset methods.
 
-<details>
-<summary><b>Extending the base set</b></summary>
+## Webhooks
 
-Extend the ready-to-use `SquidexAssetSet` base for project-specific methods:
+Squidex Rules call an HTTP endpoint on content/asset changes. Split by dependency so the
+library itself stays free of ASP.NET Core hosting:
+
+- `SquidexWebhookSignature` (main library) — verifies `X-Signature`.
+- `SquidexContentWebhookEvent` / `SquidexAssetWebhookEvent` / `SquidexWebhookEventKind`
+  (`Abstractions.Webhooks.Events`) — typed payloads, visible from `Application` too.
 
 ```csharp
-public sealed class MediaAssets(ISquidexAssetClient client) : SquidexAssetSet(client)
+app.MapPost("/webhooks/squidex", async (HttpRequest request, IMediator mediator, CancellationToken ct) =>
 {
-    // custom asset helpers...
-}
-```
+    var body = await new StreamReader(request.Body).ReadToEndAsync(ct);
+    if (!SquidexWebhookSignature.Verify(body, sharedSecret, request.Headers["X-Signature"]))
+        return Results.Unauthorized();
 
-</details>
+    var json = JsonDocument.Parse(body).RootElement;
+
+    if (SquidexWebhookEventClassifier.Classify(json) == SquidexWebhookEventKind.Content)
+        await mediator.Publish(new SquidexContentChanged(json.Deserialize<SquidexContentWebhookEvent>()!), ct);
+
+    return Results.Ok();
+});
+```
