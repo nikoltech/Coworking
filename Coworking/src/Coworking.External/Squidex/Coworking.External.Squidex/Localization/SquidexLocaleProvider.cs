@@ -27,17 +27,12 @@ public sealed class SquidexLocaleProvider
         SeedFromConfig();
     }
 
-    private bool IsFullyConfigured => _hasExplicitDefault && _hasExplicitSupported;
-
     public string DefaultLocale => _defaultLocale ?? throw NotResolved();
 
     public IReadOnlyList<string> SupportedLocales => _supportedLocales ?? throw NotResolved();
 
-    public async Task InitializeAsync(ISquidexApiClient client, CancellationToken ct = default, bool forceRefresh = false)
+    public async Task InitializeAsync(ISquidexApiClient client, CancellationToken ct = default)
     {
-        if (!forceRefresh && IsFullyConfigured)
-            return;
-
         var locales = await FetchAsync(client, ct);
         if (locales is null)
             return; // failure already invalidated + logged

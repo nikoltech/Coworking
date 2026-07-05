@@ -6,7 +6,7 @@ using Microsoft.Extensions.Options;
 
 namespace Coworking.External.Squidex.Localization;
 
-/// <summary>Initializes locales for every configured Squidex app before the host starts serving requests.</summary>
+/// <summary>Always synchronizes locales with Squidex for every configured app.</summary>
 public static class SquidexLocaleInitializer
 {
     public static async Task InitializeAllAsync(IServiceProvider services, CancellationToken ct = default)
