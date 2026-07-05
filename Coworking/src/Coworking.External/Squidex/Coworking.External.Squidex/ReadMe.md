@@ -144,7 +144,7 @@ library itself stays free of ASP.NET Core hosting:
 app.MapPost("/webhooks/squidex", async (HttpRequest request, IMediator mediator, CancellationToken ct) =>
 {
     var body = await new StreamReader(request.Body).ReadToEndAsync(ct);
-    if (!SquidexWebhookSignature.Verify(body, sharedSecret, request.Headers["X-Signature"]))
+    if (!SquidexWebhookSignature.Verify(body, sharedSecret, request.Headers[SquidexWebhookHeaders.Signature]))
         return Results.Unauthorized();
 
     var json = JsonDocument.Parse(body).RootElement;

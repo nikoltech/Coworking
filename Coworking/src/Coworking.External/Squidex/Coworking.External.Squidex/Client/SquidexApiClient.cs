@@ -270,22 +270,22 @@ internal sealed class SquidexApiClient : SquidexHttpClientBase, ISquidexApiClien
         var opts = queryOptions ?? QueryOptions.Default;
 
         if (opts.IncludeUnpublished)
-            request.Headers.Add("X-Unpublished", "true");
+            request.Headers.Add(SquidexRequestHeaders.Unpublished, "true");
 
         if (opts.NoSlowTotal)
-            request.Headers.Add("X-NoSlowTotal", "true");
+            request.Headers.Add(SquidexRequestHeaders.NoSlowTotal, "true");
 
         if (opts.Flatten)
         {
-            request.Headers.Add("X-Flatten", "true");
+            request.Headers.Add(SquidexRequestHeaders.Flatten, "true");
             var languages = opts.Languages ?? [_locales.DefaultLocale];
-            request.Headers.Add("X-Languages", string.Join(",", languages));
+            request.Headers.Add(SquidexRequestHeaders.Languages, string.Join(",", languages));
         }
         else
         {
             var languages = opts.Languages ?? _locales.SupportedLocales;
             if (languages.Count > 0)
-                request.Headers.Add("X-Languages", string.Join(",", languages));
+                request.Headers.Add(SquidexRequestHeaders.Languages, string.Join(",", languages));
         }
 
         return request;
