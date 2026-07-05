@@ -9,7 +9,7 @@ namespace Coworking.Infrastructure.External.Squidex;
 
 internal static class SquidexDependencyInjection
 {
-    internal static IServiceCollection AddSquidexContexts(this IServiceCollection services)
+    internal static IServiceCollection AddCustomSquidexContexts(this IServiceCollection services)
     {
         services.AddMainAppContexts();
 

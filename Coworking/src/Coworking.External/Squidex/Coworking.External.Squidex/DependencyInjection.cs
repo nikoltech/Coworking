@@ -13,9 +13,7 @@ namespace Coworking.External.Squidex;
 
 public static class DependencyInjection
 {
-    public static IServiceCollection AddSquidex(
-        this IServiceCollection services,
-        IConfiguration configuration)
+    public static IServiceCollection AddSquidex(this IServiceCollection services, IConfiguration configuration)
     {
         services
             .AddOptions<SquidexGlobalOptions>()

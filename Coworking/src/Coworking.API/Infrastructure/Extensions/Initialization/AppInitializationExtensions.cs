@@ -1,9 +1,6 @@
-﻿using Coworking.External.Squidex.Abstractions.Options;
-using Coworking.External.Squidex.Client;
 using Coworking.External.Squidex.Localization;
 using Coworking.Infrastructure.Persistence.Contexts;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 
 namespace Coworking.API.Infrastructure.Extensions.Initialization;
 
@@ -21,9 +18,9 @@ public static class AppInitializationExtensions
         {
             await InitDatabase(config, app);
 
-            // Note: has not used yet. Need testing
-            //// Initialize Squidex locales once before serving requests
-            //await InitializeSquidexLocalesAsync(services, app, logger);
+            // Requires AddSquidex() enabled in Coworking.Infrastructure.DependencyInjection —
+            // currently disabled there, so this stays commented out until Squidex is wired into DI.
+            // await SquidexLocaleInitializer.InitializeAllAsync(services, app.Lifetime.ApplicationStopping);
         }
         catch (Exception ex)
         {
@@ -70,48 +67,5 @@ public static class AppInitializationExtensions
         {
             logger.LogError("An error occurred while seeding the database. Exception: {@ex}", ex);
         }
-    }
-
-    /// <summary>
-    /// Initialize Squidex locales once before serving requests
-    /// </summary>
-    /// <param name="services"></param>
-    /// <param name="webApp"></param>
-    /// <param name="logger"></param>
-    /// <returns></returns>
-    private static async Task InitializeSquidexLocalesAsync(IServiceProvider services, WebApplication webApp, ILogger logger)
-    {
-        logger.LogInformation("Initializing Squidex locales...");
-
-        throw new OperationCanceledException("Need testing external Squidex package");
-
-        var localeProvider = services.GetRequiredService<SquidexLocaleProvider>();
-        var squidexClientFactory = services.GetRequiredService<SquidexClientFactory>();
-
-        var globalSqOptions = services.GetRequiredService<IOptions<SquidexGlobalOptions>>();
-        var squidexApps = globalSqOptions?.Value.Apps;
-
-        if (squidexApps is not null)
-        {
-            foreach (var appOptions in squidexApps)
-            {
-                var app = appOptions.Value;
-                var appName = app.AppName;
-
-                logger.LogInformation("Initializing locales for Squidex app '{AppName}'...", appName);
-
-                if (app.Clients is not null && app.Clients.Count > 0)
-                {
-                    var client = app.Clients.First();
-
-                    var squidexClient = squidexClientFactory.CreateForApp(appName, client.Value?.ClientId);
-                    await localeProvider.InitializeAsync(squidexClient, webApp.Lifetime.ApplicationStopping);
-                }
-
-                logger.LogInformation("Locales initialization for Squidex app '{AppName}' completed.", appName);
-            }
-        }
-
-        logger.LogInformation("Squidex locales initialization completed.");
     }
 }

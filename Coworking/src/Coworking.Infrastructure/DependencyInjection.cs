@@ -40,7 +40,7 @@ public static class DependencyInjection
 
         //services
         //    .AddSquidex(configuration)
-        //    .AddSquidexContexts();
+        //    .AddCustomSquidexContexts();
 
         services.AddHostedServices();
 

@@ -1,5 +1,4 @@
-﻿using Coworking.External.Squidex.Abstractions.Localization;
-using Coworking.External.Squidex.Auth;
+﻿using Coworking.External.Squidex.Auth;
 
 namespace Coworking.External.Squidex.UnitTests.Helpers;
 
@@ -27,8 +26,8 @@ internal static class TestUrls
 
 internal static class TestLocales
 {
-    public const string UkUA = SquidexLocales.UkUA; // "uk-UA"
-    public const string En = SquidexLocales.En;   // "en"
+    public const string UkUA = "uk-UA";
+    public const string En = "en";
     public const string De = "de";
 }
 

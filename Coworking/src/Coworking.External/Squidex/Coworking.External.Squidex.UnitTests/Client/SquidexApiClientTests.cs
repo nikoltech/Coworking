@@ -5,6 +5,7 @@ using Coworking.External.Squidex.Exceptions;
 using Coworking.External.Squidex.Localization;
 using Coworking.External.Squidex.UnitTests.Helpers;
 using FluentAssertions;
+using Microsoft.Extensions.Logging.Abstractions;
 using RichardSzalay.MockHttp;
 using System.Net;
 using System.Text;
@@ -20,7 +21,7 @@ public sealed class SquidexApiClientTests
 
     public SquidexApiClientTests()
     {
-        _locales = new SquidexLocaleProvider(_options);
+        _locales = new SquidexLocaleProvider(_options, NullLogger<SquidexLocaleProvider>.Instance);
     }
 
     private SquidexApiClient CreateClient() =>

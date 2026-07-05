@@ -1,5 +1,4 @@
-﻿using Coworking.External.Squidex.Abstractions.Localization;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 
 namespace Coworking.External.Squidex.Abstractions.Options;
 
@@ -9,7 +8,7 @@ public sealed record SquidexAppOptions
     [Required] public string AppName { get; init; } = string.Empty;
 
     public int MaxPageSize { get; init; } = 200;
-    public string DefaultLocale { get; init; } = SquidexLocales.Default;
+    public string DefaultLocale { get; init; } = string.Empty;
     public string DefaultClient { get; init; } = "Default";
 
     /// <summary>
