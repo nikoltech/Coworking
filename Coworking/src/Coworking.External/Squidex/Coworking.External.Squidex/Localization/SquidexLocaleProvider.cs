@@ -87,6 +87,7 @@ public sealed class SquidexLocaleProvider
         return locales;
     }
 
+    /// <remarks>Skips if DefaultLocale isn't explicitly configured.</remarks>
     private void EnsureMasterMatchesConfig(string masterIso2Code)
     {
         if (!_hasExplicitDefault || string.Equals(masterIso2Code, _appOptions.DefaultLocale, StringComparison.Ordinal))
