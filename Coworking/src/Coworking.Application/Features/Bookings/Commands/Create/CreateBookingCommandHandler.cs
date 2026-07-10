@@ -110,11 +110,11 @@ internal class CreateBookingCommandHandler(
     {
         var booking = Booking.Create(request.DeskId, request.UserName, request.UserEmail, start, end);
 
-        booking.SetStatus(BookingStatus.PendingPayment);
-
         if (request.Metadata?.UserTimeZoneId is not null
             && TimeZoneInfo.FindSystemTimeZoneById(request.Metadata.UserTimeZoneId) is TimeZoneInfo userZone)
             booking.UserTimeZoneId = userZone.Id;
+
+        booking.SetStatus(BookingStatus.PendingPayment);
 
         return booking;
     }

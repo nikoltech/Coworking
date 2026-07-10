@@ -1,10 +1,11 @@
 ﻿using Coworking.Domain.Common;
 using Coworking.Domain.Enums;
 using Coworking.Domain.Exceptions;
+using StateMachine;
 
 namespace Coworking.Domain.Entities;
 
-public class Booking : ITrackEntity
+public class Booking : ITrackEntity, IHasStateGraph<BookingStatus>
 {
     public int Id { get; set; }
 
@@ -14,7 +15,7 @@ public class Booking : ITrackEntity
 
     public DateTimeOffset EndTime { get; set; }
 
-    public BookingStatus Status { get; set; }
+    public BookingStatus Status { get; set; } = BookingStatus.Created;
 
     public int DeskId { get; set; }
 
@@ -33,6 +34,23 @@ public class Booking : ITrackEntity
 
     public DateTime? UpdatedAt { get; set; }
 
+
+    /// <summary>
+    /// Confirmed, Expired, Cancelled is final states. 
+    /// Cancelled from everywhere. 
+    /// Expired only after Confirmed, PendingPayment.
+    /// </summary>
+    public static StateGraph<BookingStatus> StateGraph { get; } =
+        StateGraph<BookingStatus>.Create()
+            .From(BookingStatus.Created, BookingStatus.PendingPayment, BookingStatus.Expired)
+            .From(BookingStatus.PendingPayment, BookingStatus.PendingConfirmation, BookingStatus.Expired)
+            .From(BookingStatus.PendingConfirmation, BookingStatus.Confirmed)
+            .FromAnywhere(BookingStatus.Cancelled)
+            .Build();
+
+    private readonly Lifecycle<BookingStatus> _stateLifecycle = new(BookingStatus.Created, StateGraph);
+
+
     public static Booking Create(int deskId,
         string userName, // ValueObject? depend of choosen user design
         string userEmail,  // ValueObject?
@@ -47,7 +65,7 @@ public class Booking : ITrackEntity
 
         if (utcStartTime < DateTimeOffset.UtcNow)
             throw new DomainException("Cannot book in the past.");
-
+        
         return new Booking
         {
             AccessCode = Guid.NewGuid(),
@@ -59,11 +77,10 @@ public class Booking : ITrackEntity
         };
     }
 
-    public void SetStatus(BookingStatus pendingPayment)
+    public void SetStatus(BookingStatus newStatus)
     {
-        if (Status == BookingStatus.Cancelled || Status == BookingStatus.Expired)
-            throw new DomainException("Cannot change status of a cancelled or expired booking.");
+        _stateLifecycle.MoveTo(newStatus);
 
-        Status = pendingPayment;
+        Status = newStatus;
     }
 }

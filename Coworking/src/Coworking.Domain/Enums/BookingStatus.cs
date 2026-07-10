@@ -2,9 +2,13 @@
 {
     public enum BookingStatus
     {
+        Unknown,
+
         Created,
 
         PendingPayment,
+
+        PendingConfirmation,
 
         Confirmed,
 
