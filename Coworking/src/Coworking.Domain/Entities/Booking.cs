@@ -34,18 +34,15 @@ public class Booking : ITrackEntity, IHasStateGraph<BookingStatus>
 
     public DateTime? UpdatedAt { get; set; }
 
-
-    /// <summary>
-    /// Confirmed, Expired, Cancelled is final states. 
-    /// Cancelled from everywhere. 
-    /// Expired only after Confirmed, PendingPayment.
-    /// </summary>
     public static StateGraph<BookingStatus> StateGraph { get; } =
         StateGraph<BookingStatus>.Create()
-            .From(BookingStatus.Created, BookingStatus.PendingPayment, BookingStatus.Expired)
-            .From(BookingStatus.PendingPayment, BookingStatus.PendingConfirmation, BookingStatus.Expired)
+            .From(BookingStatus.Created, [BookingStatus.PendingPayment, BookingStatus.Expired])
+            .From(BookingStatus.PendingPayment, [BookingStatus.PendingConfirmation, BookingStatus.Expired])
             .From(BookingStatus.PendingConfirmation, BookingStatus.Confirmed)
-            .FromAnywhere(BookingStatus.Cancelled)
+            .From(BookingStatus.Cancelling, BookingStatus.Cancelled)
+            .FromAnywhere(BookingStatus.Cancelling)
+            .Exclude(BookingStatus.Cancelled, BookingStatus.Cancelling) // terminal state
+            .Exclude(BookingStatus.Expired, BookingStatus.Cancelling) // terminal state
             .Build();
 
     private readonly Lifecycle<BookingStatus> _stateLifecycle = new(BookingStatus.Created, StateGraph);
@@ -65,7 +62,7 @@ public class Booking : ITrackEntity, IHasStateGraph<BookingStatus>
 
         if (utcStartTime < DateTimeOffset.UtcNow)
             throw new DomainException("Cannot book in the past.");
-        
+
         return new Booking
         {
             AccessCode = Guid.NewGuid(),
@@ -79,8 +76,16 @@ public class Booking : ITrackEntity, IHasStateGraph<BookingStatus>
 
     public void SetStatus(BookingStatus newStatus)
     {
+        EnsureLifecycleSynced();
+
         _stateLifecycle.MoveTo(newStatus);
 
         Status = newStatus;
+    }
+
+    private void EnsureLifecycleSynced()
+    {
+        if (!EqualityComparer<BookingStatus>.Default.Equals(_stateLifecycle.Current, Status))
+            _stateLifecycle.Rehydrate(Status, []);
     }
 }

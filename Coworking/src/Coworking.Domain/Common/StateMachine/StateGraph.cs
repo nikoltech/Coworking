@@ -21,7 +21,7 @@ public sealed class StateGraph<T> where T : notnull
     {
         private readonly Dictionary<T, HashSet<T>> _edges = new();
         private readonly HashSet<T> _globalTargets = new();
-        private readonly HashSet<(T From, T To)> _blocked = new();
+        private readonly HashSet<(T From, T To)> _excluded = new();
 
         private HashSet<T> Edge(T s) => _edges.TryGetValue(s, out var x) ? x : _edges[s] = new();
 
@@ -49,22 +49,18 @@ public sealed class StateGraph<T> where T : notnull
             return this;
         }
 
-        /// Remove one FromAnywhere edge. Explicit From edges are never affected.
-        public Builder Block(T from, T to)
+        /// Exclude a transition (from -> to), whether added by From or FromAnywhere.
+        /// Applied last; throws at Build if the edge does not exist.
+        public Builder Exclude(T from, T to)
         {
             ArgumentNullException.ThrowIfNull(from);
             ArgumentNullException.ThrowIfNull(to);
-            _blocked.Add((from, to));
+            _excluded.Add((from, to));
             return this;
         }
 
         public StateGraph<T> Build()
         {
-            foreach (var (from, to) in _blocked)
-                if (!_globalTargets.Contains(to))
-                    throw new InvalidOperationException(
-                        $"Block({from}, {to}): {to} is not a FromAnywhere target");
-
             // includes states that appear only as targets, so they receive globals too
             var allStates = _edges.Keys
                 .Concat(_edges.Values.SelectMany(set => set))
@@ -73,9 +69,17 @@ public sealed class StateGraph<T> where T : notnull
 
             foreach (var state in allStates)
                 foreach (var target in _globalTargets)
-                    if (!EqualityComparer<T>.Default.Equals(state, target) &&
-                        !_blocked.Contains((state, target)))
+                    if (!EqualityComparer<T>.Default.Equals(state, target))
                         Edge(state).Add(target);
+
+            // exclusions applied last, over the fully built graph
+            foreach (var (from, to) in _excluded)
+            {
+                var removed = _edges.TryGetValue(from, out var set) && set.Remove(to);
+                if (!removed)
+                    throw new InvalidOperationException(
+                        $"Exclude({from}, {to}): no such transition to remove");
+            }
 
             return new StateGraph<T>(
                 _edges.ToDictionary(k => k.Key, k => (IReadOnlySet<T>)k.Value));
