@@ -1,4 +1,4 @@
-namespace StateMachine;
+namespace Coworking.Domain.Common.StateMachine;
 
 /// Thrown when a transition is not allowed by the graph.
 public sealed class InvalidTransitionException<T> : Exception where T : notnull

@@ -1,4 +1,4 @@
-namespace StateMachine;
+namespace Coworking.Domain.Common.StateMachine;
 
 /// Holds the current state and transition history, guarded by a graph.
 /// Attach one to any entity that has a lifecycle.
@@ -8,7 +8,7 @@ public sealed class Lifecycle<T> where T : notnull
     private readonly List<StateChange<T>> _history = new();
 
     public T Current { get; private set; }
-    public IReadOnlyList<StateChange<T>> History => _history;
+    public IReadOnlyList<StateChange<T>> History => _history.AsReadOnly();
 
     public Lifecycle(T initial, StateGraph<T> graph)
         => (Current, _graph) = (initial, graph);

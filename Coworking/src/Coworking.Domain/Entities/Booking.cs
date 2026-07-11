@@ -1,7 +1,7 @@
 ﻿using Coworking.Domain.Common;
+using Coworking.Domain.Common.StateMachine;
 using Coworking.Domain.Enums;
 using Coworking.Domain.Exceptions;
-using StateMachine;
 
 namespace Coworking.Domain.Entities;
 
@@ -46,7 +46,6 @@ public class Booking : ITrackEntity, IHasStateGraph<BookingStatus>
             .Build();
 
     private readonly Lifecycle<BookingStatus> _stateLifecycle = new(BookingStatus.Created, StateGraph);
-
 
     public static Booking Create(int deskId,
         string userName, // ValueObject? depend of choosen user design

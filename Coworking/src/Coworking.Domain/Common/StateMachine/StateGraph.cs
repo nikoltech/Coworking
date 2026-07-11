@@ -1,4 +1,4 @@
-namespace StateMachine;
+namespace Coworking.Domain.Common.StateMachine;
 
 /// Directed graph of allowed transitions between states of type T
 /// (enum, string, or any value with correct equality/hash).
