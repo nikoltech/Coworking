@@ -14,9 +14,7 @@ namespace Coworking.API.Controllers;
 
 [Route("api/desks")]
 [Tags("Desks")]
-public sealed class DesksController(
-    IMediator mediator,
-    IMapper mapper) : ApiControllerBase
+public sealed class DesksController(IMediator mediator, IMapper mapper) : ApiControllerBase
 {
     /// <summary>
     /// Returns desks by coworking id.

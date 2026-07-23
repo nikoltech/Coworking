@@ -10,5 +10,5 @@ public interface IBookingRepository
         DateTimeOffset end,
         CancellationToken cancellationToken);
     Task AddAsync(Booking booking, CancellationToken cancellationToken);
-    Task<Booking?> GetByIdAsync(int id, CancellationToken ct);
+    Task<Booking?> FindByIdAsync(int id, CancellationToken ct);
 }

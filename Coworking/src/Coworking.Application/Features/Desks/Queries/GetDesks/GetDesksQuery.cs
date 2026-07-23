@@ -9,8 +9,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Coworking.Application.Features.Desks.Queries.GetDesks;
 
-public record GetDesksQuery(int coworkingId)
-    : IRequest<IReadOnlyList<DeskDto>>;
+public record GetDesksQuery(int coworkingId) : IRequest<IReadOnlyList<DeskDto>>;
 
 public class GetDesksQueryHandler(IAppDbContext context, IMapper mapper) : IRequestHandler<GetDesksQuery, IReadOnlyList<DeskDto>>
 {

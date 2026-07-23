@@ -12,9 +12,7 @@ namespace Coworking.API.Controllers;
 
 [Route("api/bookings")]
 [Tags("Bookings")]
-public sealed class BookingsController(
-    IMediator mediator,
-    IMapper mapper) : ApiControllerBase
+public sealed class BookingsController(IMediator mediator, IMapper mapper) : ApiControllerBase
 {
     /// <summary>
     /// Creates a booking.

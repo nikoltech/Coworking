@@ -10,7 +10,7 @@ public interface ICoworkingRepository
         DateTimeOffset startUtc,
         DateTimeOffset endUtc,
         CancellationToken ct = default);
-    Task<Desk> GetDeskWithCoworkingAsync(int deskId, CancellationToken cancellationToken = default);
+    Task<Desk?> GetDeskWithCoworkingAsync(int deskId, CancellationToken cancellationToken = default);
     Task<List<Domain.Entities.Coworking>> ListAsync(
         Expression<Func<Domain.Entities.Coworking, bool>>? predicate = null,
         CancellationToken ct = default);

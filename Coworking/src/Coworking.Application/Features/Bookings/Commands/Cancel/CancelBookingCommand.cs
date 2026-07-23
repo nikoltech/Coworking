@@ -12,12 +12,7 @@ public record CancelBookingCommand(
     //Guid UserId,
     int BookingId) : IRequest;
 
-internal class CancelBookingCommandHandler(
-    IMediator mediator,
-    IAppDbContext dataContext,
-    IBookingRepository bookingRepo,
-    ICoworkingRepository coworkingRepo)
-    : IRequestHandler<CancelBookingCommand>
+internal class CancelBookingCommandHandler(IMediator mediator, IAppDbContext dataContext) : IRequestHandler<CancelBookingCommand>
 {
     public async Task Handle(CancelBookingCommand request, CancellationToken ct)
     {
@@ -29,7 +24,7 @@ internal class CancelBookingCommandHandler(
         {
             booking = await dataContext.Set<Booking>()
                 .Include(b => b.Desk)
-                .ThenInclude(d => d.Coworking)
+                    .ThenInclude(d => d.Coworking)
                 .FirstOrDefaultAsync(b => b.Id == request.BookingId, ct)
                 ?? throw new NotFoundException($"Booking with ID {request.BookingId} not found.");
 

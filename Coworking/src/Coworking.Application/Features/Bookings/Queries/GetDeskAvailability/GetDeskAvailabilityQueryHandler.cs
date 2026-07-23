@@ -17,9 +17,7 @@ internal sealed class GetDeskAvailabilityQueryHandler(
     ISlotGenerator slotGenerator)
     : IRequestHandler<GetDeskAvailabilityQuery, DeskAvailabilityResponse>
 {
-    public async Task<DeskAvailabilityResponse> Handle(
-        GetDeskAvailabilityQuery request,
-        CancellationToken ct)
+    public async Task<DeskAvailabilityResponse> Handle(GetDeskAvailabilityQuery request, CancellationToken ct)
     {
         var coworking = await GetCoworkingMetaAsync(request.DeskId, ct);
         var (startUtc, endUtc) = ToUtcBoundaries(request.DateFrom, request.DateTo, coworking.TimeZone);

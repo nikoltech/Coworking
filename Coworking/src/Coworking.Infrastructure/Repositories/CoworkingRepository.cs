@@ -8,13 +8,13 @@ namespace Coworking.Infrastructure.Repositories;
 
 internal sealed class CoworkingRepository(AppDbContext context) : ICoworkingRepository
 {
-    public async Task<Desk> GetDeskWithCoworkingAsync(
+    public async Task<Desk?> GetDeskWithCoworkingAsync(
         int deskId,
         CancellationToken cancellationToken = default) =>
         await context.Set<Desk>()
-            .Where(d => d.Id == deskId)
+            .AsNoTracking()
             .Include(d => d.Coworking)
-            .SingleAsync(cancellationToken)
+            .FirstOrDefaultAsync(d => d.Id == deskId, cancellationToken)
             .ConfigureAwait(false);
 
     public async Task<List<Desk>> ListDesksAsync(int coworkingId,
@@ -22,6 +22,7 @@ internal sealed class CoworkingRepository(AppDbContext context) : ICoworkingRepo
         CancellationToken ct = default)
     {
         var query = context.Set<Desk>()
+            .AsNoTracking()
             .Where(d => d.CoworkingId == coworkingId);
 
         if (predicate is { } filter)

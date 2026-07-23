@@ -28,7 +28,7 @@ internal class BookingRepository(AppDbContext context) : IBookingRepository
         await context.Set<Booking>().AddAsync(booking, cancellationToken);
     }
 
-    public Task<Booking?> GetByIdAsync(int id, CancellationToken ct)
+    public Task<Booking?> FindByIdAsync(int id, CancellationToken ct)
     {
         return context.Set<Booking>()
             .FirstOrDefaultAsync(b => b.Id == id, ct);

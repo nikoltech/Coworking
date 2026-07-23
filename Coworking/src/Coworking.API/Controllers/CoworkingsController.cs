@@ -9,8 +9,7 @@ namespace Coworking.API.Controllers;
 
 [Route("api/coworkings")]
 [Tags("Coworkings")]
-public sealed class CoworkingsController(
-    IMediator mediator) : ApiControllerBase
+public sealed class CoworkingsController(IMediator mediator) : ApiControllerBase
 {
     /// <summary>
     /// Returns all coworking spaces.
