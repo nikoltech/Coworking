@@ -1,6 +1,5 @@
 using Coworking.Application.Abstractions;
 using Coworking.Domain.Entities;
-using Coworking.Domain.Enums;
 using Coworking.Domain.Specifications;
 using Coworking.Infrastructure.Persistence.Contexts;
 using Microsoft.EntityFrameworkCore;
@@ -17,9 +16,8 @@ internal class BookingRepository(AppDbContext context) : IBookingRepository
     {
         return await context.Set<Booking>()
             .AsNoTracking()
-            .Where(b => b.EndTime > DateTimeOffset.UtcNow
-                     && b.Status != BookingStatus.Cancelled
-                     && b.Status != BookingStatus.Expired)
+            .Where(b => b.EndTime > DateTimeOffset.UtcNow)
+            .Where(BookingSpecifications.IsBlocking())
             .AnyAsync(BookingSpecifications.OverlappingWith(deskId, start.ToUniversalTime(), end.ToUniversalTime()), cancellationToken);
     }
 
@@ -31,6 +29,7 @@ internal class BookingRepository(AppDbContext context) : IBookingRepository
     public Task<Booking?> FindByIdAsync(int id, CancellationToken ct)
     {
         return context.Set<Booking>()
+            .AsNoTracking()
             .FirstOrDefaultAsync(b => b.Id == id, ct);
     }
 }

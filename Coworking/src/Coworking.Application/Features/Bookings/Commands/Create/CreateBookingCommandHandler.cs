@@ -23,7 +23,7 @@ internal class CreateBookingCommandHandler(
 {
     public async Task<CreateBookingCommandResponse> Handle(CreateBookingCommand request, CancellationToken ct)
     {
-        var desk = await coworkingRepo.GetDeskWithCoworkingAsync(request.DeskId, ct)
+        var desk = await coworkingRepo.FindDeskWithCoworkingAsync(request.DeskId, ct)
             ?? throw new NotFoundException($"Desk with id {request.DeskId} not found.");
 
         var coworking = desk.Coworking

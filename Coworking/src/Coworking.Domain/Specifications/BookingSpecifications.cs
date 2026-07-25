@@ -1,4 +1,5 @@
 ﻿using Coworking.Domain.Entities;
+using Coworking.Domain.Enums;
 using Coworking.Domain.Exceptions;
 using System.Linq.Expressions;
 
@@ -9,8 +10,8 @@ public static class BookingSpecifications
     /// <summary>
     /// Can book at border times
     /// </summary>
-    public static Expression<Func<Booking, bool>> OverlappingWith(int deskId, 
-        DateTimeOffset newStart, 
+    public static Expression<Func<Booking, bool>> OverlappingWith(int deskId,
+        DateTimeOffset newStart,
         DateTimeOffset newEnd)
     {
         return booking =>
@@ -19,9 +20,10 @@ public static class BookingSpecifications
             booking.EndTime > newStart;
     }
 
-    /// <summary>
-    /// Represents access entitlement during coworking working hours.
-    /// </summary>
+    public static Expression<Func<Booking, bool>> IsBlocking() =>
+        booking => booking.Status != BookingStatus.Cancelled &&
+                   booking.Status != BookingStatus.Expired;
+
     public static void ValidateAccessPeriod(DateTimeOffset start,
         DateTimeOffset end,
         Domain.Entities.Coworking coworking)
