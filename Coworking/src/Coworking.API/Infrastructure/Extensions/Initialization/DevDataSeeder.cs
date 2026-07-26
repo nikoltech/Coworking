@@ -57,9 +57,8 @@ internal static class DevDataSeeder
 
     private static List<Coworking.Domain.Entities.Coworking> BuildSeedGraph()
     {
-        // whole minutes, same shape the API validator enforces
+        // BookingTimeInterceptor rounds this to whole minutes on save
         var now = DateTimeOffset.UtcNow;
-        now = now.AddTicks(-(now.Ticks % TimeSpan.TicksPerMinute));
 
         var central = new Coworking.Domain.Entities.Coworking
         {

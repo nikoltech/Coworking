@@ -18,6 +18,7 @@ public static class DependencyInjection
     {
         services
             .AddSingleton<TrackEntityInterceptor>()
+            .AddSingleton<BookingTimeInterceptor>()
             .AddSingleton<IDbConflictDetector, PostgresConflictDetector>();
 
         services.AddDbContext<AppDbContext>((sp, options) =>
@@ -25,7 +26,9 @@ public static class DependencyInjection
             options
                 .UseNpgsql(configuration.GetConnectionString("DefaultConnection"))
                 .UseSnakeCaseNamingConvention()
-                .AddInterceptors(sp.GetRequiredService<TrackEntityInterceptor>());
+                .AddInterceptors(
+                    sp.GetRequiredService<TrackEntityInterceptor>(),
+                    sp.GetRequiredService<BookingTimeInterceptor>());
 
             var env = sp.GetRequiredService<IHostEnvironment>();
             if (env.IsDevelopment())
