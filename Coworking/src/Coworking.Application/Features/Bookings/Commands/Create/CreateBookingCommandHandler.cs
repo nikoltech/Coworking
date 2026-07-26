@@ -39,8 +39,6 @@ internal class CreateBookingCommandHandler(
                 end,
                 ct);
 
-        Booking? booking;
-
         // Deadlocks as a guarantee in overlaps (MSSQL) or SSI conflict at commit (PostgreSQL). Indexes for boosting + retry policy.
         await using var transaction =
             await dataContext.BeginTransactionAsync(TransactionIsolationLevel.Serializable, ct);
@@ -54,7 +52,7 @@ internal class CreateBookingCommandHandler(
             if (isOccupied)
                 throw new ConflictException("Space is already booked for this time.");
 
-            booking = CreateAndInitializeBooking(request, start, end);
+            var booking = CreateAndInitializeBooking(request, start, end);
 
             // RangeS-U (level-up locking)
             await bookingRepo.AddAsync(booking, ct);
@@ -62,14 +60,14 @@ internal class CreateBookingCommandHandler(
             await dataContext.SaveChangesAsync(ct);
 
             await transaction.CommitAsync(ct);
+
+            return new(booking.AccessCode, booking.Id);
         }
         catch
         {
             await transaction.RollbackAsync(ct);
             throw;
         }
-
-        return new(booking.AccessCode, booking.Id);
     }
 
     private Task PublishBookingCreatedAsync(CreateBookingCommand request,

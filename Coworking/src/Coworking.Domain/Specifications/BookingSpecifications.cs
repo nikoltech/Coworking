@@ -84,8 +84,7 @@ public static class BookingSpecifications
 
     public static bool IsNonStopWorkingHours(Domain.Entities.Coworking coworking)
     {
-        return coworking.OpenTime ==
-               coworking.CloseTime;
+        return coworking.OpenTime == coworking.CloseTime;
     }
 
 }
