@@ -1,11 +1,15 @@
-using Coworking.Application.Features.Bookings.Queries.GetDeskAvailability.Dtos;
-
 namespace Coworking.API.Models.Responces;
 
 public record DeskAvailabilityResponse
 {
     public int DeskId { get; init; }
-    public IReadOnlyList<TimeSlotResponse> Slots { get; init; } = [];
-    public int TotalSlots => Slots.Count;
-    public int AvailableSlots => Slots.Count(s => s.IsAvailable);
+    public int SlotSizeMinutes { get; init; }
+    public IReadOnlyList<AvailabilityIntervalResponse> Intervals { get; init; } = [];
+
+    public int TotalSlots => CountSlots(Intervals);
+    public int AvailableSlots => CountSlots(Intervals.Where(i => i.IsAvailable));
+
+    // the slot grid is no longer materialized — derive counts from interval durations
+    private int CountSlots(IEnumerable<AvailabilityIntervalResponse> intervals) =>
+        intervals.Sum(i => (int)((i.End - i.Start).TotalMinutes / SlotSizeMinutes));
 }

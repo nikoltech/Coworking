@@ -30,7 +30,8 @@ public sealed class DesksController(IMediator mediator, IMapper mapper) : ApiCon
     }
 
     /// <summary>
-    /// Returns desk availability for a date range. Slots are sorted by start time.
+    /// Returns desk availability for a date range as non-overlapping intervals sorted by start time.
+    /// Use slotSizeMinutes to expand them into a slot grid.
     /// </summary>
     [HttpGet("{deskId:int}/availability")]
     [EnableRateLimiting("read-heavy")]

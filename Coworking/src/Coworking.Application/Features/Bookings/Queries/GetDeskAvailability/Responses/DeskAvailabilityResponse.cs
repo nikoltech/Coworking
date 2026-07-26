@@ -5,5 +5,6 @@ namespace Coworking.Application.Features.Bookings.Queries.GetDeskAvailability.Re
 public record DeskAvailabilityResponse
 {
     public int DeskId { get; init; }
-    public IReadOnlyList<TimeSlotDto> Slots { get; init; } = [];
+    public int SlotSizeMinutes { get; init; }
+    public IReadOnlyList<AvailabilityIntervalDto> Intervals { get; init; } = [];
 }

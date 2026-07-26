@@ -14,11 +14,11 @@ public class CreateBookingValidator : AbstractValidator<CreateBookingCommand>
         RuleFor(x => x.DeskId).GreaterThan(0);
 
         RuleFor(x => x.StartTime)
-            .Must(t => t.Second == 0 && t.Millisecond == 0)
+            .Must(IsWholeMinute)
             .WithMessage("StartTime must be rounded to minutes.");
 
         RuleFor(x => x.EndTime)
-            .Must(t => t.Second == 0 && t.Millisecond == 0)
+            .Must(IsWholeMinute)
             .WithMessage("EndTime must be rounded to minutes.");
 
         RuleFor(x => x.StartTime)
@@ -34,6 +34,10 @@ public class CreateBookingValidator : AbstractValidator<CreateBookingCommand>
             .WithMessage("Metadata object cannot be empty if provided.")
             .When(x => x.Metadata is not null);
     }
+
+    // Ticks, not Second/Millisecond: those are components and miss sub-millisecond ticks.
+    private static bool IsWholeMinute(DateTimeOffset time) =>
+        time.Ticks % TimeSpan.TicksPerMinute == 0;
 
     private static bool HaveAnyValue(BookingMetadata metadata)
     {

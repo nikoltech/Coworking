@@ -4,6 +4,7 @@ using Coworking.Application.Abstractions.Languages;
 using Coworking.Application.Abstractions.Synchronization;
 using Coworking.Application.Behaviors.Performance;
 using Coworking.Domain.Policies.Rounding;
+using Coworking.Domain.Services.Availability;
 using Coworking.Domain.Services.SlotGenerator;
 using Coworking.External.Squidex;
 using Coworking.Infrastructure.External.Squidex;
@@ -76,7 +77,8 @@ public static class DependencyInjection
     {
         services
             .AddSingleton<IBookingRoundingPolicy, DefaultRoundingPolicy>()
-            .AddSingleton<ISlotGenerator, SlotGenerator>();
+            .AddSingleton<ISlotGenerator, SlotGenerator>()
+            .AddSingleton<IAvailabilityCalculator, AvailabilityCalculator>();
 
         return services;
     }

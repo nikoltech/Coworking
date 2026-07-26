@@ -19,7 +19,7 @@ public class ApiMappingProfile : Profile
             .ForCtorParam("dateFrom", opt => opt.MapFrom(src => src.DateFrom))
             .ForCtorParam("dateTo", opt => opt.MapFrom(src => src.DateTo));
 
-        CreateMap<TimeSlotDto, TimeSlotResponse>();
+        CreateMap<AvailabilityIntervalDto, AvailabilityIntervalResponse>();
         CreateMap<Application.Features.Bookings.Queries.GetDeskAvailability.Responses.DeskAvailabilityResponse, DeskAvailabilityResponse>();
     }
 }

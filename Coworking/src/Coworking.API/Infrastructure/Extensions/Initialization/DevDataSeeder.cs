@@ -57,7 +57,9 @@ internal static class DevDataSeeder
 
     private static List<Coworking.Domain.Entities.Coworking> BuildSeedGraph()
     {
+        // whole minutes, same shape the API validator enforces
         var now = DateTimeOffset.UtcNow;
+        now = now.AddTicks(-(now.Ticks % TimeSpan.TicksPerMinute));
 
         var central = new Coworking.Domain.Entities.Coworking
         {
@@ -106,6 +108,52 @@ internal static class DevDataSeeder
             ]
         };
 
+        // Window crosses midnight and is not a whole number of slots (8h30 / 60min).
+        var nightShift = new Coworking.Domain.Entities.Coworking
+        {
+            Name = "Night Shift",
+            Address = "3 Politekhnichna St, Kyiv",
+            TimeZoneId = "Europe/Kyiv",
+            SlotSize = SlotSize.SixtyMinutes,
+            OpenTime = new TimeOnly(22, 0),
+            CloseTime = new TimeOnly(6, 30),
+            Desks =
+            [
+                new Desk { Name = "D1", Description = "Late shift", Coworking = null! },
+                new Desk { Name = "D2", Description = "Late shift", Coworking = null! }
+            ]
+        };
+
+        // 24/7 anchored away from midnight — its window ends on the next calendar day.
+        var roundClock = new Coworking.Domain.Entities.Coworking
+        {
+            Name = "Round Clock",
+            Address = "17 Vasylkivska St, Kyiv",
+            TimeZoneId = "Europe/Kyiv",
+            SlotSize = SlotSize.SixtyMinutes,
+            OpenTime = new TimeOnly(8, 0),
+            CloseTime = new TimeOnly(8, 0),
+            Desks =
+            [
+                new Desk { Name = "E1", Description = "Always open", Coworking = null! }
+            ]
+        };
+
+        // Havana switches DST at 00:00, so local midnight does not exist on transition days.
+        var havana = new Coworking.Domain.Entities.Coworking
+        {
+            Name = "Havana Patio",
+            Address = "220 Calle Obispo, Havana",
+            TimeZoneId = "America/Havana",
+            SlotSize = SlotSize.SixtyMinutes,
+            OpenTime = new TimeOnly(0, 0),
+            CloseTime = new TimeOnly(0, 0),
+            Desks =
+            [
+                new Desk { Name = "F1", Description = "Courtyard", Coworking = null! }
+            ]
+        };
+
         var centralDesk = central.Desks.First();
         centralDesk.Bookings =
         [
@@ -136,7 +184,39 @@ internal static class DevDataSeeder
             BuildBooking("Lea Wong", "lea@example.com", tomorrowMidnight.AddHours(-1), tomorrowMidnight.AddHours(1), BookingStatus.Confirmed, "Asia/Singapore")
         ];
 
-        return [central, riverside, nightOwl];
+        // Both land past midnight — in the tail of the window that opens the day before.
+        var kyiv = TimeZoneInfo.FindSystemTimeZoneById("Europe/Kyiv");
+        var tomorrowInKyiv = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(now, kyiv).DateTime).AddDays(1);
+
+        var nightShiftDesk = nightShift.Desks.First();
+        nightShiftDesk.Bookings =
+        [
+            BuildBooking("Taras Bondar", "taras@example.com",
+                LocalTime(tomorrowInKyiv, new TimeOnly(2, 0), kyiv),
+                LocalTime(tomorrowInKyiv, new TimeOnly(3, 0), kyiv),
+                BookingStatus.Confirmed, "Europe/Kyiv")
+        ];
+
+        var roundClockDesk = roundClock.Desks.First();
+        roundClockDesk.Bookings =
+        [
+            BuildBooking("Sofia Marchenko", "sofia@example.com",
+                LocalTime(tomorrowInKyiv, new TimeOnly(3, 0), kyiv),
+                LocalTime(tomorrowInKyiv, new TimeOnly(4, 0), kyiv),
+                BookingStatus.Confirmed, "Europe/Kyiv")
+        ];
+
+        return [central, riverside, nightOwl, nightShift, roundClock, havana];
+    }
+
+    /// <summary>
+    /// Anchors a booking to the coworking's local clock instead of to UtcNow.
+    /// </summary>
+    private static DateTimeOffset LocalTime(DateOnly date, TimeOnly time, TimeZoneInfo timeZone)
+    {
+        var local = date.ToDateTime(time);
+
+        return new DateTimeOffset(local, timeZone.GetUtcOffset(local));
     }
 
     private static Booking BuildBooking(string userName,
