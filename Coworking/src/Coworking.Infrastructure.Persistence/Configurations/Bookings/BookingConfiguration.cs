@@ -25,7 +25,8 @@ public class BookingConfiguration : IEntityTypeConfiguration<Booking>
             .HasMaxLength(100);
 
         // indexes
-        builder.HasIndex(x => new { x.DeskId, x.StartTime, x.EndTime, x.Status })
+        builder.HasIndex(x => new { x.DeskId, x.StartTime })
+               .IncludeProperties(x => new { x.EndTime, x.Status })
                .HasDatabaseName("ix_bookings_overlap_check");
 
         builder.HasIndex(x => x.CreatedAt);

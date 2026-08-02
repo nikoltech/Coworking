@@ -2,6 +2,9 @@
 
 namespace Coworking.Infrastructure.Persistence.Transactions.Conflicts
 {
+    /// <summary>
+    /// Check whether enabled RCSI or 
+    /// </summary>
     public class SqlServerConflictDetector : IDbConflictDetector
     {
         public bool IsTransient(Exception ex)
