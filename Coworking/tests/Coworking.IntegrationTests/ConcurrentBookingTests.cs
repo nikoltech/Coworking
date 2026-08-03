@@ -48,9 +48,7 @@ public class ConcurrentBookingTests
         Assert.Equal(1, results.Count(r => r.Status == HttpStatusCode.Conflict));
     }
 
-    /****************************************************************
-     * helpers
-     *******************************************************/
+    // helpers
 
     private static async Task<(HttpStatusCode Status, string Body)> PostBookingAsync(
         TestApiFactory factory,

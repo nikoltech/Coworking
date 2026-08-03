@@ -43,7 +43,8 @@ public static class DependencyInjection
     {
         cfg.AddOpenBehavior(typeof(PerformanceBehavior<,>));
         cfg.AddOpenBehavior(typeof(ValidationBehavior<,>));
-        cfg.AddOpenBehavior(typeof(LoggingBehavior<,>));
+        // exception logging lives in GlobalExceptionHandler: it knows the mapped status,
+        // so business 4xx are not reported as errors
         // TransactionConflictRetryBehavior is registered by AddPersistence — it needs the DbContext
         cfg.AddOpenBehavior(typeof(DomainExceptionBehavior<,>));
     }

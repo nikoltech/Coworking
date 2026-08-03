@@ -243,3 +243,6 @@ _Pvt_Extensions
 
 # docker
 docker-compose.override.yml
+
+# claude code (local config, not shared)
+.claude/

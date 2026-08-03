@@ -43,29 +43,19 @@ internal class CreateBookingCommandHandler(
         await using var transaction =
             await dataContext.BeginTransactionAsync(TransactionIsolationLevel.Serializable, ct);
 
-        Booking booking;
+        // RangeS-S
+        var hasConflict = await bookingRepo
+            .AnyOverlapAsync(request.DeskId, start, end, ct);
 
-        try
-        {
-            // RangeS-S
-            var isOccupied = await bookingRepo
-                .AnyOverlapAsync(request.DeskId, start, end, ct);
+        if (hasConflict)
+            throw new ConflictException("Space is already booked for this time.");
 
-            if (isOccupied)
-                throw new ConflictException("Space is already booked for this time.");
+        var booking = CreateAndInitializeBooking(request, start, end);
 
-            booking = CreateAndInitializeBooking(request, start, end);
-
-            // RangeS-U (level-up locking)
-            await bookingRepo.AddAsync(booking, ct);
-            await PublishBookingCreatedAsync(request, desk, start, end, ct);
-            await dataContext.SaveChangesAsync(ct);
-        }
-        catch
-        {
-            await transaction.RollbackAsync(ct);
-            throw;
-        }
+        // RangeS-U (level-up locking)
+        await bookingRepo.AddAsync(booking, ct);
+        await PublishBookingCreatedAsync(request, desk, start, end, ct);
+        await dataContext.SaveChangesAsync(ct);
 
         await transaction.CommitAsync(ct);
 

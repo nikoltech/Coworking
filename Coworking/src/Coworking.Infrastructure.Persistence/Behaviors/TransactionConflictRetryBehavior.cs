@@ -29,8 +29,6 @@ public class TransactionConflictRetryBehavior<TRequest, TResponse>(
     {
         var retryPolicy = Policy
             .Handle<Exception>(dbConflictDetector.IsTransient)
-            //.Handle<DbUpdateException>(dbConflictDetector.IsTransient)
-            //    .Or<DbException>(dbConflictDetector.IsTransient)
             .WaitAndRetryAsync(
                 MaxRetries,
                 retryAttempt => TimeSpan.FromMilliseconds(100 * retryAttempt)
