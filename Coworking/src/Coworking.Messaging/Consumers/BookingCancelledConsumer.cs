@@ -6,11 +6,7 @@ using MassTransit;
 
 namespace Coworking.Messaging.Consumers;
 
-// Получает Integration Event из RabbitMQ и отправляет email — асинхронная замена
-// синхронному BookingCancelledNotificationHandler, который был в Application слое.
-//
-// ВАЖНО: консьюмер должен быть идемпотентным.
-// При наличии хранилища обработанных ID — проверяй context.Message.MessageId перед отправкой.
+// TODO: not idempotent yet: needs a processed-MessageId store keyed on context.Message.MessageId
 internal sealed class BookingCancelledConsumer(IEmailNotificationService emailService)
     : IConsumer<BookingCancelledMessage>
 {

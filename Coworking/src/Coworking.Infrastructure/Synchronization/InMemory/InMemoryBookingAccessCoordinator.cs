@@ -6,7 +6,8 @@ using Nito.AsyncEx;
 namespace Coworking.Infrastructure.Synchronization.InMemory;
 
 /// <summary>
-/// “soft fairness queue + optimistic contention reducer”
+/// Serializes overlapping booking attempts for the same desk in-process, so the DB sees
+/// fewer conflicts. Advisory only — correctness rests on the Serializable transaction.
 /// </summary>
 public sealed class InMemoryBookingAccessCoordinator : IBookingAccessCoordinator
 {
@@ -94,9 +95,6 @@ public sealed class InMemoryBookingAccessCoordinator : IBookingAccessCoordinator
             }
         }
     }
-
-    //private static string MakeKey(Guid deskId, DateTimeOffset start, DateTimeOffset end) =>
-    //    $"{deskId}:{start:O}:{end:O}";
 
     private static RangeKey MakeKey(int deskId, DateTimeOffset start, DateTimeOffset end) =>
         new(deskId, start, end);

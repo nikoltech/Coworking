@@ -12,10 +12,8 @@ public class CoworkingConfiguration : IEntityTypeConfiguration<Domain.Entities.C
 
         builder.HasKey(c => c.Id);
 
-        // Optimistic Concurrency
         builder.Property(c => c.Version)
             .IsRowVersion();
-        //.IsConcurrencyToken();
 
         builder.Property(c => c.Name)
             .IsRequired()

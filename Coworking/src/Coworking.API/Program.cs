@@ -10,16 +10,13 @@ var builder = WebApplication.CreateBuilder(args);
 
 var config = builder.Configuration;
 
-// Core layers
 builder.Services.AddApplication();
 builder.Services.AddPersistence(config);
 builder.Services.AddInfrastructure(config);
 builder.Services.AddMessaging(config);
 
-// API layer
 builder.Services.ConfigureApi(config);
 
-// Build
 var app = builder.Build();
 
 await app.InitializeApplicationAsync(config);
@@ -56,7 +53,6 @@ app.Run();
 
 // Exposed so WebApplicationFactory<Program> can boot the real host in integration tests.
 public partial class Program;
-
 
 
 //app.MapGet("/check-my-ip", (HttpContext context) =>

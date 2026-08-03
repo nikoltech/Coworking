@@ -15,10 +15,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     {
         base.OnModelCreating(modelBuilder);
 
-        // Outbox таблицы MassTransit. Три таблицы:
-        // OutboxMessage   — сообщения ожидающие отправки в брокер
-        // OutboxState     — состояние доставки для каждой очереди
-        // InboxState      — обработанные MessageId для идемпотентности консьюмера
         modelBuilder.AddInboxStateEntity();
         modelBuilder.AddOutboxMessageEntity();
         modelBuilder.AddOutboxStateEntity();

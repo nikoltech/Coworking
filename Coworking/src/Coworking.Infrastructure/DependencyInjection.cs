@@ -28,7 +28,6 @@ public static class DependencyInjection
     public static IServiceCollection AddInfrastructure(this IServiceCollection services,
         IConfiguration configuration)
     {
-        //services.AddMemoryCache();
         services.AddLazyCache(); // thread-safe GetOrAdd
 
         services
@@ -38,10 +37,6 @@ public static class DependencyInjection
             .AddDomainServices()
             .AddSynchronization()
             .AddEmailMessaging(configuration);
-
-        //services
-        //    .AddSquidex(configuration)
-        //    .AddCustomSquidexContexts();
 
         services.AddHostedServices();
 
@@ -120,7 +115,6 @@ public static class DependencyInjection
     private static IServiceCollection AddHostedServices(this IServiceCollection services)
     {
         services.AddHostedService<BookingLockExpiryCleaner>();
-        //services.AddHostedService<EmailBackgroundWorker>(); // replaced by RabbitMQ consumer + DirectEmailNotificationService
 
         return services;
     }

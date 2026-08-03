@@ -36,8 +36,7 @@ public static class ModelBuilderExtensions
 
     private static void ConfigureDisabledQueryFilter(this ModelBuilder modelBuilder, Type entityType)
     {
-        // Safe way to create a query filter using expression trees
-        // Creation an expression like: e => e.DisabledAt == null
+        // builds e => e.DisabledAt == null
         var parameter = Expression.Parameter(entityType, "e");
         var property = Expression.Property(parameter, nameof(ICanBeDisabled.DisabledAt));
 

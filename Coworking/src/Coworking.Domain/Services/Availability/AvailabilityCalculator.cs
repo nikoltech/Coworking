@@ -26,10 +26,6 @@ public sealed class AvailabilityCalculator : IAvailabilityCalculator
         return result;
     }
 
-    /****************************************************************
-     * day window
-     *******************************************************/
-
     /// <summary>
     /// The working period as an instant range. DST changes its real length —
     /// 23 hours on spring forward, 25 on fall back — but never breaks it apart.
@@ -54,10 +50,6 @@ public sealed class AvailabilityCalculator : IAvailabilityCalculator
 
     private static DateTimeOffset ToInstant(DateTime local, TimeZoneInfo timeZone) =>
         new(local, timeZone.GetUtcOffset(local));
-
-    /****************************************************************
-     * busy subtraction
-     *******************************************************/
 
     private static IEnumerable<AvailabilityInterval> SubtractBusy(
         DateTimeOffset windowStart, 

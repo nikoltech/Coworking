@@ -14,7 +14,6 @@ namespace Coworking.Infrastructure.Persistence.Behaviors;
 /// Lives next to EF because recovering from one means resetting
 /// the DbContext, which the Application layer cannot reach.
 /// </summary>
-// Note: metrics for future
 public class TransactionConflictRetryBehavior<TRequest, TResponse>(
     IDbConflictDetector dbConflictDetector,
     AppDbContext dbContext,

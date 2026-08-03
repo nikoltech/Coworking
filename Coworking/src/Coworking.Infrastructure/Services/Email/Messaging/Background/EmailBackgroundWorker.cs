@@ -41,8 +41,6 @@ public sealed class EmailBackgroundWorker(
             async (email, token) => await SendWithRetryAsync(email, token));
     }
 
-    /** private **********************/
-
     private async Task SendWithRetryAsync(EmailMessageChannelDto email, CancellationToken ct)
     {
         try
@@ -67,8 +65,6 @@ public sealed class EmailBackgroundWorker(
                 email.To, MaxRetryAttempts, email.Subject);
         }
     }
-
-    /** helpers **********************/
 
     private static ResiliencePipeline BuildRetryPipeline(ILogger logger) =>
         new ResiliencePipelineBuilder()
@@ -121,7 +117,7 @@ public sealed class EmailBackgroundWorker(
             SmtpStatusCode.TransactionFailed => true,
             SmtpStatusCode.ExceededStorageAllocation => true,
 
-            // ❌ permanent
+            // permanent failures
             SmtpStatusCode.MailboxUnavailable => false,
             SmtpStatusCode.UserNotLocalTryAlternatePath => false,
             SmtpStatusCode.MailboxNameNotAllowed => false,

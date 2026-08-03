@@ -6,10 +6,8 @@ namespace Coworking.API.Infrastructure.Extensions;
 public static class RateLimitingExtensions
 {
     /// <summary>
-    /// WARNING: Ensure proxy settings are configured to capture client IPs correctly.
+    /// Partitions on the client IP — requires the proxy settings to be configured.
     /// </summary>
-    /// <param name="services"></param>
-    /// <returns></returns>
     public static IServiceCollection AddApiRateLimiting(this IServiceCollection services)
     {
         services.AddRateLimiter(options =>

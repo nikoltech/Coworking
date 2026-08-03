@@ -39,7 +39,7 @@ internal static partial class HtmlTextHelper
         // Collapse excessive blank lines
         text = ExcessiveNewLinesRegex().Replace(text, "\n\n");
 
-        // Trim trailing spaces per line without Split/Join allocations
+        // hand-rolled to avoid Split/Join allocations
         text = TrimTrailingSpacesPerLine(text);
 
         return text.Trim();

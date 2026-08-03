@@ -47,10 +47,6 @@ internal sealed class GetDeskAvailabilityQueryHandler(
         };
     }
 
-    /****************************************************************
-     * Helpers
-     *******************************************************/
-
     private async Task<CoworkingMeta> GetCoworkingMetaAsync(int deskId, CancellationToken ct)
     {
         var raw = await context.Set<Domain.Entities.Coworking>()

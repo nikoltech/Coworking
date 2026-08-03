@@ -18,8 +18,7 @@ public static class AppInitializationExtensions
         {
             await InitDatabase(config, app);
 
-            // Requires AddSquidex() enabled in Coworking.Infrastructure.DependencyInjection —
-            // currently disabled there, so this stays commented out until Squidex is wired into DI.
+            // locale init stays off until AddSquidex() is wired into Infrastructure DI:
             // await SquidexLocaleInitializer.InitializeAllAsync(services, app.Lifetime.ApplicationStopping);
         }
         catch (Exception ex)
@@ -56,14 +55,13 @@ public static class AppInitializationExtensions
 
         try
         {
-            // === DEV SEED (remove me) ===
+            // dev seed — see DevDataSeeder
             var stopping = webApplication.Lifetime.ApplicationStopping;
             if (configuration.GetValue<bool>("General:ResetData"))
                 await DevDataSeeder.ResetAsync(context, stopping);
 
             if (configuration.GetValue<bool>("General:SeedData"))
                 await DevDataSeeder.SeedAsync(context, stopping);
-            // === /DEV SEED ===
         }
         catch (Exception ex)
         {

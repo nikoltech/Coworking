@@ -35,10 +35,6 @@ public sealed class SlotGenerator : ISlotGenerator
         return slots;
     }
 
-    /****************************************************************
-     * period boundary
-     *******************************************************/
-
     private static DateTime ResolvePeriodEnd(DateOnly date, TimeOnly openTime, TimeOnly closeTime)
     {
         // 24/7 mode
@@ -52,10 +48,6 @@ public sealed class SlotGenerator : ISlotGenerator
         // regular hours (e.g. 08:00 – 20:00)
         return date.ToDateTime(closeTime);
     }
-
-    /****************************************************************
-     * slot construction
-     *******************************************************/
 
     private static bool TryBuildSlot(TimeZoneInfo timeZone,
         DateTime localStart,

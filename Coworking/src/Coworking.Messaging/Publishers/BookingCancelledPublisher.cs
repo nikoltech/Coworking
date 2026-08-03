@@ -5,9 +5,6 @@ using MediatR;
 
 namespace Coworking.Messaging.Publishers;
 
-// Слушает Domain Event (MediatR) и транслирует его в Integration Event (RabbitMQ).
-// Важно: успешная публикация в брокер НЕ гарантирует обработку консьюмером.
-// Для гарантии доставки при сбоях нужен Outbox pattern (запись в БД + фоновая отправка).
 internal sealed class BookingCancelledPublisher(IPublishEndpoint publishEndpoint)
     : INotificationHandler<BookingCancelledNotification>
 {

@@ -17,12 +17,8 @@ public static class NetworkExtensions
     }
      */
     /// <summary>
-    /// WARNING: Ensure UseForwardedHeaders is configured. 
-    /// Uses configuration 'ProxySettings:TrustedProxies'. Set or leave empty.
+    /// Requires UseForwardedHeaders; reads 'ProxySettings:TrustedProxies', which may be empty.
     /// </summary>
-    /// <param name="services"></param>
-    /// <param name="configuration"></param>
-    /// <returns></returns>
     public static IServiceCollection AddProxySettings(this IServiceCollection services, IConfiguration configuration)
     {
 

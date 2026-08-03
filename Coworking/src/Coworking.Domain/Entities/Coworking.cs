@@ -33,7 +33,6 @@ public class Coworking : ITrackEntity, ICanBeDisabled
 
     public ICollection<Desk> Desks { get; set; } = [];
 
-    /// <param name="timeZoneId">IANA time zone identifier</param>
     public static Coworking Create(string name, SlotSize slotSize, string timeZoneId)
     {
         if (string.IsNullOrWhiteSpace(name))

@@ -8,7 +8,7 @@ namespace Coworking.Domain.Specifications;
 public static class BookingSpecifications
 {
     /// <summary>
-    /// Can book at border times
+    /// Can book at border times. Time pattern is "()"
     /// </summary>
     public static Expression<Func<Booking, bool>> OverlappingWith(int deskId,
         DateTimeOffset newStart,

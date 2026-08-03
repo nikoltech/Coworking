@@ -6,14 +6,7 @@ using MassTransit;
 
 namespace Coworking.Messaging.Consumers;
 
-// Получает Integration Event из RabbitMQ и отправляет email — асинхронная замена
-// синхронному BookingCreatedNotificationHandler, который был в Application слое.
-//
-// Преимущество: HTTP-запрос не ждёт отправки email.
-// Если email-сервис упал — retry policy повторит попытку без потери сообщения.
-//
-// ВАЖНО: консьюмер должен быть идемпотентным.
-// При наличии хранилища обработанных ID — проверяй context.Message.MessageId перед отправкой.
+// TODO: not idempotent yet: needs a processed-MessageId store keyed on context.Message.MessageId
 internal sealed class BookingCreatedConsumer(IEmailNotificationService emailService)
     : IConsumer<BookingCreatedMessage>
 {

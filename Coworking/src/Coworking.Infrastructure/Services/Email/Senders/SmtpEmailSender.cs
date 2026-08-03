@@ -105,11 +105,5 @@ internal sealed class SmtpEmailSender : IEmailSender
     }
 
     private static string StripHtml(string html)
-    {
-        //return Regex.Replace(html, "<.*?>", string.Empty)
-        //    .Replace("&nbsp;", " ")
-        //    .Trim();
-
-        return HtmlTextHelper.ToPlainText(html);
-    }
+        => HtmlTextHelper.ToPlainText(html);
 }

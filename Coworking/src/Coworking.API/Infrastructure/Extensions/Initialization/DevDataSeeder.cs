@@ -6,12 +6,11 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Coworking.API.Infrastructure.Extensions.Initialization;
 
-// ============================================================================
-// DEV SEED (remove me)
-// Throwaway helper for filling/wiping the DB during local experiments.
-// To remove the feature: delete this file, the DEV SEED block in
-// AppInitializationExtensions, and the General:SeedData/ResetData flags.
-// ============================================================================
+/// <summary>
+/// Throwaway helper for filling/wiping the DB during local experiments.
+/// To remove the feature: delete this file, the dev seed block in
+/// AppInitializationExtensions, and the General:SeedData/ResetData flags.
+/// </summary>
 internal static class DevDataSeeder
 {
     /// <summary>
@@ -52,8 +51,6 @@ internal static class DevDataSeeder
 
         await db.Database.ExecuteSqlRawAsync(sql, ct);
     }
-
-    /** seed data **********************/
 
     private static List<Coworking.Domain.Entities.Coworking> BuildSeedGraph()
     {

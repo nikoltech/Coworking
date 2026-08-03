@@ -21,9 +21,6 @@ public class Booking : ITrackEntity, IHasStateGraph<BookingStatus>
 
     public Desk Desk { get; set; } = default!;
 
-
-    //public Guid UserId { get; set; }
-
     public string UserName { get; set; } = default!;
 
     public string UserEmail { get; set; } = default!;

@@ -13,7 +13,7 @@ internal static class SwaggerExtensions
                 Description = "Booking system API for coworking spaces"
             });
 
-            // show enums as strings (very important for the frontend)
+            // enums as strings — clients bind to names, not ordinals
             c.UseInlineDefinitionsForEnums();
 
             c.EnableAnnotations();

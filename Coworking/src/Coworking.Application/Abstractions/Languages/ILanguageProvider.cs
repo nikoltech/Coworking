@@ -2,9 +2,8 @@
 
 public interface ILanguageProvider
 {
-    // TODO: Consider using some more structured type for languages instead of a string.
     /// <summary>
-    /// Unknown concrete code style
+    /// Two-letter ISO code; "uk" when the request carries none.
     /// </summary>
     string CurrentLanguage { get; }
 }

@@ -99,8 +99,6 @@ public static class DependencyInjection
         return services;
     }
 
-    /** private **********************/
-
     private static IServiceCollection AddRabbitMqOptions(this IServiceCollection services,
         IConfiguration configuration)
     {

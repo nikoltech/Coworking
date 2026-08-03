@@ -14,9 +14,7 @@ public class AvailabilityCalculatorTests
     private static readonly TimeOnly Open = new(8, 0);
     private static readonly TimeOnly Close = new(20, 0);
 
-    /****************************************************************
-     * windows without bookings
-     *******************************************************/
+    // windows without bookings
 
     [Fact]
     public void RegularHours_WithoutBookings_ReturnsSingleAvailableInterval()
@@ -72,9 +70,7 @@ public class AvailabilityCalculatorTests
         Assert.Equal([At(Day, 8, 0), At(Day.AddDays(1), 8, 0), At(to, 8, 0)], result.Select(i => i.Start));
     }
 
-    /****************************************************************
-     * slot size is a client-side hint — no window is ever trimmed to it
-     *******************************************************/
+    // slot size is a client-side hint — no window is ever trimmed to it
 
     [Fact]
     public void WindowNotDivisibleBySlot_KeepsItsTail()
@@ -104,9 +100,7 @@ public class AvailabilityCalculatorTests
         Assert.Equal(TimeSpan.FromMinutes(510), interval.End - interval.Start);
     }
 
-    /****************************************************************
-     * busy subtraction
-     *******************************************************/
+    // busy subtraction
 
     [Fact]
     public void BookingInsideWindow_SplitsIntoFreeBusyFree()
@@ -288,9 +282,7 @@ public class AvailabilityCalculatorTests
             Assert.Equal(result[i - 1].End, result[i].Start);
     }
 
-    /****************************************************************
-     * DST — shifts the real length of a day, never breaks it apart
-     *******************************************************/
+    // DST — shifts the real length of a day, never breaks it apart
 
     [Theory]
     [InlineData(2026, 3, 29, 23)]
@@ -391,9 +383,7 @@ public class AvailabilityCalculatorTests
         Assert.Equal(TimeSpan.FromHours(23), interval.End - interval.Start);
     }
 
-    /****************************************************************
-     * helpers
-     *******************************************************/
+    // helpers
 
     private static IReadOnlyList<AvailabilityInterval> Calculate(
         DateOnly from, DateOnly to,

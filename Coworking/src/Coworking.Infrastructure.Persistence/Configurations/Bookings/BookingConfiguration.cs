@@ -24,7 +24,6 @@ public class BookingConfiguration : IEntityTypeConfiguration<Booking>
         builder.Property(x => x.UserTimeZoneId)
             .HasMaxLength(100);
 
-        // indexes
         builder.HasIndex(x => new { x.DeskId, x.StartTime })
                .IncludeProperties(x => new { x.EndTime, x.Status })
                .HasDatabaseName("ix_bookings_overlap_check");

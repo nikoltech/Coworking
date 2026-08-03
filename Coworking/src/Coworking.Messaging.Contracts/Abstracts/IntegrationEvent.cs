@@ -1,17 +1,13 @@
 namespace Coworking.Messaging.Contracts.Abstracts;
 
-// Integration event — публичный контракт между сервисами.
-// В отличие от Domain Event (внутренний, MediatR), пересекает границы сервисов через брокер.
-// Правило: события иммутабельны — они описывают факт прошлого, а не намерение.
 public abstract record IntegrationEvent
 {
-    // Уникальный ID сообщения. Консьюмер использует его для идемпотентности:
-    // at-least-once delivery означает, что одно событие может прийти дважды.
+    // consumer dedup key — delivery is at-least-once
     public Guid MessageId { get; init; } = Guid.NewGuid();
 
-    // Когда событие произошло в домене (не когда сообщение было отправлено в брокер).
+    // when it happened in the domain, not when it was published
     public DateTimeOffset OccurredAt { get; init; } = DateTimeOffset.UtcNow;
 
-    // Строка вместо enum — консьюмер не сломается при переименовании типа в продюсере.
+    // string, not enum: renaming the producer type must not break consumers
     public abstract string EventType { get; }
 }
