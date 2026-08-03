@@ -36,7 +36,7 @@ public sealed class SquidexWebhookEventTests
         }
         """;
 
-    // ── Classification ────────────────────────────────────────────────────────
+    // Classification
 
     [Fact]
     public void Classify_ReturnsContent_WhenSchemaIdPresent()
@@ -62,7 +62,7 @@ public sealed class SquidexWebhookEventTests
         SquidexWebhookEventClassifier.Classify(evt).Should().Be(SquidexWebhookEventKind.Unknown);
     }
 
-    // ── Content event ─────────────────────────────────────────────────────────
+    // Content event
 
     [Fact]
     public void ContentEvent_DeserializesCommonAndSpecificFields()
@@ -95,7 +95,7 @@ public sealed class SquidexWebhookEventTests
         evt.DataOldAs<SquidexFakes.TestSchema>().Should().BeNull();
     }
 
-    // ── Asset event ───────────────────────────────────────────────────────────
+    // Asset event
 
     [Fact]
     public void AssetEvent_DeserializesAllFields()

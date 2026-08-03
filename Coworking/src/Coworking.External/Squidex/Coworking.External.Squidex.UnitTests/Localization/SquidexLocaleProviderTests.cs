@@ -1,5 +1,4 @@
-﻿// Localization/SquidexLocaleProviderTests.cs
-using Coworking.External.Squidex.Abstractions.Models;
+﻿using Coworking.External.Squidex.Abstractions.Models;
 using Coworking.External.Squidex.Abstractions.Client;
 using Coworking.External.Squidex.Localization;
 using Coworking.External.Squidex.UnitTests.Helpers;
@@ -14,7 +13,7 @@ public sealed class SquidexLocaleProviderTests
 {
     private readonly ISquidexApiClient _client = Substitute.For<ISquidexApiClient>();
 
-    // ── Before initialization ────────────────────────────────────────────────
+    // Before initialization
 
     [Fact]
     public void SupportedLocales_ReturnsFromAppsettings_WhenConfigured()
@@ -42,7 +41,7 @@ public sealed class SquidexLocaleProviderTests
         provider.DefaultLocale.Should().Be(TestLocales.UkUA);
     }
 
-    // ── After initialization — appsettings set ────────────────────────────────
+    // After initialization — appsettings set
 
     [Fact]
     public async Task InitializeAsync_AlwaysCallsSquidex_EvenWhenBothExplicitlyConfigured()
@@ -80,7 +79,7 @@ public sealed class SquidexLocaleProviderTests
         provider.DefaultLocale.Should().Be(TestLocales.De);
     }
 
-    // ── After initialization — appsettings empty, fetches from Squidex ───────
+    // After initialization — appsettings empty, fetches from Squidex
 
     [Fact]
     public async Task InitializeAsync_FetchesFromSquidex_WhenSupportedLocalesNotConfigured()

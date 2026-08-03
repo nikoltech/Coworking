@@ -1,5 +1,4 @@
-﻿// Helpers/SquidexFakes.cs
-using Coworking.External.Squidex.Abstractions.Models;
+﻿using Coworking.External.Squidex.Abstractions.Models;
 using Coworking.External.Squidex.Abstractions.Options;
 using Microsoft.Extensions.Options;
 using System.Text.Json;
@@ -9,7 +8,7 @@ namespace Coworking.External.Squidex.UnitTests.Helpers;
 
 internal static class SquidexFakes
 {
-	// ── Options ──────────────────────────────────────────────────────────────
+	// Options
 
 	public static SquidexAppOptions DefaultAppOptions(
 		string baseUrl = TestUrls.BaseUrl,
@@ -42,7 +41,7 @@ internal static class SquidexFakes
 		});
 	}
 
-	// ── Content factories ─────────────────────────────────────────────────────
+	// Content factories
 
 	public static ContentDto<T> MakeContent<T>(
 		T data,
@@ -67,7 +66,7 @@ internal static class SquidexFakes
 		new(total,
 			items.Select((item, i) => MakeContent(item, $"id-{i + 1}", status)).ToList());
 
-	// ── Asset factories ─────────────────────────────────────────────────────────
+	// Asset factories
 
 	public static AssetDto MakeAsset(
 		string id = "asset-1",
@@ -91,7 +90,7 @@ internal static class SquidexFakes
 	public static AssetsResponse MakeAssetsResponse(params AssetDto[] items) =>
 		new(items.Length, items.ToList());
 
-	// ── Locale factories ──────────────────────────────────────────────────────
+	// Locale factories
 
 	public static SquidexLocaleInfo MakeMasterLocale(string iso2Code = TestLocales.UkUA) =>
 		new(iso2Code, IsMaster: true, IsOptional: false);
@@ -108,7 +107,7 @@ internal static class SquidexFakes
 		return list;
 	}
 
-	// ── JSON helpers ──────────────────────────────────────────────────────────
+	// JSON helpers
 
 	public static string TokenJson(
 		string token = "test-access-token",
@@ -138,7 +137,7 @@ internal static class SquidexFakes
 	public static string ResponseJson<T>(ResponseSchema<T> response) =>
 		JsonSerializer.Serialize(response);
 
-	// ── Test schemas ──────────────────────────────────────────────────────────
+	// Test schemas
 
 	public sealed class TestSchema : ISquidexSchema
 	{

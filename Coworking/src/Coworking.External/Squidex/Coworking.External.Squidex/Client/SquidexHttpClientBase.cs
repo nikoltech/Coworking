@@ -38,7 +38,7 @@ internal abstract class SquidexHttpClientBase
         _clientName = clientName;
     }
 
-    // ── Request building ──────────────────────────────────────────────────────
+    // Request building
 
     /// <summary>Creates a request stamped with the app + client so the auth handler can resolve a token.</summary>
     protected HttpRequestMessage CreateRequest(HttpMethod method, string url) =>
@@ -58,7 +58,7 @@ internal abstract class SquidexHttpClientBase
         return request;
     }
 
-    // ── Send ──────────────────────────────────────────────────────────────────
+    // Send
 
     protected async Task<T> SendAndDeserializeAsync<T>(HttpRequestMessage request, CancellationToken ct)
     {

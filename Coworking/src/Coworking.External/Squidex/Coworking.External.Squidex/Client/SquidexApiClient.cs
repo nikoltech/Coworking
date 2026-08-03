@@ -32,7 +32,7 @@ internal sealed class SquidexApiClient : SquidexHttpClientBase, ISquidexApiClien
         _locales = locales;
     }
 
-    // ── JSON query ────────────────────────────────────────────────────────────
+    // JSON query
 
     /// <summary>
     /// Queries content items by a JSON filter serialized into the URL query string.
@@ -51,7 +51,7 @@ internal sealed class SquidexApiClient : SquidexHttpClientBase, ISquidexApiClien
         return SendAndDeserializeAsync<ResponseSchema<T>>(request, ct);
     }
 
-    // ── OData query ───────────────────────────────────────────────────────────
+    // OData query
 
     public Task<ResponseSchema<T>> QueryODataAsync<T>(string schema, ODataQuery query,
         QueryOptions? queryOptions = null,
@@ -63,7 +63,7 @@ internal sealed class SquidexApiClient : SquidexHttpClientBase, ISquidexApiClien
         return SendAndDeserializeAsync<ResponseSchema<T>>(request, ct);
     }
 
-    // ── POST query ────────────────────────────────────────────────────────────
+    // POST query
 
     public Task<ResponseSchema<T>> QueryPostAsync<T>(string schema, RequestQuery query,
         QueryOptions? queryOptions = null,
@@ -77,7 +77,7 @@ internal sealed class SquidexApiClient : SquidexHttpClientBase, ISquidexApiClien
         return SendAndDeserializeAsync<ResponseSchema<T>>(request, ct);
     }
 
-    // ── IDs query (batched) ───────────────────────────────────────────────────
+    // IDs query (batched)
 
     public async Task<ResponseSchema<T>> GetByIdsAsync<T>(string schema, IEnumerable<string> ids,
         QueryOptions? queryOptions = null,
@@ -94,7 +94,7 @@ internal sealed class SquidexApiClient : SquidexHttpClientBase, ISquidexApiClien
         return new ResponseSchema<T>(allItems.Count, allItems);
     }
 
-    // ── Single item ───────────────────────────────────────────────────────────
+    // Single item
 
     public async Task<ContentDto<T>?> GetByIdAsync<T>(string schema, string id,
         QueryOptions? queryOptions = null,
@@ -110,11 +110,7 @@ internal sealed class SquidexApiClient : SquidexHttpClientBase, ISquidexApiClien
         return await response.Content.ReadFromJsonAsync<ContentDto<T>>(Json, ct);
     }
 
-    /// <summary>
-    /// For conditional GET — client caches ETag and sends it as If-None-Match header.
-    /// </summary>
-    /// <param name="knownVersion">Optional ETag for conditional GET</param>
-    /// <returns>If content is not modified, returns NotModified=true and null content. Otherwise, returns content with NotModified=false.</returns>
+    /// <inheritdoc/>
     public async Task<(ContentDto<T>? Content, bool NotModified)> GetByIdConditionalAsync<T>(
         string schema, string id,
         int? knownVersion = null,
@@ -138,7 +134,7 @@ internal sealed class SquidexApiClient : SquidexHttpClientBase, ISquidexApiClien
         return (content, NotModified: false);
     }
 
-    // ── Mutations ────────────────────────────────────────────────────────────
+    // Mutations
 
     public Task<ContentDto<T>> CreateAsync<T>(string schema, T data,
         bool publish = true,
@@ -154,7 +150,6 @@ internal sealed class SquidexApiClient : SquidexHttpClientBase, ISquidexApiClien
     /// Updates content item with optimistic concurrency control using ETag.
     /// </summary>
     /// <param name="expectedVersion">Optional ETag for concurrency control</param>
-    /// <returns></returns>
     public Task<ContentDto<T>> UpdateAsync<T>(string schema, string id, T data,
         int? expectedVersion = null,
         CancellationToken ct = default)
@@ -162,7 +157,6 @@ internal sealed class SquidexApiClient : SquidexHttpClientBase, ISquidexApiClien
         var request = BuildRequest(HttpMethod.Put, $"{ContentUrl(schema)}/{id}");
         request.Content = JsonContent.Create(data, options: Json);
 
-        // if version is provided, add If-Match header
         if (expectedVersion.HasValue)
             request.Headers.IfMatch.Add(
                 new EntityTagHeaderValue($"\"{expectedVersion}\""));
@@ -208,7 +202,7 @@ internal sealed class SquidexApiClient : SquidexHttpClientBase, ISquidexApiClien
         return SendAndDeserializeAsync<ContentDto<T>>(request, ct);
     }
 
-    // ── App ──────────────────────────────────────────────────────────────────
+    // App
 
     public async Task<IReadOnlyList<SquidexLocaleInfo>> GetAppLocalesAsync(CancellationToken ct = default)
     {
@@ -226,7 +220,7 @@ internal sealed class SquidexApiClient : SquidexHttpClientBase, ISquidexApiClien
             .ToList() ?? [];
     }
 
-    // ── Private ──────────────────────────────────────────────────────────────
+    // Private
 
     private Task<ResponseSchema<T>> QueryByIdsBatchAsync<T>(string schema, string[] batch,
         QueryOptions? queryOptions,
@@ -316,7 +310,7 @@ internal sealed class SquidexApiClient : SquidexHttpClientBase, ISquidexApiClien
     private string ContentUrl(string schema) =>
         $"{AppOptions.BaseUrl.TrimEnd('/')}/api/content/{AppOptions.AppName}/{schema}";
 
-    // ── Response types ────────────────────────────────────────────────────────
+    // Response types
 
     private sealed record PostQueryBody(
         [property: JsonPropertyName("q")] RequestQuery Query);

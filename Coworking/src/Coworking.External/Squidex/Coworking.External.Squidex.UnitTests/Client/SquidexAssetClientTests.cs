@@ -23,7 +23,7 @@ public sealed class SquidexAssetClientTests
 
     private string AssetsUrl => $"*/api/assets/{_options.AppName}";
 
-    // ── Query ─────────────────────────────────────────────────────────────────
+    // Query
 
     [Fact]
     public async Task QueryAsync_ReturnsFlatAssets_NotContentWrapped()
@@ -94,7 +94,7 @@ public sealed class SquidexAssetClientTests
         capturedClient.Should().Be(TestClientNames.Default);
     }
 
-    // ── GetById ───────────────────────────────────────────────────────────────
+    // GetById
 
     [Fact]
     public async Task GetByIdAsync_ReturnsNull_WhenNotFound()
@@ -122,7 +122,7 @@ public sealed class SquidexAssetClientTests
         result.FileName.Should().Be("kyiv.png");
     }
 
-    // ── Mutations ─────────────────────────────────────────────────────────────
+    // Mutations
 
     [Fact]
     public async Task UploadAsync_PostsMultipartForm_ToAssetsEndpoint()
@@ -193,7 +193,7 @@ public sealed class SquidexAssetClientTests
         capturedUrl.Should().NotContain("permanent");
     }
 
-    // ── Retry (driven by configured options, not a hardcoded constant) ─────────
+    // Retry (driven by configured options, not a hardcoded constant)
 
     [Fact]
     public async Task QueryAsync_RetriesOnTransientError_UpToConfiguredMaxAttempts()
@@ -235,7 +235,7 @@ public sealed class SquidexAssetClientTests
         callCount.Should().Be(3);
     }
 
-    // ── helper ──────────────────────────────────────────────────────────────
+    // helper
 
     private static HttpResponseMessage OkResponse<T>(T body) =>
         new(HttpStatusCode.OK)

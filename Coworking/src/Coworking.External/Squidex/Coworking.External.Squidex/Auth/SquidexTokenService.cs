@@ -54,7 +54,7 @@ public sealed class SquidexTokenService(
     public void InvalidateToken(string appName, string clientName) =>
         cache.Remove(CacheKey(appName, clientName));
 
-    // ── private ──────────────────────────────────────────────────────────────
+    // private
 
     private SquidexAppOptions GetAppOptions(string appName) =>
         _options.Apps.TryGetValue(appName, out var app)

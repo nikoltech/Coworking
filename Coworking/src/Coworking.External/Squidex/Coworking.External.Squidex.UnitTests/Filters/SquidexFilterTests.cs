@@ -1,5 +1,4 @@
-﻿// Filters/SquidexFilterTests.cs
-using Coworking.External.Squidex.Abstractions.Filters;
+﻿using Coworking.External.Squidex.Abstractions.Filters;
 using Coworking.External.Squidex.UnitTests.Helpers;
 using FluentAssertions;
 
@@ -131,7 +130,7 @@ public sealed class SquidexFilterTests
         logical["or"].Should().HaveCount(2);
     }
 
-    // ── SquidexPaths ──────────────────────────────────────────────────────────
+    // SquidexPaths
 
     [Fact]
     public void SquidexPaths_Iv_BuildsCorrectPath()

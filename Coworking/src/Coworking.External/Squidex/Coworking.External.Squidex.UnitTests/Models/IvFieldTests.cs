@@ -1,5 +1,4 @@
-﻿// Models/IvFieldTests.cs
-using Coworking.External.Squidex.Abstractions.Models;
+﻿using Coworking.External.Squidex.Abstractions.Models;
 using FluentAssertions;
 
 namespace Coworking.External.Squidex.UnitTests.Models;

@@ -1,5 +1,4 @@
-﻿// Exceptions/HttpResponseExtensionsTests.cs
-using Coworking.External.Squidex.Exceptions;
+﻿using Coworking.External.Squidex.Exceptions;
 using FluentAssertions;
 using System.Net;
 using System.Text;

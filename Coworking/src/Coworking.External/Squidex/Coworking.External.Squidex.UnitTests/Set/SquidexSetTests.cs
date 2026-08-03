@@ -1,5 +1,4 @@
-﻿// Set/SquidexSetTests.cs
-using Coworking.External.Squidex.Abstractions.Client;
+﻿using Coworking.External.Squidex.Abstractions.Client;
 using Coworking.External.Squidex.Abstractions.Filters;
 using Coworking.External.Squidex.Abstractions.Models;
 using Coworking.External.Squidex.Abstractions.Pagination;

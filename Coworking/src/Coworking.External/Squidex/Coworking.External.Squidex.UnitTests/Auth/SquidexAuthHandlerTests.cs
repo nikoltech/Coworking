@@ -1,4 +1,3 @@
-// Auth/SquidexAuthHandlerTests.cs
 using Coworking.External.Squidex.Auth;
 using Coworking.External.Squidex.Client;
 using Coworking.External.Squidex.UnitTests.Helpers;

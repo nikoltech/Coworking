@@ -4,8 +4,8 @@
 /// Builds Squidex filter objects without string operation literals.
 ///
 /// Always use path constants from *Paths.cs per schema — never raw strings:
-///   SquidexFilter.Eq(CityPaths.Title, "Kyiv")   ✅
-///   SquidexFilter.Eq("data.Title.iv", "Kyiv")   ❌
+///   do:     SquidexFilter.Eq(CityPaths.Title, "Kyiv")
+///   don't:  SquidexFilter.Eq("data.Title.iv", "Kyiv")
 ///
 /// Path constants are the single source of truth — update there and
 /// all filters update automatically.

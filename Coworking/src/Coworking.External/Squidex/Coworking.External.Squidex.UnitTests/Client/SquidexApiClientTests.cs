@@ -30,7 +30,7 @@ public sealed class SquidexApiClientTests
     private string ContentUrl(string schema) =>
         $"*/api/content/{_options.AppName}/{schema}*";
 
-    // ── JSON Query ────────────────────────────────────────────────────────────
+    // JSON Query
 
     [Fact]
     public async Task QueryAsync_ReturnsDeserializedResponse()
@@ -69,7 +69,7 @@ public sealed class SquidexApiClientTests
         capturedUrl.Should().NotContain("$top");
     }
 
-    // ── OData Query ───────────────────────────────────────────────────────────
+    // OData Query
 
     [Fact]
     public async Task QueryODataAsync_UsesODataParams_NotQParam()
@@ -108,7 +108,7 @@ public sealed class SquidexApiClientTests
         capturedUrl.Should().Contain("%27"); // encoded quote
     }
 
-    // ── POST Query ────────────────────────────────────────────────────────────
+    // POST Query
 
     [Fact]
     public async Task QueryPostAsync_PostsToQueryEndpoint()
@@ -143,7 +143,7 @@ public sealed class SquidexApiClientTests
         capturedBody.Should().Contain("\"take\""); // JSON body contains query
     }
 
-    // ── IDs query ─────────────────────────────────────────────────────────────
+    // IDs query
 
     [Fact]
     public async Task GetByIdsAsync_SendsSingleRequest_ForSmallBatch()
@@ -195,7 +195,7 @@ public sealed class SquidexApiClientTests
         capturedUrl.Should().StartWith("?ids=");
     }
 
-    // ── Headers ───────────────────────────────────────────────────────────────
+    // Headers
 
     [Fact]
     public async Task QueryAsync_AddsXLanguagesHeader_WithSupportedLocales()
@@ -270,7 +270,7 @@ public sealed class SquidexApiClientTests
         capturedNoSlowTotal.Should().Be("true");
     }
 
-    // ── GetById ───────────────────────────────────────────────────────────────
+    // GetById
 
     [Fact]
     public async Task GetByIdAsync_ReturnsNull_WhenNotFound()
@@ -318,7 +318,7 @@ public sealed class SquidexApiClientTests
         result!.Status.Should().Be(TestStatuses.Draft);
     }
 
-    // ── Mutations ─────────────────────────────────────────────────────────────
+    // Mutations
 
     [Fact]
     public async Task CreateAsync_PostsWithPublishParam()
@@ -475,7 +475,7 @@ public sealed class SquidexApiClientTests
         result.Status.Should().Be(TestStatuses.Archived);
     }
 
-    // ── Retry ─────────────────────────────────────────────────────────────────
+    // Retry
 
     [Theory]
     [InlineData(HttpStatusCode.InternalServerError)]
@@ -533,7 +533,7 @@ public sealed class SquidexApiClientTests
         callCount.Should().Be(1);
     }
 
-    // ── App Languages ──────────────────────────────────────────────────────────
+    // App Languages
 
     [Fact]
     public async Task GetAppLocalesAsync_ReturnsFullLocaleInfo_IncludingIsMasterAndIsOptional()
@@ -575,7 +575,7 @@ public sealed class SquidexApiClientTests
         locales.Single(l => !l.IsMaster).Iso2Code.Should().Be(TestLocales.UkUA);
     }
 
-    // ── Private helper ────────────────────────────────────────────────────────
+    // Private helper
 
     private static HttpResponseMessage OkResponse<T>(T body) =>
         new(HttpStatusCode.OK)

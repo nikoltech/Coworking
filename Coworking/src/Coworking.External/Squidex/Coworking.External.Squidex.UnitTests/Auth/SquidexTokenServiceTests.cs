@@ -1,4 +1,3 @@
-// Auth/SquidexTokenServiceTests.cs
 using Coworking.External.Squidex.Abstractions.Options;
 using Coworking.External.Squidex.Auth;
 using Coworking.External.Squidex.Client;

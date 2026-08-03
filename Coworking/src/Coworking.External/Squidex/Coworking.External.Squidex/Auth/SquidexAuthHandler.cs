@@ -37,7 +37,7 @@ public sealed class SquidexAuthHandler(SquidexTokenService tokenService) : Deleg
         return await base.SendAsync(retryRequest, ct);
     }
 
-    // ── private ──────────────────────────────────────────────────────────────
+    // private
 
     private async Task<AuthenticationHeaderValue> GetAuthHeaderAsync(
         string appName, string clientName,

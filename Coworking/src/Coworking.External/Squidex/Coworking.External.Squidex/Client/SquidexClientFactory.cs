@@ -38,7 +38,7 @@ public sealed class SquidexClientFactory(
         return new SquidexAssetClient(http, appOptions, client);
     }
 
-    // ── private ──────────────────────────────────────────────────────────────
+    // private
 
     private SquidexAppOptions GetAppOptions(string appName) =>
         _options.Apps.TryGetValue(appName, out var app)

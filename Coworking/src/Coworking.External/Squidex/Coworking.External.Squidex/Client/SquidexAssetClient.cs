@@ -81,7 +81,7 @@ internal sealed class SquidexAssetClient : SquidexHttpClientBase, ISquidexAssetC
         await response.EnsureSquidexSuccessAsync(ct);
     }
 
-    // ── private ──────────────────────────────────────────────────────────────
+    // private
 
     private string AssetsUrl() =>
         $"{AppOptions.BaseUrl.TrimEnd('/')}/api/assets/{AppOptions.AppName}";

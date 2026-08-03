@@ -38,7 +38,7 @@ public sealed class SquidexPaginator : ISquidexPaginator
         return firstPage with { Items = allItems };
     }
 
-    // ── private ──────────────────────────────────────────────────────────────
+    // private
 
     private static async Task<ResponseSchema<T>[]> FetchRemainingPagesAsync<T>(string schema, ISquidexApiClient client,
         RequestQuery baseQuery,

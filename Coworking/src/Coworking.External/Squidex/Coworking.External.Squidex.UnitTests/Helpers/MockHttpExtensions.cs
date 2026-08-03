@@ -1,5 +1,4 @@
-﻿// Helpers/MockHttpExtensions.cs
-using RichardSzalay.MockHttp;
+﻿using RichardSzalay.MockHttp;
 using System.Net;
 using System.Text;
 using System.Text.Json;

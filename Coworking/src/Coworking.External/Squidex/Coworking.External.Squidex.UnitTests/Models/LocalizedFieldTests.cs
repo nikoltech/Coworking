@@ -1,5 +1,4 @@
-﻿// Models/LocalizedFieldTests.cs
-using Coworking.External.Squidex.Abstractions.Models;
+﻿using Coworking.External.Squidex.Abstractions.Models;
 using Coworking.External.Squidex.UnitTests.Helpers;
 using FluentAssertions;
 
