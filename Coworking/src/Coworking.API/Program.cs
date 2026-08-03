@@ -54,6 +54,9 @@ if (app.Environment.IsDevelopment())
 
 app.Run();
 
+// Exposed so WebApplicationFactory<Program> can boot the real host in integration tests.
+public partial class Program;
+
 
 
 //app.MapGet("/check-my-ip", (HttpContext context) =>

@@ -44,7 +44,7 @@ public static class DependencyInjection
         cfg.AddOpenBehavior(typeof(PerformanceBehavior<,>));
         cfg.AddOpenBehavior(typeof(ValidationBehavior<,>));
         cfg.AddOpenBehavior(typeof(LoggingBehavior<,>));
+        // TransactionConflictRetryBehavior is registered by AddPersistence — it needs the DbContext
         cfg.AddOpenBehavior(typeof(DomainExceptionBehavior<,>));
-        cfg.AddOpenBehavior(typeof(TransactionConflictRetryBehavior<,>));
     }
 }

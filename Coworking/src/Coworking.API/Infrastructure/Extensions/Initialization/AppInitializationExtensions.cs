@@ -43,13 +43,15 @@ public static class AppInitializationExtensions
         using var scope = webApplication.Services.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
+        // A broken schema must stop the start: log the cause, then rethrow
         try
         {
             await context.Database.MigrateAsync();
         }
         catch (Exception ex)
         {
-            logger.LogError("An error occurred while migrating or initializing the database. Exception: {@ex}", ex);
+            logger.LogCritical(ex, "FATAL: database migration failed. System cannot start.");
+            throw;
         }
 
         try
@@ -65,7 +67,8 @@ public static class AppInitializationExtensions
         }
         catch (Exception ex)
         {
-            logger.LogError("An error occurred while seeding the database. Exception: {@ex}", ex);
+            // dev-only data: never worth blocking the start
+            logger.LogError(ex, "An error occurred while seeding the database.");
         }
     }
 }

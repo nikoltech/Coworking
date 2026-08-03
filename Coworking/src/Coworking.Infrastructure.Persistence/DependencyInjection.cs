@@ -1,8 +1,10 @@
 ﻿using Coworking.Application.Abstractions;
 using Coworking.Application.Abstractions.Transactions;
+using Coworking.Infrastructure.Persistence.Behaviors;
 using Coworking.Infrastructure.Persistence.Contexts;
 using Coworking.Infrastructure.Persistence.Interceptors;
 using Coworking.Infrastructure.Persistence.Transactions.Conflicts;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -41,6 +43,8 @@ public static class DependencyInjection
         });
 
         services.AddScoped<IAppDbContext>(sp => sp.GetRequiredService<AppDbContext>());
+
+        services.AddTransient(typeof(IPipelineBehavior<,>), typeof(TransactionConflictRetryBehavior<,>));
 
         return services;
     }

@@ -30,7 +30,7 @@ namespace Coworking.API.Infrastructure.Extensions
                             ? "An internal error occurred."
                             : error.Message;
 
-                        (ctx.ProblemDetails.Status, ctx.ProblemDetails.Title) = MapExceptionToStatusAndTitle(error);
+                        (ctx.ProblemDetails.Status, ctx.ProblemDetails.Title) = ExceptionStatusMap.Map(error);
 
                         if (error is ValidationException ve)
                         {
@@ -40,28 +40,14 @@ namespace Coworking.API.Infrastructure.Extensions
                         }
                     }
 
+                    // traceId stays in every environment — it is the only handle
+                    // tying a user-reported error to a log entry
                     if (env.IsDevelopment())
                     {
                         ctx.ProblemDetails.Extensions["instance"] = $"{ctx.HttpContext.Request.Method} {ctx.HttpContext.Request.Path}";
                         ctx.ProblemDetails.Extensions["environment"] = env.EnvironmentName;
                     }
-                    else
-                    {
-                        ctx.ProblemDetails.Extensions.Remove("traceId");
-                    }
                 });
-        }
-
-        private static (int Status, string Title) MapExceptionToStatusAndTitle(Exception? error)
-        {
-            return error switch
-            {
-                ValidationException => (StatusCodes.Status400BadRequest, "Validation Failed"),
-                NotFoundException => (StatusCodes.Status404NotFound, "Not Found"),
-                ConflictException => (StatusCodes.Status409Conflict, "Conflict"),
-                BusinessRuleException => (StatusCodes.Status422UnprocessableEntity, "Business Rule Violated"),
-                _ => (StatusCodes.Status500InternalServerError, "Server Error")
-            };
         }
     }
 }
