@@ -6,10 +6,7 @@ public record DeskAvailabilityResponse
     public int SlotSizeMinutes { get; init; }
     public IReadOnlyList<AvailabilityIntervalResponse> Intervals { get; init; } = [];
 
-    public int TotalSlots => CountSlots(Intervals);
-    public int AvailableSlots => CountSlots(Intervals.Where(i => i.IsAvailable));
-
-    // counts derived from durations; there is no slot grid
-    private int CountSlots(IEnumerable<AvailabilityIntervalResponse> intervals) =>
-        intervals.Sum(i => (int)((i.End - i.Start).TotalMinutes / SlotSizeMinutes));
+    // counted once from durations; there is no slot grid
+    public int TotalSlots { get; init; }
+    public int AvailableSlots { get; init; }
 }

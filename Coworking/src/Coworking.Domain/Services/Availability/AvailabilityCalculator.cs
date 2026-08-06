@@ -1,3 +1,4 @@
+using Coworking.Domain.Common;
 using Coworking.Domain.Specifications;
 
 namespace Coworking.Domain.Services.Availability;
@@ -13,6 +14,9 @@ public sealed class AvailabilityCalculator : IAvailabilityCalculator
         TimeZoneInfo timeZone,
         IReadOnlyList<(DateTimeOffset Start, DateTimeOffset End)> busy)
     {
+        // sorted once: SubtractBusy relies on the order, and sorting per day was the hot spot
+        var ordered = OrderByStart(busy);
+
         var result = new List<AvailabilityInterval>();
 
         for (var date = from; date <= to; date = date.AddDays(1))
@@ -20,20 +24,30 @@ public sealed class AvailabilityCalculator : IAvailabilityCalculator
             var (start, end) = ResolveDayWindow(date, openTime, closeTime, timeZone);
 
             if (start < end)
-                result.AddRange(SubtractBusy(start, end, busy));
+                result.AddRange(SubtractBusy(start, end, ordered, timeZone));
         }
 
         return result;
     }
 
+    private static (DateTimeOffset Start, DateTimeOffset End)[] OrderByStart(
+        IReadOnlyList<(DateTimeOffset Start, DateTimeOffset End)> busy)
+    {
+        var ordered = busy.ToArray();
+
+        Array.Sort(ordered, static (left, right) => left.Start.CompareTo(right.Start));
+
+        return ordered;
+    }
+
     /// <summary>
-    /// The working period as an instant range. DST changes its real length —
+    /// The working period as a moment range. DST changes its real length —
     /// 23 hours on spring forward, 25 on fall back — but never breaks it apart.
     /// </summary>
     private static (DateTimeOffset Start, DateTimeOffset End) ResolveDayWindow(
         DateOnly date, TimeOnly openTime, TimeOnly closeTime, TimeZoneInfo timeZone) =>
-        (ToInstant(date.ToDateTime(openTime), timeZone),
-         ToInstant(ResolveLocalEnd(date, openTime, closeTime), timeZone));
+        (ZonedTime.FromWallClock(date.ToDateTime(openTime), timeZone),
+         ZonedTime.FromWallClock(ResolveLocalEnd(date, openTime, closeTime), timeZone));
 
     private static DateTime ResolveLocalEnd(DateOnly date, TimeOnly openTime, TimeOnly closeTime)
     {
@@ -48,39 +62,43 @@ public sealed class AvailabilityCalculator : IAvailabilityCalculator
         return date.ToDateTime(closeTime);
     }
 
-    private static DateTimeOffset ToInstant(DateTime local, TimeZoneInfo timeZone) =>
-        new(local, timeZone.GetUtcOffset(local));
-
     private static IEnumerable<AvailabilityInterval> SubtractBusy(
-        DateTimeOffset windowStart, 
+        DateTimeOffset windowStart,
         DateTimeOffset windowEnd,
-        IReadOnlyList<(DateTimeOffset Start, DateTimeOffset End)> busy)
+        (DateTimeOffset Start, DateTimeOffset End)[] ordered,
+        TimeZoneInfo timeZone)
     {
-        // keep only what overlaps the window, trimmed to its bounds and to its local offset
-        var clipped = busy
-            .Where(b => DateRangeOverlap.Check(windowStart, windowEnd, b.Start, b.End))
-            .Select(b => (
-                Start: b.Start > windowStart ? b.Start.ToOffset(windowStart.Offset) : windowStart,
-                End: b.End < windowEnd ? b.End.ToOffset(windowEnd.Offset) : windowEnd))
-            .OrderBy(b => b.Start)
-            .ToList();
+        // on a normal day every moment shares the window's offset; only a transition needs a lookup
+        var sameOffsetAllDay = windowStart.Offset == windowEnd.Offset;
 
-        // collapse overlapping and adjacent bookings into one busy run
+        DateTimeOffset Label(DateTimeOffset moment) =>
+            sameOffsetAllDay ? moment.ToOffset(windowStart.Offset) : TimeZoneInfo.ConvertTime(moment, timeZone);
+
+        // clip to the window and collapse touching bookings into busy runs
         var merged = new List<(DateTimeOffset Start, DateTimeOffset End)>();
 
-        foreach (var busyRange in clipped)
+        foreach (var (bookedStart, bookedEnd) in ordered)
         {
-            if (merged.Count > 0 && busyRange.Start <= merged[^1].End)
-            {
-                var last = merged[^1];
+            if (bookedStart >= windowEnd)
+                break;
 
-                if (busyRange.End > last.End)
-                    merged[^1] = (last.Start, busyRange.End);
+            if (!DateRangeOverlap.Check(windowStart, windowEnd, bookedStart, bookedEnd))
+                continue;
+
+            var start = bookedStart > windowStart ? Label(bookedStart) : windowStart;
+            var end = bookedEnd < windowEnd ? Label(bookedEnd) : windowEnd;
+
+            var last = merged.Count - 1;
+
+            if (last >= 0 && start <= merged[last].End)
+            {
+                if (end > merged[last].End)
+                    merged[last] = (merged[last].Start, end);
 
                 continue;
             }
 
-            merged.Add(busyRange);
+            merged.Add((start, end));
         }
 
         // walk the window, emitting the free gaps between busy runs

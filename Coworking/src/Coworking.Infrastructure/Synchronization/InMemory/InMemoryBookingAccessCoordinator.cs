@@ -1,7 +1,8 @@
-﻿using Coworking.Application.Abstractions.Synchronization;
+using Coworking.Application.Abstractions.Synchronization;
 using Coworking.Domain.Specifications;
 using Coworking.Infrastructure.Synchronization.InMemory.Internal;
 using Nito.AsyncEx;
+using System.Collections.Concurrent;
 
 namespace Coworking.Infrastructure.Synchronization.InMemory;
 
@@ -11,8 +12,15 @@ namespace Coworking.Infrastructure.Synchronization.InMemory;
 /// </summary>
 public sealed class InMemoryBookingAccessCoordinator : IBookingAccessCoordinator
 {
-    private readonly Dictionary<RangeKey, ActiveRange> _activeRanges = [];
-    private readonly AsyncLock _lock = new();
+    private sealed class DeskLane
+    {
+        public AsyncLock Lock { get; } = new();
+        public Dictionary<RangeKey, ActiveRange> Ranges { get; } = [];
+    }
+
+    // lanes are never evicted: dropping an empty one races with acquiring it,
+    // and an idle lane costs less than that synchronization
+    private readonly ConcurrentDictionary<int, DeskLane> _lanes = new();
     private readonly TimeProvider _timeProvider;
 
     private static readonly TimeSpan BufferLifeTime = TimeSpan.FromMinutes(1);
@@ -38,39 +46,40 @@ public sealed class InMemoryBookingAccessCoordinator : IBookingAccessCoordinator
         DateTimeOffset end,
         CancellationToken ct)
     {
+        var lane = _lanes.GetOrAdd(deskId, static _ => new DeskLane());
+
         while (true)
         {
             ct.ThrowIfCancellationRequested();
 
-            Task[] tasksToWait;
+            List<Task>? tasksToWait;
 
-            using (await _lock.LockAsync(ct))
+            using (await lane.Lock.LockAsync(ct))
             {
-                var overlapping = _activeRanges.Values
-                    .Where(r => r.DeskId == deskId
-                             && DateRangeOverlap.Check(start, end, r.Start, r.End))
-                    .Select(r => r.Semaphore)
-                    .ToList();
+                // stays null while nothing overlaps — the common path allocates nothing
+                tasksToWait = null;
 
-                if (overlapping.Count == 0)
+                foreach (var range in lane.Ranges.Values)
+                {
+                    if (DateRangeOverlap.Check(start, end, range.Start, range.End))
+                        (tasksToWait ??= []).Add(range.Semaphore.WaitAsync(ct));
+                }
+
+                if (tasksToWait is null)
                 {
                     var key = MakeKey(deskId, start, end);
 
                     var expiresAt = _timeProvider.GetUtcNow().Add(ttl ?? DefaultAcquireTimeout + BufferLifeTime);
 
-                    _activeRanges[key] = new ActiveRange(
+                    lane.Ranges[key] = new ActiveRange(
                         deskId,
                         start,
                         end,
                         new SemaphoreSlim(0, 1),
                         expiresAt);
 
-                    return new RangeLease(_activeRanges, _lock, key);
+                    return new RangeLease(lane.Ranges, lane.Lock, key);
                 }
-
-                tasksToWait = overlapping
-                    .Select(semaphore => semaphore.WaitAsync(ct))
-                    .ToArray();
             }
 
             // wait outside the lock
@@ -81,17 +90,29 @@ public sealed class InMemoryBookingAccessCoordinator : IBookingAccessCoordinator
 
     internal async Task CleanExpiredAsync()
     {
-        using (await _lock.LockAsync())
-        {
-            var expired = _activeRanges
-                .Where(kvp => kvp.Value.ExpiresAt <= _timeProvider.GetUtcNow())
-                .Select(kvp => kvp.Key)
-                .ToList();
+        var now = _timeProvider.GetUtcNow();
 
-            foreach (var key in expired)
+        // each lane is locked briefly and independently
+        foreach (var lane in _lanes.Values)
+        {
+            using (await lane.Lock.LockAsync())
             {
-                _activeRanges[key].Semaphore.Release();
-                _activeRanges.Remove(key);
+                List<RangeKey>? expired = null;
+
+                foreach (var (key, range) in lane.Ranges)
+                {
+                    if (range.ExpiresAt <= now)
+                        (expired ??= []).Add(key);
+                }
+
+                if (expired is null)
+                    continue;
+
+                foreach (var key in expired)
+                {
+                    lane.Ranges[key].Semaphore.Release();
+                    lane.Ranges.Remove(key);
+                }
             }
         }
     }

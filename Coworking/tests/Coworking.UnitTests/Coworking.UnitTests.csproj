@@ -20,6 +20,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Coworking.Domain\Coworking.Domain.csproj" />
+    <ProjectReference Include="..\..\src\Coworking.Infrastructure\Coworking.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

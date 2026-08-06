@@ -1,3 +1,4 @@
+using Coworking.Domain.Common;
 using Coworking.Domain.Entities;
 using Coworking.Domain.Enums;
 using Coworking.Domain.ValueObjects;
@@ -208,12 +209,8 @@ internal static class DevDataSeeder
     /// <summary>
     /// Anchors a booking to the coworking's local clock instead of to UtcNow.
     /// </summary>
-    private static DateTimeOffset LocalTime(DateOnly date, TimeOnly time, TimeZoneInfo timeZone)
-    {
-        var local = date.ToDateTime(time);
-
-        return new DateTimeOffset(local, timeZone.GetUtcOffset(local));
-    }
+    private static DateTimeOffset LocalTime(DateOnly date, TimeOnly time, TimeZoneInfo timeZone) =>
+        ZonedTime.FromWallClock(date.ToDateTime(time), timeZone);
 
     private static Booking BuildBooking(string userName,
         string userEmail,

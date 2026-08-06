@@ -1,4 +1,5 @@
 using Coworking.Application.Abstractions;
+using Coworking.Domain.Common;
 using Coworking.Application.Common.Exceptions;
 using Coworking.Application.Features.Bookings.Queries.GetDeskAvailability.Dtos;
 using Coworking.Application.Features.Bookings.Queries.GetDeskAvailability.Responses;
@@ -37,14 +38,37 @@ internal sealed class GetDeskAvailabilityQueryHandler(
             coworking.TimeZone,
             busy);
 
+        var (totalSlots, availableSlots) = CountSlots(intervals, coworking.SlotSize.Minutes);
+
         return new DeskAvailabilityResponse
         {
             DeskId = desk.Id,
             SlotSizeMinutes = coworking.SlotSize.Minutes,
+            TotalSlots = totalSlots,
+            AvailableSlots = availableSlots,
             Intervals = intervals
                 .Select(i => new AvailabilityIntervalDto(i.Start, i.End, i.IsAvailable))
                 .ToList()
         };
+    }
+
+    private static (int Total, int Available) CountSlots(
+        IReadOnlyList<AvailabilityInterval> intervals, int slotSizeMinutes)
+    {
+        var total = 0;
+        var available = 0;
+
+        foreach (var interval in intervals)
+        {
+            var slots = (int)((interval.End - interval.Start).TotalMinutes / slotSizeMinutes);
+
+            total += slots;
+
+            if (interval.IsAvailable)
+                available += slots;
+        }
+
+        return (total, available);
     }
 
     private async Task<CoworkingMeta> GetCoworkingMetaAsync(int deskId, CancellationToken ct)
@@ -66,14 +90,10 @@ internal sealed class GetDeskAvailabilityQueryHandler(
     private static (DateTimeOffset Start, DateTimeOffset End) ToUtcBoundaries(
         DateOnly dateFrom, DateOnly dateTo, TimeZoneInfo timeZone)
     {
-        // GetUtcOffset, not ConvertTimeToUtc: local midnight may not exist on a DST date
-        DateTimeOffset ToInstant(DateTime local) =>
-            new(local, timeZone.GetUtcOffset(local));
-
         // +2 days: a working window may run past midnight into the next day
         return (
-            ToInstant(dateFrom.ToDateTime(TimeOnly.MinValue)),
-            ToInstant(dateTo.AddDays(2).ToDateTime(TimeOnly.MinValue)));
+            ZonedTime.FromWallClock(dateFrom.ToDateTime(TimeOnly.MinValue), timeZone),
+            ZonedTime.FromWallClock(dateTo.AddDays(2).ToDateTime(TimeOnly.MinValue), timeZone));
     }
 
     private sealed record CoworkingMeta(

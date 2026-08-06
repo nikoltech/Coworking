@@ -7,4 +7,8 @@ public record DeskAvailabilityResponse
     public int DeskId { get; init; }
     public int SlotSizeMinutes { get; init; }
     public IReadOnlyList<AvailabilityIntervalDto> Intervals { get; init; } = [];
+
+    // counted from durations; there is no slot grid
+    public int TotalSlots { get; init; }
+    public int AvailableSlots { get; init; }
 }

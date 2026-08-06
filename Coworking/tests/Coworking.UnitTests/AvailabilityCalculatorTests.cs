@@ -370,6 +370,27 @@ public class AvailabilityCalculatorTests
         Assert.Equal(busy[0].Item2, booked.End);
     }
 
+    // equality compares instants, so only an explicit offset check catches a wrong label
+    [Fact]
+    public void BookingAfterATransition_CarriesTheOffsetOfItsOwnInstant()
+    {
+        var date = new DateOnly(2026, 3, 29);
+        var midnight = new TimeOnly(0, 0);
+        var summerOffset = TimeSpan.FromHours(3);
+        var busy = new[]
+        {
+            (new DateTimeOffset(date.ToDateTime(new TimeOnly(10, 0)), summerOffset),
+             new DateTimeOffset(date.ToDateTime(new TimeOnly(11, 0)), summerOffset))
+        };
+
+        var intervals = Calculate(date, date, midnight, midnight, Kyiv, busy);
+
+        // the transition is at 03:00, so a 10:00 booking sits entirely on summer time
+        var booked = Assert.Single(intervals, i => !i.IsAvailable);
+        Assert.Equal(summerOffset, booked.Start.Offset);
+        Assert.Equal(summerOffset, booked.End.Offset);
+    }
+
     // Havana switches at 00:00, so local midnight does not exist on the transition day.
     [Fact]
     public void ZoneTransitioningAtMidnight_ResolvesWithoutThrowing()
