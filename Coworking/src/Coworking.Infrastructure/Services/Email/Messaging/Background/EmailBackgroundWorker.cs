@@ -47,7 +47,7 @@ public sealed class EmailBackgroundWorker(
         {
             await _retryPipeline.ExecuteAsync(async token =>
             {
-                using var scope = scopeFactory.CreateScope();
+                await using var scope = scopeFactory.CreateAsyncScope();
                 var sender = scope.ServiceProvider.GetRequiredService<IEmailSender>();
 
                 await sender.SendRawEmailAsync(email.To, email.Subject, email.Body, token);
