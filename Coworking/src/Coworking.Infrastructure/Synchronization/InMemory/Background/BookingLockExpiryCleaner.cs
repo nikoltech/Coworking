@@ -1,8 +1,9 @@
 ﻿using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace Coworking.Infrastructure.Synchronization.InMemory.Background;
 
-internal sealed class BookingLockExpiryCleaner(InMemoryBookingAccessCoordinator synchronizer)
+internal sealed class BookingLockExpiryCleaner(ILogger<BookingLockExpiryCleaner> logger, InMemoryBookingAccessCoordinator synchronizer)
     : BackgroundService
 {
     private static readonly TimeSpan Interval = InMemoryBookingAccessCoordinator.DefaultAcquireTimeout * 2;
@@ -17,7 +18,12 @@ internal sealed class BookingLockExpiryCleaner(InMemoryBookingAccessCoordinator 
                 await synchronizer.CleanExpiredAsync();
             }
         }
-        catch (OperationCanceledException) { }
-        catch (Exception) { throw; }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        { }
+        catch (Exception ex)
+        {
+            logger.LogCritical(ex, "BookingLockExpiryCleaner failed");
+            throw;
+        }
     }
 }

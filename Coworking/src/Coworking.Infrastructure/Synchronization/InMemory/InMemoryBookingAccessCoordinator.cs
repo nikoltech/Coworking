@@ -95,6 +95,7 @@ public sealed class InMemoryBookingAccessCoordinator : IBookingAccessCoordinator
         // each lane is locked briefly and independently
         foreach (var lane in _lanes.Values)
         {
+            // TODO: avoid unnecessary global locks and shutdown wait time. Ensure enter range stop_grace_period/SIGTERM !!
             using (await lane.Lock.LockAsync())
             {
                 List<RangeKey>? expired = null;

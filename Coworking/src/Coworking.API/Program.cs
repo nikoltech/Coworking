@@ -7,6 +7,7 @@ using Coworking.Infrastructure.Persistence;
 using Coworking.Messaging;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Host.ConfigureHostOptions(o => o.ServicesStopConcurrently = true);
 
 var config = builder.Configuration;
 

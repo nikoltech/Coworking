@@ -19,6 +19,7 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
+    stop_grace_period: 30s
 
   rabbitmq:
     image: rabbitmq:3-management
