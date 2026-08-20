@@ -57,7 +57,7 @@ internal class CreateBookingCommandHandler(
         await PublishBookingCreatedAsync(request, desk, start, end, ct);
         await dataContext.SaveChangesAsync(ct);
 
-        await transaction.CommitAsync(ct);
+        await transaction.CommitAsync(CancellationToken.None);
 
         return new(booking.AccessCode, booking.Id);
     }

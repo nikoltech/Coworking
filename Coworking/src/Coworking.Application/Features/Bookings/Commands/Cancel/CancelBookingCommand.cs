@@ -20,26 +20,18 @@ internal class CancelBookingCommandHandler(IMediator mediator, IAppDbContext dat
 
         using var transaction = await dataContext.BeginTransactionAsync(ct);
 
-        try
-        {
-            booking = await dataContext.Set<Booking>()
-                .Include(b => b.Desk)
-                    .ThenInclude(d => d.Coworking)
-                .FirstOrDefaultAsync(b => b.Id == request.BookingId, ct)
-                ?? throw new NotFoundException($"Booking with ID {request.BookingId} not found.");
+        booking = await dataContext.Set<Booking>()
+            .Include(b => b.Desk)
+                .ThenInclude(d => d.Coworking)
+            .FirstOrDefaultAsync(b => b.Id == request.BookingId, ct)
+            ?? throw new NotFoundException($"Booking with ID {request.BookingId} not found.");
 
-            booking.SetStatus(BookingStatus.Cancelled);
+        booking.SetStatus(BookingStatus.Cancelled);
 
-            await PublishBookingCancelledAsync(booking, ct);
-            await dataContext.SaveChangesAsync(ct);
+        await PublishBookingCancelledAsync(booking, ct);
+        await dataContext.SaveChangesAsync(ct);
 
-            await transaction.CommitAsync(ct);
-        }
-        catch
-        {
-            await transaction.RollbackAsync(ct);
-            throw;
-        }
+        await transaction.CommitAsync(CancellationToken.None);
     }
 
     private Task PublishBookingCancelledAsync(Booking booking, CancellationToken ct) =>
