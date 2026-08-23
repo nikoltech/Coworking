@@ -20,7 +20,8 @@ known set of schemas, not a full Squidex SDK.
         "DefaultClient": "Default",
         "SupportedLocales": [ "uk-UA", "en" ],
         "DefaultLocale": "en",
-        "Retry": { "MaxAttempts": 3, "BaseDelaySeconds": 1.0 },
+        "Retry": { "MaxAttempts": 3 },
+        "Limits": { "MaxParallelRequests": 16 },
         "Clients": {
           "Default":  { "ClientId": "my-app:default",  "ClientSecret": "secret" },
           "Frontend": { "ClientId": "my-app:frontend", "ClientSecret": "secret" }
@@ -39,6 +40,34 @@ That's the whole setup. `ISquidexContext` is then ready to inject:
 - **One app configured** → `ISquidexContext` is registered unkeyed.
 - **Several apps** → registered keyed by app name (`[FromKeyedServices("Blog")]`); set
   `DefaultApp` if one of them should *also* be available unkeyed.
+
+### Load and retries
+
+`Limits.MaxParallelRequests` caps how many requests a **single** operation fans out into —
+paging a schema with `GetAllAsync`, or splitting an id list in `GetByIdsAsync`. It does not
+limit how many operations you start: total load stays yours to manage.
+
+`Retry.MaxAttempts` counts requests, not extra ones — `3` means at most three sends. A
+`Retry-After` header is obeyed when the server sends one; otherwise the pause grows
+exponentially from one second. Either way it is spread randomly, so parallel requests do not
+all come back at once.
+
+There is no option for how long a call may take in total, because one app-wide number cannot
+serve both a user-facing endpoint and a background sync. Pass a deadline instead — it bounds
+the requests, the retry pauses and the parallel batches alike:
+
+```csharp
+using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+cts.CancelAfter(TimeSpan.FromSeconds(3));
+
+var faq = await context.Set<Faq>("faq").GetAllAsync(ct: cts.Token);
+```
+
+A generous deadline waits out a long `Retry-After` and succeeds; a tight one gives up. Both
+fall out of the caller's own budget, with nothing to configure here.
+
+> **Removed:** `Retry.BaseDelaySeconds`. The backoff now starts from a fixed one second, and
+> how long a call may wait is the caller's deadline rather than a setting.
 
 `DefaultLocale`/`SupportedLocales` can be omitted — they're then fetched from the Squidex app
 on startup (see `SquidexLocaleProvider.InitializeAsync`).

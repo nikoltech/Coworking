@@ -83,12 +83,19 @@ internal sealed class SquidexApiClient : SquidexHttpClientBase, ISquidexApiClien
         QueryOptions? queryOptions = null,
         CancellationToken ct = default)
     {
-        using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        var batches = ids.Chunk(IdsBatchSize).ToArray();
+        var results = new ResponseSchema<T>[batches.Length];
 
-        var tasks = ids.Chunk(IdsBatchSize)
-            .Select(batch => QueryByIdsBatchWithCancelAsync<T>(schema, batch, queryOptions, cts));
+        await Parallel.ForEachAsync(
+            Enumerable.Range(0, batches.Length),
+            new ParallelOptions
+            {
+                MaxDegreeOfParallelism = AppOptions.Limits.MaxParallelRequests,
+                CancellationToken = ct
+            },
+            async (index, token) =>
+                results[index] = await QueryByIdsBatchAsync<T>(schema, batches[index], queryOptions, token));
 
-        var results = await Task.WhenAll(tasks);
         var allItems = results.SelectMany(r => r.Items).ToList();
 
         return new ResponseSchema<T>(allItems.Count, allItems);
@@ -233,21 +240,6 @@ internal sealed class SquidexApiClient : SquidexHttpClientBase, ISquidexApiClien
             queryOptions);
 
         return SendAndDeserializeAsync<ResponseSchema<T>>(request, ct);
-    }
-
-    private async Task<ResponseSchema<T>> QueryByIdsBatchWithCancelAsync<T>(string schema, string[] batch,
-        QueryOptions? queryOptions,
-        CancellationTokenSource cts)
-    {
-        try
-        {
-            return await QueryByIdsBatchAsync<T>(schema, batch, queryOptions, cts.Token);
-        }
-        catch
-        {
-            cts.Cancel();
-            throw;
-        }
     }
 
     private HttpRequestMessage BuildRequest(HttpMethod method, string url,

@@ -5,7 +5,7 @@ using Coworking.External.Squidex.Abstractions.Pagination;
 namespace Coworking.External.Squidex.Pagination;
 
 /// <summary>
-/// Fetches all pages of a Squidex query in parallel.
+/// Fetches all pages of a Squidex query in bounded parallel batches.
 /// pageSize is passed per-call from AppOptions to support multiple apps.
 /// </summary>
 public sealed class SquidexPaginator : ISquidexPaginator
@@ -16,60 +16,69 @@ public sealed class SquidexPaginator : ISquidexPaginator
         QueryOptions? queryOptions = null,
         CancellationToken ct = default)
     {
-        baseQuery.Take = pageSize;
-        baseQuery.Skip = 0;
+        var maxParallel = client.AppOptions.Limits.MaxParallelRequests;
 
-        var firstPage = await client.QueryAsync<T>(schema, baseQuery, queryOptions, ct);
+        var first = await FetchPageAsync<T>(schema, client, baseQuery, 0, pageSize, queryOptions, ct);
+        var pages = new List<ResponseSchema<T>> { first };
 
-        if (firstPage.Total <= pageSize)
-            return firstPage;
+        while (pages.Last().MayHaveMore(pageSize))
+        {
+            var fetched = pages.Count;
 
-        var remainingPages = await FetchRemainingPagesAsync<T>(schema, client,
-            baseQuery,
-            firstPage.Total,
-            pageSize,
-            queryOptions,
-            ct);
+            var batch = await FetchBatchAsync<T>(schema, client, baseQuery,
+                startPage: fetched,
+                pageCount: NextBatchSize(first.Total, fetched, pageSize),
+                pageSize, maxParallel, queryOptions, ct);
 
-        var allItems = firstPage.Items
-            .Concat(remainingPages.SelectMany(p => p.Items))
-            .ToList();
+            pages.AddRange(batch);
+        }
 
-        return firstPage with { Items = allItems };
+        return Combine(pages);
     }
 
     // private
 
-    private static async Task<ResponseSchema<T>[]> FetchRemainingPagesAsync<T>(string schema, ISquidexApiClient client,
+    // no count to go by (-1) leaves nothing to predict, so take one page and look at it
+    private static int NextBatchSize(long total, int fetched, int pageSize) =>
+        total < 0 ? 1 : Math.Max(PagesFor(total, pageSize) - fetched, 1);
+
+    private static int PagesFor(long total, int pageSize) =>
+        (int)Math.Ceiling(total / (double)pageSize);
+
+    private static async Task<ResponseSchema<T>[]> FetchBatchAsync<T>(string schema, ISquidexApiClient client,
         RequestQuery baseQuery,
-        long total,
+        int startPage,
+        int pageCount,
         int pageSize,
+        int maxParallel,
         QueryOptions? queryOptions,
         CancellationToken ct)
     {
-        using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        var pageCount = (int)Math.Ceiling(total / (double)pageSize);
+        var batch = new ResponseSchema<T>[pageCount];
 
-        var pageTasks = Enumerable.Range(1, pageCount - 1)
-            .Select(page => FetchPageAsync<T>(schema, client, PageQuery(baseQuery, page, pageSize), queryOptions, cts));
+        await Parallel.ForEachAsync(
+            Enumerable.Range(0, pageCount),
+            new ParallelOptions { MaxDegreeOfParallelism = maxParallel, CancellationToken = ct },
+            async (index, token) =>
+                batch[index] = await FetchPageAsync<T>(
+                    schema, client, baseQuery, startPage + index, pageSize, queryOptions, token));
 
-        return await Task.WhenAll(pageTasks);
+        return batch;
     }
 
-    private static async Task<ResponseSchema<T>> FetchPageAsync<T>(string schema, ISquidexApiClient client,
-        RequestQuery query,
+    private static Task<ResponseSchema<T>> FetchPageAsync<T>(string schema, ISquidexApiClient client,
+        RequestQuery baseQuery,
+        int page,
+        int pageSize,
         QueryOptions? queryOptions,
-        CancellationTokenSource cts)
+        CancellationToken ct) =>
+        client.QueryAsync<T>(schema, PageQuery(baseQuery, page, pageSize), queryOptions, ct);
+
+    private static ResponseSchema<T> Combine<T>(List<ResponseSchema<T>> pages)
     {
-        try
-        {
-            return await client.QueryAsync<T>(schema, query, queryOptions, cts.Token);
-        }
-        catch
-        {
-            cts.Cancel();
-            throw;
-        }
+        var items = pages.SelectMany(p => p.Items).ToList();
+
+        return new ResponseSchema<T>(items.Count, items);   // counted, not the server's number
     }
 
     private static RequestQuery PageQuery(RequestQuery source, int page, int pageSize) => new()

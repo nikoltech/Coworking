@@ -8,6 +8,7 @@ using Coworking.External.Squidex.UnitTests.Helpers;
 using FluentAssertions;
 using RichardSzalay.MockHttp;
 using System.Net;
+using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 
@@ -200,7 +201,7 @@ public sealed class SquidexAssetClientTests
     {
         // MaxAttempts = 2 → exactly one retry, proving the loop reads options
         // rather than the old hardwired const of 3.
-        var fast = _options with { Retry = new SquidexRetryOptions { MaxAttempts = 2, BaseDelaySeconds = 0 } };
+        var fast = _options with { Retry = new SquidexRetryOptions { MaxAttempts = 2 } };
 
         var callCount = 0;
         _mockHttp.When(HttpMethod.Get, AssetsUrl).Respond(_ =>
@@ -216,9 +217,34 @@ public sealed class SquidexAssetClientTests
     }
 
     [Fact]
+    public async Task QueryAsync_ObeysRetryAfter_BeforeRetrying()
+    {
+        var patient = _options with { Retry = new SquidexRetryOptions { MaxAttempts = 2 } };
+
+        var callCount = 0;
+        _mockHttp.When(HttpMethod.Get, AssetsUrl).Respond(_ =>
+        {
+            callCount++;
+
+            if (callCount > 1)
+                return OkResponse(SquidexFakes.MakeAssetsResponse(SquidexFakes.MakeAsset()));
+
+            var response = new HttpResponseMessage(HttpStatusCode.TooManyRequests);
+            response.Headers.RetryAfter = new RetryConditionHeaderValue(TimeSpan.Zero);
+
+            return response;
+        });
+
+        var result = await CreateClient(patient).QueryAsync();
+
+        result.Total.Should().Be(1);
+        callCount.Should().Be(2);
+    }
+
+    [Fact]
     public async Task QueryAsync_RetriesThenSucceeds_OnTransientError()
     {
-        var fast = _options with { Retry = new SquidexRetryOptions { MaxAttempts = 3, BaseDelaySeconds = 0 } };
+        var fast = _options with { Retry = new SquidexRetryOptions { MaxAttempts = 3 } };
 
         var callCount = 0;
         _mockHttp.When(HttpMethod.Get, AssetsUrl).Respond(_ =>

@@ -22,6 +22,9 @@ internal abstract class SquidexHttpClientBase
     private readonly HttpClient _http;
     private readonly string _clientName;
 
+    /// <summary>Scale of the backoff curve: a pause is drawn from [0, FirstDelay · 2^(n-1)].</summary>
+    private static readonly TimeSpan FirstDelay = TimeSpan.FromSeconds(1);
+
     /// <summary>Read + write options shared by all Squidex payloads.</summary>
     protected static readonly JsonSerializerOptions Json = new()
     {
@@ -74,6 +77,7 @@ internal abstract class SquidexHttpClientBase
     {
         var retry = AppOptions.Retry;
 
+        // TODO: think about another approach: Microsoft.Extensions.Http.Resilience
         for (var attempt = 1; attempt <= retry.MaxAttempts; attempt++)
         {
             var requestToSend = attempt == 1
@@ -85,12 +89,43 @@ internal abstract class SquidexHttpClientBase
             if (!IsTransient(response.StatusCode) || attempt == retry.MaxAttempts)
                 return response;
 
+            var delay = NextDelay(response, attempt);
+
             response.Dispose();
-            await Task.Delay(
-                TimeSpan.FromSeconds(retry.BaseDelaySeconds * Math.Pow(2, attempt - 1)), ct);
+            await Task.Delay(delay, ct);
         }
 
         throw new UnreachableException();
+    }
+
+    /// <summary>
+    /// Retry-After when the server sent one, otherwise a window that doubles each attempt.
+    /// The wait is drawn randomly so parallel requests do not all come back at once.
+    /// </summary>
+    private static TimeSpan NextDelay(HttpResponseMessage response, int attempt)
+    {
+        // the server's figure is a floor; the jitter keeps the herd from re-syncing on it
+        if (RetryAfter(response) is { } requested)
+            return requested + Jitter(FirstDelay);
+
+        return Jitter(FirstDelay * Math.Pow(2, attempt - 1));
+    }
+
+    private static TimeSpan Jitter(TimeSpan window) => window * Random.Shared.NextDouble();
+
+    private static TimeSpan? RetryAfter(HttpResponseMessage response)
+    {
+        var header = response.Headers.RetryAfter;
+
+        if (header?.Delta is { } delta)
+            return delta;
+
+        if (header?.Date is not { } date)
+            return null;
+
+        var wait = date - DateTimeOffset.UtcNow;
+
+        return wait > TimeSpan.Zero ? wait : TimeSpan.Zero;
     }
 
     private static bool IsTransient(HttpStatusCode code) => code is

@@ -21,4 +21,6 @@ public sealed record SquidexAppOptions
     public Dictionary<string, SquidexClientCredentials> Clients { get; init; } = new();
 
     public SquidexRetryOptions Retry { get; init; } = new();
+
+    public SquidexLimitsOptions Limits { get; init; } = new();
 }
