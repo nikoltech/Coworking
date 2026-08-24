@@ -258,7 +258,7 @@ internal sealed class SquidexApiClient : SquidexHttpClientBase, ISquidexApiClien
         if (opts.IncludeUnpublished)
             request.Headers.Add(SquidexRequestHeaders.Unpublished, "true");
 
-        if (opts.NoSlowTotal)
+        if (opts.NoSlowTotal is { } isSet)
             request.Headers.Add(SquidexRequestHeaders.NoSlowTotal, "true");
 
         if (opts.Flatten)

@@ -4,7 +4,7 @@
 /// Per-request Squidex query options.
 /// Controls X-Languages, X-Unpublished, X-NoSlowTotal and X-Flatten headers.
 /// </summary>
-public sealed class QueryOptions
+public sealed record QueryOptions
 {
     public static readonly QueryOptions Default = new();
 

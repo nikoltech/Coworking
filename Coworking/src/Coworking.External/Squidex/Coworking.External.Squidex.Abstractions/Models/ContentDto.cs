@@ -8,4 +8,4 @@ public sealed record ContentDto<T>(
     [property: JsonPropertyName("created")] DateTime Created,
     [property: JsonPropertyName("lastModified")] DateTime LastModified,
     [property: JsonPropertyName("status")] string Status,
-    [property: JsonPropertyName("data")] T Data);
+    [property: JsonPropertyName("data")] T? Data);

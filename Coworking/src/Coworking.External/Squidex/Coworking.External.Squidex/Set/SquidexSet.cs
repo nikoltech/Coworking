@@ -96,6 +96,7 @@ public class SquidexSet<T> : ISquidexSet<T> where T : class
             new QueryOptions { IncludeUnpublished = includeUnpublished, NoSlowTotal = true },
             ct);
 
-        return result.Total > 0;
+        // NoSlowTotal means Total may come back as -1; the single item asked for is the answer
+        return result?.Items?.Count > 0;
     }
 }

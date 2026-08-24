@@ -18,7 +18,11 @@ public sealed class SquidexPaginator : ISquidexPaginator
     {
         var maxParallel = client.AppOptions.Limits.MaxParallelRequests;
 
-        var first = await FetchPageAsync<T>(schema, client, baseQuery, 0, pageSize, queryOptions, ct);
+        // the count is a subset of work we are committed to anyway, and without it
+        // the pages can only be walked one at a time
+        var options = (queryOptions ?? QueryOptions.Default) with { NoSlowTotal = false };
+
+        var first = await FetchPageAsync<T>(schema, client, baseQuery, 0, pageSize, options, ct);
         var pages = new List<ResponseSchema<T>> { first };
 
         while (pages.Last().MayHaveMore(pageSize))
@@ -28,7 +32,7 @@ public sealed class SquidexPaginator : ISquidexPaginator
             var batch = await FetchBatchAsync<T>(schema, client, baseQuery,
                 startPage: fetched,
                 pageCount: NextBatchSize(first.Total, fetched, pageSize),
-                pageSize, maxParallel, queryOptions, ct);
+                pageSize, maxParallel, options, ct);
 
             pages.AddRange(batch);
         }

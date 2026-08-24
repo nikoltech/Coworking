@@ -182,6 +182,24 @@ public sealed class SquidexPaginatorTests
             o!.IncludeUnpublished.Should().BeTrue());
     }
 
+    [Fact]
+    public async Task FetchAllAsync_ClearsNoSlowTotal_EvenWhenTheCallerAsksForIt()
+    {
+        // Arrange — without a total the pages could only be walked one at a time
+        var capturedOptions = new ConcurrentBag<QueryOptions?>();
+
+        ServePages(itemCount: 7, reportedTotal: 7, onOptions: capturedOptions.Add);
+
+        // Act
+        await _paginator.FetchAllAsync<SquidexFakes.TestSchema>(
+            "cities", _client, RequestQuery.Create(), PageSize,
+            new QueryOptions { NoSlowTotal = true });
+
+        // Assert
+        capturedOptions.Should().HaveCountGreaterThan(1);
+        capturedOptions.Should().AllSatisfy(o => o!.NoSlowTotal.Should().BeFalse());
+    }
+
     // helpers
 
     private Task<ResponseSchema<SquidexFakes.TestSchema>> FetchAllAsync() =>

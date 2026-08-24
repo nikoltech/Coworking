@@ -160,7 +160,7 @@ public sealed class SquidexSetTests
     }
 
     [Fact]
-    public async Task ExistsAsync_ReturnsTrue_WhenTotalGreaterThanZero()
+    public async Task ExistsAsync_ReturnsTrue_WhenAnItemComesBack()
     {
         // Arrange
         _client.QueryAsync<SquidexFakes.TestSchema>(
@@ -177,7 +177,7 @@ public sealed class SquidexSetTests
     }
 
     [Fact]
-    public async Task ExistsAsync_ReturnsFalse_WhenTotalIsZero()
+    public async Task ExistsAsync_ReturnsFalse_WhenNothingComesBack()
     {
         // Arrange
         _client.QueryAsync<SquidexFakes.TestSchema>(
@@ -190,6 +190,23 @@ public sealed class SquidexSetTests
 
         // Assert
         exists.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task ExistsAsync_ReturnsTrue_WhenSquidexSkippedTheCount()
+    {
+        // Arrange — NoSlowTotal makes Squidex report -1; the item itself is the answer
+        _client.QueryAsync<SquidexFakes.TestSchema>(
+                "test-schema", Arg.Any<RequestQuery>(),
+                Arg.Any<QueryOptions?>(), Arg.Any<CancellationToken>())
+               .Returns(SquidexFakes.MakePagedResponse(-1, TestStatuses.Published,
+                   SquidexFakes.MakeTestSchema("x")));
+
+        // Act
+        var exists = await CreateRepo().ExistsAsync(SquidexFilter.Eq("data.Name.iv", "x"));
+
+        // Assert
+        exists.Should().BeTrue();
     }
 
     [Fact]
