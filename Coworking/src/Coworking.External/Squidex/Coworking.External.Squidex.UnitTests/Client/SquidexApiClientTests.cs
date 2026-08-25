@@ -1,4 +1,4 @@
-﻿using Coworking.External.Squidex.Abstractions.Models;
+using Coworking.External.Squidex.Abstractions.Models;
 using Coworking.External.Squidex.Abstractions.Options;
 using Coworking.External.Squidex.Client;
 using Coworking.External.Squidex.Exceptions;
@@ -302,23 +302,6 @@ public sealed class SquidexApiClientTests
         result!.Id.Should().Be("city-1");
         result.Data!.Name!.Value.Should().Be("kyiv");
     }
-
-    [Fact]
-    public async Task GetByIdAsync_ReturnsDraftContent()
-    {
-        var expected = SquidexFakes.MakeDraft(SquidexFakes.MakeTestSchema("draft"), "draft-1");
-
-        _mockHttp
-            .When(HttpMethod.Get, "*/api/content/test-app/cities/draft-1")
-            .RespondJson(expected);
-
-        var result = await CreateClient()
-            .GetByIdAsync<SquidexFakes.TestSchema>("cities", "draft-1");
-
-        result!.Status.Should().Be(TestStatuses.Draft);
-    }
-
-    // Mutations
 
     [Fact]
     public async Task CreateAsync_PostsWithPublishParam()

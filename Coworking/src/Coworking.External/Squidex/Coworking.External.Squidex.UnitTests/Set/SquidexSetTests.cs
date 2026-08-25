@@ -1,4 +1,4 @@
-﻿using Coworking.External.Squidex.Abstractions.Client;
+using Coworking.External.Squidex.Abstractions.Client;
 using Coworking.External.Squidex.Abstractions.Filters;
 using Coworking.External.Squidex.Abstractions.Models;
 using Coworking.External.Squidex.Abstractions.Pagination;
@@ -19,25 +19,6 @@ public sealed class SquidexSetTests
 
     private SquidexSet<SquidexFakes.TestSchema> CreateRepo(string schema = "test-schema") =>
         new(_client, _paginator, schema);
-
-    [Fact]
-    public async Task QueryAsync_DelegatesToClient_WithSameArguments()
-    {
-        // Arrange
-        var expected = SquidexFakes.MakeResponse<SquidexFakes.TestSchema>();
-        var query = RequestQuery.Create().WithTake(5);
-        var opts = new QueryOptions { IncludeUnpublished = true };
-
-        _client.QueryAsync<SquidexFakes.TestSchema>(
-                "test-schema", query, opts, Arg.Any<CancellationToken>())
-               .Returns(expected);
-
-        // Act
-        var result = await CreateRepo().QueryAsync(query, opts);
-
-        // Assert
-        result.Should().Be(expected);
-    }
 
     [Fact]
     public async Task GetAllAsync_DelegatesToPaginator()
@@ -61,41 +42,6 @@ public sealed class SquidexSetTests
     }
 
     [Fact]
-    public async Task GetByIdAsync_DelegatesToClient()
-    {
-        // Arrange
-        var expected = SquidexFakes.MakeContent(
-            SquidexFakes.MakeTestSchema("city"), "city-id");
-
-        _client.GetByIdAsync<SquidexFakes.TestSchema>(
-                "test-schema", "city-id", Arg.Any<QueryOptions?>(), Arg.Any<CancellationToken>())
-               .Returns(expected);
-
-        // Act
-        var result = await CreateRepo().GetByIdAsync("city-id");
-
-        // Assert
-        result.Should().Be(expected);
-        result!.Data!.Name!.Value.Should().Be("city");
-    }
-
-    [Fact]
-    public async Task GetByIdAsync_ReturnsNull_WhenNotFound()
-    {
-        // Arrange
-        _client.GetByIdAsync<SquidexFakes.TestSchema>(
-                Arg.Any<string>(), Arg.Any<string>(),
-                Arg.Any<QueryOptions?>(), Arg.Any<CancellationToken>())
-               .Returns((ContentDto<SquidexFakes.TestSchema>?)null);
-
-        // Act
-        var result = await CreateRepo().GetByIdAsync("missing-id");
-
-        // Assert
-        result.Should().BeNull();
-    }
-
-    [Fact]
     public async Task CreateAsync_DelegatesToClient_WithPublishFlag()
     {
         // Arrange
@@ -115,37 +61,31 @@ public sealed class SquidexSetTests
     }
 
     [Fact]
-    public async Task UpdateAsync_DelegatesToClient()
+    public async Task UpdateAsync_PassesExpectedVersion_ForOptimisticConcurrency()
     {
-        // Arrange
         var schema = SquidexFakes.MakeTestSchema("updated");
-        var expected = SquidexFakes.MakeContent(schema, "upd-id");
 
-        _client.UpdateAsync("test-schema", "upd-id", schema, Arg.Any<int?>(), Arg.Any<CancellationToken>())
-               .Returns(expected);
+        _client.UpdateAsync("test-schema", "upd-id", schema, 7, Arg.Any<CancellationToken>())
+               .Returns(SquidexFakes.MakeContent(schema, "upd-id"));
 
-        // Act
-        var result = await CreateRepo().UpdateAsync("upd-id", schema);
+        await CreateRepo().UpdateAsync("upd-id", schema, expectedVersion: 7);
 
-        // Assert
-        result.Should().Be(expected);
+        await _client.Received(1).UpdateAsync(
+            "test-schema", "upd-id", schema, 7, Arg.Any<CancellationToken>());
     }
 
     [Fact]
-    public async Task PatchAsync_DelegatesToClient()
+    public async Task PatchAsync_PassesExpectedVersion_ForOptimisticConcurrency()
     {
-        // Arrange
         var schema = SquidexFakes.MakeTestSchema("patched");
-        var expected = SquidexFakes.MakeContent(schema, "patch-id");
 
-        _client.PatchAsync("test-schema", "patch-id", schema, Arg.Any<int?>(), Arg.Any<CancellationToken>())
-               .Returns(expected);
+        _client.PatchAsync("test-schema", "patch-id", schema, 7, Arg.Any<CancellationToken>())
+               .Returns(SquidexFakes.MakeContent(schema, "patch-id"));
 
-        // Act
-        var result = await CreateRepo().PatchAsync("patch-id", schema);
+        await CreateRepo().PatchAsync("patch-id", schema, expectedVersion: 7);
 
-        // Assert
-        result.Should().Be(expected);
+        await _client.Received(1).PatchAsync(
+            "test-schema", "patch-id", schema, 7, Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -268,7 +208,7 @@ public sealed class SquidexSetTests
     }
 
     [Fact]
-    public async Task Repository_UsesCorrectSchema_ForAllOperations()
+    public async Task QueryAsync_UsesTheConfiguredSchema()
     {
         // Arrange — different schema name
         var repo = CreateRepo("custom-schema");

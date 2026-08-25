@@ -47,6 +47,12 @@ That's the whole setup. `ISquidexContext` is then ready to inject:
 paging a schema with `GetAllAsync`, or splitting an id list in `GetByIdsAsync`. It does not
 limit how many operations you start: total load stays yours to manage.
 
+The named client stays open for your own handlers:
+
+```csharp
+services.AddHttpClient(SquidexHttpClientNames.Api).AddHttpMessageHandler(...);
+```
+
 `Retry.MaxAttempts` counts requests, not extra ones — `3` means at most three sends. A
 `Retry-After` header is obeyed when the server sends one; otherwise the pause grows
 exponentially from one second. Either way it is spread randomly, so parallel requests do not
