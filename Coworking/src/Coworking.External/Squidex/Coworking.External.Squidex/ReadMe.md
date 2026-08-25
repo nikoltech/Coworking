@@ -122,6 +122,38 @@ public class GetCitiesHandler(ISquidexContext squidex)
 alternative for OData (`QueryODataAsync`). `QueryOptions` controls `X-Languages`,
 `X-Unpublished`, `X-NoSlowTotal`, `X-Flatten` per call.
 
+### Components
+
+A `Components` field arrives as a partitioned list. One component type needs nothing special:
+
+```csharp
+[JsonPropertyName("Blocks")] public IvField<List<TextBlock>>? Blocks { get; set; }
+```
+
+Several types need a discriminator. Squidex sends `schemaId`, but it differs per environment,
+so name a stable field of your own — `System.Text.Json` polymorphism cannot be used here,
+as it only reads a discriminator that is the first property:
+
+```csharp
+[SquidexComponent("componentType")]
+[SquidexComponentType("hero", typeof(HeroBlock))]
+[SquidexComponentType("cta", typeof(CtaBlock))]
+public abstract class PageBlock
+{
+    [JsonPropertyName("schemaId")] public string? SchemaId { get; set; }
+}
+```
+
+```csharp
+foreach (var block in page?.Data?.Blocks?.Value ?? [])
+{
+    var text = block switch { HeroBlock h => h.Heading, CtaBlock c => c.Label, _ => null };
+}
+```
+
+Nothing to register — the attribute is a `JsonConverterAttribute`. The discriminator is written
+back on save, since it is a real field of the component schema.
+
 ### Domain-specific repositories
 
 `Set<T>()` is ready to use as-is. For extra methods on a schema, derive from `SquidexSet<T>`:

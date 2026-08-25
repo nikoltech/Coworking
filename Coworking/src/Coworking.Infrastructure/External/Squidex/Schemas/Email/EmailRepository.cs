@@ -20,6 +20,6 @@ public sealed class EmailRepository(
                     .WithFilter(SquidexFilter.Eq(EmailPaths.Name, name)),
                 ct: ct);
 
-        return result.Items.FirstOrDefault()?.Data.Value?.Value;
+        return result.Items.FirstOrDefault()?.Data?.Value?.Value;
     }
 }

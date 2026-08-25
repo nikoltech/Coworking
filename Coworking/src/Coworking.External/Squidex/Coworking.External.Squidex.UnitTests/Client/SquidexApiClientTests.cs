@@ -47,8 +47,8 @@ public sealed class SquidexApiClientTests
             "cities", RequestQuery.Create().WithTake(10));
 
         result.Total.Should().Be(2);
-        result.Items[0].Data.Name!.Value.Should().Be("alpha");
-        result.Items[1].Data.Name!.Value.Should().Be("beta");
+        result.Items[0].Data!.Name!.Value.Should().Be("alpha");
+        result.Items[1].Data!.Name!.Value.Should().Be("beta");
     }
 
     [Fact]
@@ -300,7 +300,7 @@ public sealed class SquidexApiClientTests
 
         result.Should().NotBeNull();
         result!.Id.Should().Be("city-1");
-        result.Data.Name!.Value.Should().Be("kyiv");
+        result.Data!.Name!.Value.Should().Be("kyiv");
     }
 
     [Fact]

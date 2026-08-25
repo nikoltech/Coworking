@@ -76,7 +76,7 @@ public sealed class SquidexSetTests
 
         // Assert
         result.Should().Be(expected);
-        result!.Data.Name!.Value.Should().Be("city");
+        result!.Data!.Name!.Value.Should().Be("city");
     }
 
     [Fact]
