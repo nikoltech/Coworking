@@ -19,8 +19,12 @@ public sealed class Lifecycle<T> where T : notnull
     public IReadOnlySet<T> Available => _graph.From(Current);
 
     /// Move to a new state; throws if the graph forbids it.
+    /// Moving to the current state is valid and does nothing, history included.
     public void MoveTo(T to)
     {
+        if (EqualityComparer<T>.Default.Equals(Current, to))
+            return;
+
         if (!_graph.CanMove(Current, to))
             throw new InvalidTransitionException<T>(Current, to);
 

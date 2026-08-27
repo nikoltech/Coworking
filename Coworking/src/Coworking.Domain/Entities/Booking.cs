@@ -9,7 +9,7 @@ public class Booking : ITrackEntity, IHasStateGraph<BookingStatus>
 {
     public int Id { get; set; }
 
-    public Guid AccessCode { get; set; } = Guid.NewGuid();
+    public Guid AccessCode { get; set; } = Guid.CreateVersion7();
 
     public DateTimeOffset StartTime { get; set; }
 
@@ -61,13 +61,18 @@ public class Booking : ITrackEntity, IHasStateGraph<BookingStatus>
 
         return new Booking
         {
-            AccessCode = Guid.NewGuid(),
             DeskId = deskId,
             UserName = userName,
             UserEmail = userEmail,
             StartTime = utcStartTime,
             EndTime = utcEndTime
         };
+    }
+
+    public void Cancel()
+    {
+        SetStatus(BookingStatus.Cancelling);
+        SetStatus(BookingStatus.Cancelled);
     }
 
     public void SetStatus(BookingStatus newStatus)

@@ -1,4 +1,4 @@
-﻿using Coworking.Application.Behaviors;
+using Coworking.Application.Behaviors;
 using Coworking.Application.Behaviors.Performance;
 using Coworking.Application.Features.Bookings.Commands.Create;
 using FluentValidation;
@@ -45,7 +45,9 @@ public static class DependencyInjection
         cfg.AddOpenBehavior(typeof(ValidationBehavior<,>));
         // exception logging lives in GlobalExceptionHandler: it knows the mapped status,
         // so business 4xx are not reported as errors
-        // TransactionConflictRetryBehavior is registered by AddPersistence — it needs the DbContext
         cfg.AddOpenBehavior(typeof(DomainExceptionBehavior<,>));
+
+        // must stay last: it runs innermost and needs the untranslated database exception
+        cfg.AddOpenBehavior(typeof(TransactionConflictRetryBehavior<,>));
     }
 }

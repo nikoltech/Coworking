@@ -1,7 +1,9 @@
+using Coworking.Domain.Exceptions;
+
 namespace Coworking.Domain.Common.StateMachine;
 
 /// Thrown when a transition is not allowed by the graph.
-public sealed class InvalidTransitionException<T> : Exception where T : notnull
+public sealed class InvalidTransitionException<T> : DomainException where T : notnull
 {
     public T From { get; }
     public T To { get; }

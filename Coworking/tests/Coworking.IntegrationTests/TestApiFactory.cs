@@ -10,12 +10,15 @@ using Npgsql;
 namespace Coworking.IntegrationTests;
 
 /// <summary>
-/// Boots the real API against a separate database on the dev Postgres instance.
+/// Boots the real API against a separate database on the dev Postgres instance. Test classes
+/// run in parallel and nothing is cleaned up between runs, so each one gets its own database.
 /// </summary>
-public sealed class TestApiFactory(bool bypassCoordinator) : WebApplicationFactory<Program>
+public sealed class TestApiFactory(
+    bool bypassCoordinator,
+    string database = "coworking_tests",
+    Action<IServiceCollection>? configureServices = null)
+    : WebApplicationFactory<Program>
 {
-    private const string TestDatabase = "coworking_tests";
-
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         // Development, so user secrets supply the real db/broker credentials
@@ -44,11 +47,13 @@ public sealed class TestApiFactory(bool bypassCoordinator) : WebApplicationFacto
             if (bypassCoordinator)
                 services.Replace(
                     ServiceDescriptor.Singleton<IBookingAccessCoordinator, NoOpBookingAccessCoordinator>());
+
+            configureServices?.Invoke(services);
         });
     }
 
-    private static string WithTestDatabase(string connectionString) =>
-        new NpgsqlConnectionStringBuilder(connectionString) { Database = TestDatabase }.ConnectionString;
+    private string WithTestDatabase(string connectionString) =>
+        new NpgsqlConnectionStringBuilder(connectionString) { Database = database }.ConnectionString;
 
     private static void RemoveMassTransitHostedServices(IServiceCollection services)
     {

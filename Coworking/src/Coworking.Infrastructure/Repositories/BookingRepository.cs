@@ -17,7 +17,7 @@ internal class BookingRepository(AppDbContext context) : IBookingRepository
         return await context.Set<Booking>()
             .AsNoTracking()
             .Where(b => b.EndTime > DateTimeOffset.UtcNow)
-            .Where(BookingSpecifications.IsBlocking())
+            .Where(BookingSpecifications.IsActive())
             .AnyAsync(BookingSpecifications.OverlappingWith(deskId, start.ToUniversalTime(), end.ToUniversalTime()), cancellationToken);
     }
 

@@ -20,7 +20,7 @@ public static class BookingSpecifications
             booking.EndTime > newStart;
     }
 
-    public static Expression<Func<Booking, bool>> IsBlocking() =>
+    public static Expression<Func<Booking, bool>> IsActive() =>
         booking => booking.Status != BookingStatus.Cancelled &&
                    booking.Status != BookingStatus.Expired;
 

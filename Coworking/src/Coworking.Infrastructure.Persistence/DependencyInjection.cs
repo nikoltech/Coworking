@@ -1,11 +1,10 @@
-﻿using Coworking.Application.Abstractions;
+using Coworking.Application.Abstractions;
 using Coworking.Application.Abstractions.Transactions;
-using Coworking.Infrastructure.Persistence.Behaviors;
 using Coworking.Infrastructure.Persistence.Contexts;
 using Coworking.Infrastructure.Persistence.Interceptors;
 using Coworking.Infrastructure.Persistence.Transactions.Conflicts;
-using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -19,8 +18,8 @@ public static class DependencyInjection
         IConfiguration configuration)
     {
         services
-            .AddSingleton<TrackEntityInterceptor>()
-            .AddSingleton<BookingTimeInterceptor>()
+            .AddSingleton<IInterceptor, TrackEntityInterceptor>()
+            .AddSingleton<IInterceptor, BookingTimeInterceptor>()
             .AddSingleton<IDbConflictDetector, PostgresConflictDetector>();
 
         services.AddDbContext<AppDbContext>((sp, options) =>
@@ -28,9 +27,7 @@ public static class DependencyInjection
             options
                 .UseNpgsql(configuration.GetConnectionString("DefaultConnection"))
                 .UseSnakeCaseNamingConvention()
-                .AddInterceptors(
-                    sp.GetRequiredService<TrackEntityInterceptor>(),
-                    sp.GetRequiredService<BookingTimeInterceptor>());
+                .AddInterceptors(sp.GetServices<IInterceptor>());
 
             var env = sp.GetRequiredService<IHostEnvironment>();
             if (env.IsDevelopment())
@@ -43,8 +40,6 @@ public static class DependencyInjection
         });
 
         services.AddScoped<IAppDbContext>(sp => sp.GetRequiredService<AppDbContext>());
-
-        services.AddTransient(typeof(IPipelineBehavior<,>), typeof(TransactionConflictRetryBehavior<,>));
 
         return services;
     }

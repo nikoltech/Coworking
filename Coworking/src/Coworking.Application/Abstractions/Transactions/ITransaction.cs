@@ -1,4 +1,4 @@
-﻿using System.Data;
+using System.Data;
 
 namespace Coworking.Application.Abstractions.Transactions;
 
@@ -8,6 +8,11 @@ public interface ITransaction : IAsyncDisposable, IDisposable
 {
     IDbTransaction GetUnderlyingTransaction();
 
-    Task CommitAsync(CancellationToken ct = default);
+    /// <summary>
+    /// Commits the transaction. Takes no cancellation token on purpose: once COMMIT is sent
+    /// the database decides the outcome, and abandoning the wait yields an unknown result
+    /// rather than a rollback. Change your mind before calling this.
+    /// </summary>
+    Task CommitAsync();
     Task RollbackAsync(CancellationToken ct = default);
 }

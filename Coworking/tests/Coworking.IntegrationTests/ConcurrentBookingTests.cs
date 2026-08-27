@@ -1,15 +1,12 @@
-using Coworking.Domain.Entities;
-using Coworking.Domain.ValueObjects;
-using Coworking.Infrastructure.Persistence.Contexts;
-using Microsoft.Extensions.DependencyInjection;
 using System.Net;
 using System.Net.Http.Json;
-using CoworkingEntity = Coworking.Domain.Entities.Coworking;
 
 namespace Coworking.IntegrationTests;
 
 public class ConcurrentBookingTests
 {
+    private const string Database = "coworking_tests_concurrent";
+
     /// <summary>
     /// Fast path: InMemoryBookingAccessCoordinator serializes the two requests before the
     /// database, so the loser sees the committed booking and is rejected by the overlap check.
@@ -26,11 +23,34 @@ public class ConcurrentBookingTests
     public Task OverlappingRequests_WithoutCoordinator_LeaveExactlyOneWinner() =>
         AssertExactlyOneConflict(bypassCoordinator: true, clientIp: "203.0.113.2");
 
+    /// <summary>
+    /// Non-overlapping slots on one desk: both bookings are legal, but their overlap-check
+    /// predicates cover the same index range, so Serializable aborts one with 40001. The
+    /// retried attempt reaches the outbox, which is the path OutboxRetryTests pins down.
+    /// </summary>
+    [Fact]
+    public async Task NonOverlappingRequests_ThatSerializationConflict_BothSucceed()
+    {
+        await using var factory = new TestApiFactory(bypassCoordinator: true, Database);
+
+        var deskId = await TestSeed.DeskAsync(factory, "Retry outbox");
+        var start = DateTimeOffset.UtcNow.AddDays(1).Date.AddHours(10);
+
+        var results = await Task.WhenAll(
+            PostBookingAsync(factory, "203.0.113.3", deskId, start, start.AddHours(1)),
+            PostBookingAsync(factory, "203.0.113.4", deskId, start.AddHours(2), start.AddHours(3)));
+
+        var report = string.Join("\n", results.Select(r => $"  {(int)r.Status} {r.Status}: {r.Body}"));
+
+        Assert.True(results.All(r => r.Status == HttpStatusCode.OK),
+            $"Both bookings are legal, so both must be created:\n{report}");
+    }
+
     private static async Task AssertExactlyOneConflict(bool bypassCoordinator, string clientIp)
     {
-        await using var factory = new TestApiFactory(bypassCoordinator);
+        await using var factory = new TestApiFactory(bypassCoordinator, Database);
 
-        var deskId = await SeedDeskAsync(factory);
+        var deskId = await TestSeed.DeskAsync(factory, "Concurrency");
         var start = DateTimeOffset.UtcNow.AddDays(1).Date.AddHours(10);
 
         var first = PostBookingAsync(factory, clientIp, deskId, start, start.AddHours(1));
@@ -72,30 +92,5 @@ public class ConcurrentBookingTests
         });
 
         return (response.StatusCode, await response.Content.ReadAsStringAsync());
-    }
-
-    private static async Task<int> SeedDeskAsync(TestApiFactory factory)
-    {
-        using var scope = factory.Services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-
-        await db.Database.EnsureCreatedAsync();
-
-        // 24/7 in UTC keeps working-hours and rounding out of the way
-        var coworking = new CoworkingEntity
-        {
-            Name = $"Concurrency {Guid.NewGuid():N}",
-            Address = "Test",
-            TimeZoneId = "UTC",
-            SlotSize = SlotSize.ThirtyMinutes,
-            OpenTime = new TimeOnly(0, 0),
-            CloseTime = new TimeOnly(0, 0),
-            Desks = [new Desk { Name = "T1", Description = "Test", Coworking = null! }]
-        };
-
-        db.Set<CoworkingEntity>().Add(coworking);
-        await db.SaveChangesAsync();
-
-        return coworking.Desks.First().Id;
     }
 }

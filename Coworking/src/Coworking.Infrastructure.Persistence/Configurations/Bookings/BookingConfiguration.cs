@@ -1,4 +1,5 @@
 ﻿using Coworking.Domain.Entities;
+using Coworking.Infrastructure.Persistence.Configurations.Common;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -9,6 +10,8 @@ public class BookingConfiguration : IEntityTypeConfiguration<Booking>
     public void Configure(EntityTypeBuilder<Booking> builder)
     {
         builder.HasKey(x => x.Id);
+
+        builder.HasStoreConcurrencyToken();
 
         builder.Property(x => x.StartTime)
             .IsRequired();
@@ -23,6 +26,9 @@ public class BookingConfiguration : IEntityTypeConfiguration<Booking>
 
         builder.Property(x => x.UserTimeZoneId)
             .HasMaxLength(100);
+
+        builder.HasIndex(x => x.AccessCode)
+               .IsUnique();
 
         builder.HasIndex(x => new { x.DeskId, x.StartTime })
                .IncludeProperties(x => new { x.EndTime, x.Status })

@@ -1,6 +1,6 @@
 ﻿namespace Coworking.Domain.Exceptions;
 
-public class BookingOverlapException : Exception
+public class BookingOverlapException : DomainException
 {
     public BookingOverlapException()
     {

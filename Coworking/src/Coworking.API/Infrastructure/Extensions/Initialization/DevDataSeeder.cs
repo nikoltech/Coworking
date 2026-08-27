@@ -29,7 +29,7 @@ internal static class DevDataSeeder
         await db.Set<Coworking.Domain.Entities.Coworking>().AddRangeAsync(coworkings, ct);
         await db.SaveChangesAsync(ct);
 
-        await transaction.CommitAsync(ct);
+        await transaction.CommitAsync();
     }
 
     /// <summary>

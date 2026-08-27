@@ -14,4 +14,9 @@ public interface IAppDbContext
 
     Task<ITransaction> BeginTransactionAsync(CancellationToken ct = default);
     Task<ITransaction> BeginTransactionAsync(TransactionIsolationLevel isolationLevel, CancellationToken ct = default);
+
+    /// <summary>
+    /// Drops everything tracked so a rolled-back request can be replayed from scratch.
+    /// </summary>
+    void DiscardPendingChanges();
 }

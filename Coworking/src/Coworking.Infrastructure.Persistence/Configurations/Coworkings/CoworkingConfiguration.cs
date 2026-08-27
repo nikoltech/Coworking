@@ -12,8 +12,7 @@ public class CoworkingConfiguration : IEntityTypeConfiguration<Domain.Entities.C
 
         builder.HasKey(c => c.Id);
 
-        builder.Property(c => c.Version)
-            .IsRowVersion();
+        builder.HasStoreConcurrencyToken();
 
         builder.Property(c => c.Name)
             .IsRequired()

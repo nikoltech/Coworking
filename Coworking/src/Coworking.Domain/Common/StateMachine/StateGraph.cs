@@ -7,8 +7,10 @@ public sealed class StateGraph<T> where T : notnull
     private readonly IReadOnlyDictionary<T, IReadOnlySet<T>> _edges;
     private StateGraph(IReadOnlyDictionary<T, IReadOnlySet<T>> edges) => _edges = edges;
 
+    /// Staying in the current state is always permitted and changes nothing.
     public bool CanMove(T from, T to) =>
-        _edges.TryGetValue(from, out var next) && next.Contains(to);
+        EqualityComparer<T>.Default.Equals(from, to)
+        || (_edges.TryGetValue(from, out var next) && next.Contains(to));
 
     public IReadOnlySet<T> From(T state) =>
         _edges.TryGetValue(state, out var next) ? next : Empty;

@@ -56,7 +56,7 @@ internal sealed class CoworkingRepository(AppDbContext context) : ICoworkingRepo
 
         var blockingBookings = context.Set<Booking>()
             .Where(b => b.DeskId == deskId && b.StartTime < end && b.EndTime > start)
-            .Where(BookingSpecifications.IsBlocking());
+            .Where(BookingSpecifications.IsActive());
 
         var result = await context.Set<Desk>()
             .AsNoTracking()

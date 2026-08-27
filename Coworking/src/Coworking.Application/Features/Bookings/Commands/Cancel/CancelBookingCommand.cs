@@ -10,7 +10,7 @@ namespace Coworking.Application.Features.Bookings.Commands.Cancel;
 
 public record CancelBookingCommand(
     //Guid UserId,
-    int BookingId) : IRequest;
+    Guid AccessCode) : IRequest;
 
 internal class CancelBookingCommandHandler(IMediator mediator, IAppDbContext dataContext) : IRequestHandler<CancelBookingCommand>
 {
@@ -18,20 +18,29 @@ internal class CancelBookingCommandHandler(IMediator mediator, IAppDbContext dat
     {
         Booking booking;
 
-        using var transaction = await dataContext.BeginTransactionAsync(ct);
+        await using var transaction = await dataContext.BeginTransactionAsync(ct);
 
         booking = await dataContext.Set<Booking>()
             .Include(b => b.Desk)
                 .ThenInclude(d => d.Coworking)
-            .FirstOrDefaultAsync(b => b.Id == request.BookingId, ct)
-            ?? throw new NotFoundException($"Booking with ID {request.BookingId} not found.");
+            .FirstOrDefaultAsync(b => b.AccessCode == request.AccessCode, ct)
+            ?? throw new NotFoundException($"Booking with access code {request.AccessCode} not found.");
 
-        booking.SetStatus(BookingStatus.Cancelled);
+        booking.Cancel();
 
         await PublishBookingCancelledAsync(booking, ct);
-        await dataContext.SaveChangesAsync(ct);
 
-        await transaction.CommitAsync(CancellationToken.None);
+        try
+        {
+            await dataContext.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            throw new ConflictException(
+                $"Booking with access code {request.AccessCode} was modified concurrently.", ex);
+        }
+
+        await transaction.CommitAsync();
     }
 
     private Task PublishBookingCancelledAsync(Booking booking, CancellationToken ct) =>
@@ -43,5 +52,5 @@ internal class CancelBookingCommandHandler(IMediator mediator, IAppDbContext dat
             Start: booking.StartTime,
             End: booking.EndTime,
             TimeZoneId: booking.Desk.Coworking.TimeZoneId,
-            CancellationReason: default), ct);
+            CancellationReason: CancellationReasons.ByUser), ct);
 }

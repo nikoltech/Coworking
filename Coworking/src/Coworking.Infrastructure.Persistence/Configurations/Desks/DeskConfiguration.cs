@@ -1,4 +1,5 @@
 ﻿using Coworking.Domain.Entities;
+using Coworking.Infrastructure.Persistence.Configurations.Common;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -12,8 +13,7 @@ public class DeskConfiguration : IEntityTypeConfiguration<Desk>
 
         builder.HasKey(x => x.Id);
 
-        builder.Property(c => c.RowVersion)
-            .IsRowVersion();
+        builder.HasStoreConcurrencyToken();
 
         builder.Property(x => x.Name)
             .IsRequired()

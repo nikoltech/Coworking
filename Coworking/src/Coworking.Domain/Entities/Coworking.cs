@@ -29,8 +29,6 @@ public class Coworking : ITrackEntity, ICanBeDisabled
 
     public DateTime? DisabledAt { get; set; }
 
-    public byte[]? Version { get; set; }
-
     public ICollection<Desk> Desks { get; set; } = [];
 
     public static Coworking Create(string name, SlotSize slotSize, string timeZoneId)

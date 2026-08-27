@@ -35,16 +35,17 @@ public sealed class BookingsController(IMediator mediator, IMapper mapper) : Api
     }
 
     /// <summary>
-    /// Cancels a booking.
+    /// Cancels a booking. The access code returned on creation is the authorization.
     /// </summary>
-    [HttpDelete("{id:int}")]
+    [HttpDelete("{accessCode:guid}")]
     [EnableRateLimiting("booking-write")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
-    public async Task<IActionResult> Cancel([FromRoute] int id, CancellationToken ct)
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> Cancel([FromRoute] Guid accessCode, CancellationToken ct)
     {
-        await mediator.Send(new CancelBookingCommand(id), ct);
+        await mediator.Send(new CancelBookingCommand(accessCode), ct);
 
         return NoContent();
     }
