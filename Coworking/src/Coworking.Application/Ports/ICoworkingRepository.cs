@@ -1,7 +1,7 @@
-﻿using Coworking.Domain.Entities;
+using Coworking.Domain.Entities;
 using System.Linq.Expressions;
 
-namespace Coworking.Application.Abstractions;
+namespace Coworking.Application.Ports;
 
 public interface ICoworkingRepository
 {

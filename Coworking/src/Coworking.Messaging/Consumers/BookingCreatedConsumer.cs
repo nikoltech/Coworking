@@ -1,4 +1,4 @@
-using Coworking.Application.Abstractions.Email;
+using Coworking.Application.Ports.Email;
 using Coworking.Application.Features.Bookings.Commands.Create.Notifications.Models;
 using Coworking.Application.Helpers;
 using Coworking.Messaging.Contracts;

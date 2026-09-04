@@ -1,12 +1,12 @@
-﻿using Coworking.Application.Abstractions.Email;
 using Coworking.Infrastructure.Services.Email.Options;
 using Coworking.Infrastructure.Services.Email.Senders.Helpers;
+using MailKit;
 using MailKit.Net.Smtp;
 using MailKit.Security;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MimeKit;
-using System.Net;
+using System.Net.Sockets;
 
 namespace Coworking.Infrastructure.Services.Email.Senders;
 
@@ -24,10 +24,6 @@ internal sealed class SmtpEmailSender : IEmailSender
         _options = options?.Value ?? throw new ArgumentNullException(nameof(options));
         _connectionLimiter = connectionLimiter ?? throw new ArgumentNullException(nameof(connectionLimiter));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-
-#if DEBUG
-        ServicePointManager.ServerCertificateValidationCallback = (s, c, ch, e) => true;
-#endif
     }
 
     public async Task SendRawEmailAsync(
@@ -52,12 +48,38 @@ internal sealed class SmtpEmailSender : IEmailSender
                     _logger.LogTrace("Email sent to {Recipient}", to);
             }, ct);
         }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to send email to {Recipient}", to);
-            throw;
+
+            throw Translate(ex, to);
         }
     }
+
+    private static Exception Translate(Exception ex, string to) =>
+        ex switch
+        {
+            EmailDeliveryException => ex,
+
+            SmtpCommandException command => IsTransientCode(command.StatusCode)
+                ? new EmailTransientException($"SMTP server temporarily rejected {to}: {command.StatusCode}.", ex)
+                : new EmailPermanentException($"SMTP server rejected {to}: {command.StatusCode}.", ex),
+
+            SmtpProtocolException or SocketException or IOException or TimeoutException =>
+                new EmailConnectionException($"Connection to the SMTP server failed for {to}.", ex),
+
+            AuthenticationException or ServiceNotAuthenticatedException =>
+                new EmailPermanentException($"SMTP authentication failed while sending to {to}.", ex),
+
+            _ => new EmailPermanentException($"Sending to {to} failed: {ex.GetType().Name}.", ex)
+        };
+
+    private static bool IsTransientCode(SmtpStatusCode statusCode) =>
+        (int)statusCode is >= 400 and < 500;
 
     private void ValidateParameters(string to, string subject, string body)
     {
@@ -87,6 +109,11 @@ internal sealed class SmtpEmailSender : IEmailSender
         CancellationToken ct)
     {
         using var client = new SmtpClient();
+
+#if DEBUG
+        // per client: MailKit validates through SslStream, which ServicePointManager never reached
+        client.ServerCertificateValidationCallback = (_, _, _, _) => true;
+#endif
 
         await client.ConnectAsync(_options.Host, _options.Port, SecureSocketOptions.StartTls, ct);
         await client.AuthenticateAsync(_options.Username, _options.Password, ct);

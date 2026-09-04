@@ -1,6 +1,6 @@
-﻿using AutoMapper;
+using AutoMapper;
 using AutoMapper.QueryableExtensions;
-using Coworking.Application.Abstractions;
+using Coworking.Application.Ports;
 using Coworking.Application.Features.Desks.Queries.GetDesks.Dtos;
 using Coworking.Domain.Entities;
 using MediatR;

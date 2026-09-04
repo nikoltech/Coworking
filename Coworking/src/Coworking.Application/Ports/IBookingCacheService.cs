@@ -1,4 +1,4 @@
-﻿namespace Coworking.Application.Abstractions;
+namespace Coworking.Application.Ports;
 
 public interface IBookingCacheService
 {

@@ -1,4 +1,4 @@
-using Coworking.Application.Abstractions;
+using Coworking.Application.Ports;
 using Coworking.Application.Common.Exceptions;
 using Coworking.Application.Features.Bookings.Commands.Cancel.Notifications;
 using Coworking.Domain.Entities;

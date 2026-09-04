@@ -1,5 +1,5 @@
 using Coworking.API.Controllers.Abstractions;
-using Coworking.Application.Abstractions;
+using Coworking.Application.Ports;
 using Coworking.Infrastructure.Persistence.Contexts;
 using Coworking.Messaging.Contracts;
 using MassTransit;

@@ -19,6 +19,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Coworking.Application\Coworking.Application.csproj" />
+    <ProjectReference Include="..\Coworking.Infrastructure\Coworking.Infrastructure.csproj" />
     <ProjectReference Include="..\Coworking.Infrastructure.Persistence\Coworking.Infrastructure.Persistence.csproj" />
     <ProjectReference Include="..\Coworking.Messaging.Contracts\Coworking.Messaging.Contracts.csproj" />
   </ItemGroup>

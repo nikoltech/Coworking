@@ -1,5 +1,5 @@
-using Coworking.Application.Abstractions;
-using Coworking.Application.Abstractions.Synchronization;
+using Coworking.Application.Ports;
+using Coworking.Application.Ports.Synchronization;
 using Coworking.Application.Common.Enums;
 using Coworking.Application.Common.Exceptions;
 using Coworking.Application.Features.Bookings.Commands.Create.Notifications;

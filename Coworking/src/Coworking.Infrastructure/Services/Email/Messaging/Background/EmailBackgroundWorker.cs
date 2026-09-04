@@ -1,4 +1,4 @@
-﻿using Coworking.Application.Abstractions.Email;
+using Coworking.Application.Ports.Email;
 using Coworking.Infrastructure.Services.Email.Messaging.Dtos;
 using Coworking.Infrastructure.Services.Email.Options;
 using Microsoft.Extensions.DependencyInjection;
@@ -7,7 +7,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Polly;
 using Polly.Retry;
-using System.Net.Mail;
 
 namespace Coworking.Infrastructure.Services.Email.Messaging.Background;
 
@@ -76,9 +75,7 @@ public sealed class EmailBackgroundWorker(
                 MaxDelay = TimeSpan.FromSeconds(30),
 
                 ShouldHandle = args =>
-                    ValueTask.FromResult(
-                        args.Outcome.Exception is not null &&
-                        IsTransient(args.Outcome.Exception)),
+                    ValueTask.FromResult(args.Outcome.Exception is EmailTransientException),
 
                 OnRetry = args =>
                 {
@@ -93,36 +90,4 @@ public sealed class EmailBackgroundWorker(
                 }
             })
             .Build();
-
-    private static bool IsTransient(Exception ex)
-    {
-        return ex switch
-        {
-            TimeoutException => true,
-            HttpRequestException => true,
-            SmtpException smtpEx when IsTransientSmtpCode(smtpEx) => true,
-            _ => false
-        };
-    }
-
-    private static bool IsTransientSmtpCode(SmtpException ex)
-    {
-        var statusCode = ex.StatusCode;
-
-        return statusCode switch
-        {
-            SmtpStatusCode.GeneralFailure => true,
-            SmtpStatusCode.MailboxBusy => true,
-            SmtpStatusCode.ServiceNotAvailable => true,
-            SmtpStatusCode.TransactionFailed => true,
-            SmtpStatusCode.ExceededStorageAllocation => true,
-
-            // permanent failures
-            SmtpStatusCode.MailboxUnavailable => false,
-            SmtpStatusCode.UserNotLocalTryAlternatePath => false,
-            SmtpStatusCode.MailboxNameNotAllowed => false,
-
-            _ => false
-        };
-    }
 }

@@ -1,6 +1,6 @@
 using System.Data;
 
-namespace Coworking.Application.Abstractions.Transactions;
+namespace Coworking.Application.Ports.Transactions;
 
 /// Note: For relational storages uses IDataContextTransaction, for non-relational storages uses ITransaction directly. 
 /// This allows to avoid unnecessary wrapping of transactions for relational storages and provides a more flexible API for non-relational storages.

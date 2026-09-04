@@ -1,8 +1,8 @@
-﻿using Coworking.Application.Abstractions.Transactions;
+using Coworking.Application.Ports.Transactions;
 using Coworking.Application.Common.Enums;
 using Microsoft.EntityFrameworkCore;
 
-namespace Coworking.Application.Abstractions;
+namespace Coworking.Application.Ports;
 
 public interface IAppDbContext
 {

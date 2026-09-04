@@ -1,4 +1,4 @@
-using Coworking.Application.Abstractions;
+using Coworking.Application.Ports;
 using Coworking.Domain.Common;
 using Coworking.Application.Common.Exceptions;
 using Coworking.Application.Features.Bookings.Queries.GetDeskAvailability.Dtos;

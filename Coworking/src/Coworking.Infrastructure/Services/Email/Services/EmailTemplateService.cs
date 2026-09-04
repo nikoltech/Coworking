@@ -1,4 +1,4 @@
-﻿using Coworking.Application.Abstractions.Email;
+using Coworking.Application.Ports.Email;
 using HandlebarsDotNet;
 using LazyCache;
 

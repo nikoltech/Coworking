@@ -1,5 +1,5 @@
-using Coworking.Application.Abstractions;
-using Coworking.Application.Abstractions.Transactions;
+using Coworking.Application.Ports;
+using Coworking.Application.Ports.Transactions;
 using MediatR;
 using Microsoft.Extensions.Logging;
 using Polly;

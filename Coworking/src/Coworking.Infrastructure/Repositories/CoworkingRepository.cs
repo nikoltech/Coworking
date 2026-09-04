@@ -1,4 +1,4 @@
-﻿using Coworking.Application.Abstractions;
+using Coworking.Application.Ports;
 using Coworking.Domain.Entities;
 using Coworking.Domain.Specifications;
 using Coworking.Infrastructure.Persistence.Contexts;

@@ -1,4 +1,4 @@
-﻿namespace Coworking.Application.Abstractions.Transactions
+namespace Coworking.Application.Ports.Transactions
 {
     public interface IDbConflictDetector
     {

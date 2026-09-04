@@ -1,5 +1,5 @@
+using Coworking.Infrastructure.Services.Email;
 using MassTransit;
-using System.Net.Mail;
 
 namespace Coworking.Messaging;
 
@@ -13,32 +13,20 @@ internal static class ConsumerPipelines
             // 5 attempts: 10–300s each, total 50s – ~16 min
             r.Exponential(5, TimeSpan.FromSeconds(10), TimeSpan.FromMinutes(5), TimeSpan.FromSeconds(30));
 
-            r.Handle<TimeoutException>();
-            r.Handle<HttpRequestException>();
-            r.Handle<SmtpException>(ex => IsTransientSmtpCode(ex));
+            r.Handle<EmailTransientException>();
 
-            r.Ignore<SmtpException>(ex => !IsTransientSmtpCode(ex));
+            r.Ignore<EmailPermanentException>();
             r.Ignore<ArgumentException>();
             r.Ignore<InvalidOperationException>();
         });
 
-        // Tier 2: fast in-place retry — for momentary network blips only (no SmtpException).
+        // Tier 2: fast in-place retry — a server that asked us to wait must not be hammered,
+        // so only failures that never reached it are repeated immediately.
         c.UseMessageRetry(r =>
         {
-            r.Intervals(TimeSpan.FromMilliseconds(200), TimeSpan.FromMilliseconds(500));
-            r.Handle<TimeoutException>();
-            r.Handle<HttpRequestException>();
+            r.Intervals(TimeSpan.FromMilliseconds(200), TimeSpan.FromMilliseconds(300));
+
+            r.Handle<EmailConnectionException>();
         });
     }
-
-    private static bool IsTransientSmtpCode(SmtpException ex) =>
-        ex.StatusCode switch
-        {
-            SmtpStatusCode.GeneralFailure         => true,
-            SmtpStatusCode.MailboxBusy            => true,
-            SmtpStatusCode.ServiceNotAvailable    => true,
-            SmtpStatusCode.TransactionFailed      => true,
-            SmtpStatusCode.ExceededStorageAllocation => true,
-            _                                     => false
-        };
 }

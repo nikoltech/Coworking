@@ -1,4 +1,4 @@
-﻿using Coworking.Application.Abstractions.Transactions;
+using Coworking.Application.Ports.Transactions;
 using Npgsql;
 
 namespace Coworking.Infrastructure.Persistence.Transactions.Conflicts

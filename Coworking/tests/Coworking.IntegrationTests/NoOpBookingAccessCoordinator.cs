@@ -1,4 +1,4 @@
-using Coworking.Application.Abstractions.Synchronization;
+using Coworking.Application.Ports.Synchronization;
 
 namespace Coworking.IntegrationTests;
 

@@ -1,4 +1,4 @@
-﻿namespace Coworking.Application.Abstractions.Synchronization;
+namespace Coworking.Application.Ports.Synchronization;
 
 public interface IBookingAccessCoordinator
 {

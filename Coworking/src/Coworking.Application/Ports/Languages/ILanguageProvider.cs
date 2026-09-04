@@ -1,4 +1,4 @@
-﻿namespace Coworking.Application.Abstractions.Languages;
+namespace Coworking.Application.Ports.Languages;
 
 public interface ILanguageProvider
 {
