@@ -8,21 +8,25 @@ This project explores backend architecture and concurrency handling in booking s
 
 ## Key Features
 
-- Booking workflow with concurrency control using application-level coordination and database transactions (Range locks)
+- Booking concurrency control: application-level coordination, serializable transactions, optimistic locking on PostgreSQL `xmin`
 - Clean Architecture with CQRS (MediatR) and validation pipeline (FluentValidation, behaviors)
-- Rate-limited REST API with centralized error handling (ProblemDetails)
-- Background processing using Channels, parallel workers, and retry policies (Polly)
-- PostgreSQL integration via EF Core with transaction handling and conflict detection
-- Squidex Headless CMS integration (stage: unit testing)
+- Rate-limited REST API with centralized error handling (ProblemDetails, `Retry-After` on conflicts)
+- Reliable messaging over a transactional outbox (MassTransit, RabbitMQ) with tiered retry and delayed redelivery
+- Background processing using message consumers and a periodic hosted service
+- PostgreSQL integration via EF Core with transaction handling and per-provider conflict detection
+- Squidex Headless CMS client (not yet integrated)
+- Unit and integration test suites
 
 ## Tech Stack
 
 - .NET 10, ASP.NET Core
 - EF Core (PostgreSQL)
+- MassTransit (RabbitMQ)
 - MediatR (CQRS)
 - FluentValidation
 - Polly
-- Docker (API + PostgreSQL)
+- MailKit
+- Docker (API + PostgreSQL + RabbitMQ)
 
 ## Notes
 
