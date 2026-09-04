@@ -12,8 +12,7 @@ namespace Coworking.Infrastructure.Services.Email.Services;
 /// </summary>
 internal sealed class DirectEmailNotificationService(
     IEmailTemplateService templateService,
-    IEmailSender emailSender,
-    ILogger<DirectEmailNotificationService> logger) : IEmailNotificationService
+    IEmailSender emailSender) : IEmailNotificationService
 {
     public async Task SendBookingCreatedAsync(BookingCreatedEmailModel model, CancellationToken ct)
     {

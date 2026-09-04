@@ -10,21 +10,12 @@ using System.Net.Sockets;
 
 namespace Coworking.Infrastructure.Services.Email.Senders;
 
-internal sealed class SmtpEmailSender : IEmailSender
+internal sealed class SmtpEmailSender(
+    IOptions<SmtpOptions> options,
+    ISmtpConnectionLimiter connectionLimiter,
+    ILogger<SmtpEmailSender> logger) : IEmailSender
 {
-    private readonly SmtpOptions _options;
-    private readonly ISmtpConnectionLimiter _connectionLimiter;
-    private readonly ILogger<SmtpEmailSender> _logger;
-
-    public SmtpEmailSender(
-        IOptions<SmtpOptions> options,
-        ISmtpConnectionLimiter connectionLimiter,
-        ILogger<SmtpEmailSender> logger)
-    {
-        _options = options?.Value ?? throw new ArgumentNullException(nameof(options));
-        _connectionLimiter = connectionLimiter ?? throw new ArgumentNullException(nameof(connectionLimiter));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-    }
+    private readonly SmtpOptions _options = options.Value;
 
     public async Task SendRawEmailAsync(
         string to,
@@ -38,14 +29,14 @@ internal sealed class SmtpEmailSender : IEmailSender
 
         try
         {
-            await using var _ = await _connectionLimiter.AcquireAsync(ct);
+            await using var _ = await connectionLimiter.AcquireAsync(ct);
 
             await ExecuteSmtpOperationAsync(async client =>
             {
                 await client.SendAsync(message, ct);
 
-                if (_logger.IsEnabled(LogLevel.Trace) && _logger.IsEnabled(LogLevel.Debug))
-                    _logger.LogTrace("Email sent to {Recipient}", to);
+                if (logger.IsEnabled(LogLevel.Trace) && logger.IsEnabled(LogLevel.Debug))
+                    logger.LogTrace("Email sent to {Recipient}", to);
             }, ct);
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
@@ -54,7 +45,7 @@ internal sealed class SmtpEmailSender : IEmailSender
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to send email to {Recipient}", to);
+            logger.LogError(ex, "Failed to send email to {Recipient}", to);
 
             throw Translate(ex, to);
         }
@@ -81,7 +72,7 @@ internal sealed class SmtpEmailSender : IEmailSender
     private static bool IsTransientCode(SmtpStatusCode statusCode) =>
         (int)statusCode is >= 400 and < 500;
 
-    private void ValidateParameters(string to, string subject, string body)
+    private static void ValidateParameters(string to, string subject, string body)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(to);
         ArgumentException.ThrowIfNullOrWhiteSpace(subject);

@@ -53,8 +53,11 @@ internal sealed class GlobalExceptionHandler(
             return;
         }
 
-        logger.LogInformation(
-            "{Title}: {ExceptionType} for {Method} {Path} -> {Status}. {Message}",
-            title, exception.GetType().Name, method, path, status, exception.Message);
+        if (logger.IsEnabled(LogLevel.Information))
+        {
+            logger.LogInformation(
+                "{Title}: {ExceptionType} for {Method} {Path} -> {Status}. {Message}",
+                title, exception.GetType().Name, method, path, status, exception.Message);
+        }
     }
 }
