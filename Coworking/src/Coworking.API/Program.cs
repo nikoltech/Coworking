@@ -24,6 +24,8 @@ await app.InitializeApplicationAsync(config);
 
 app.UseForwardedHeaders();
 
+app.UseAppLocalization();
+
 app.UseExceptionHandler();
 app.UseStatusCodePages();
 

@@ -10,6 +10,7 @@ public static class DependencyInjection
     {
         services.AddProxySettings(configuration);
         services.AddApiRateLimiting();
+        services.AddAppLocalization(configuration);
 
         services.ConfigureErrorHandling();
         services.AddControllers();
