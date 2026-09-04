@@ -21,7 +21,7 @@ public class RetryPathTests
         await using var seed = new TestApiFactory(bypassCoordinator: false, Database);
         var deskId = await TestSeed.DeskAsync(seed, "Retry path");
 
-        var interceptor = new CommitFailsOnceInterceptor();
+        var interceptor = new CommitFailsInterceptor();
 
         await using var factory = new TestApiFactory(bypassCoordinator: false, Database,
             services => services.AddSingleton<IInterceptor>(interceptor));
@@ -62,6 +62,37 @@ public class RetryPathTests
 
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
         Assert.Equal(1, interceptor.Failures);
+    }
+
+    /// <summary>
+    /// Contention the retries cannot outlast is still not the caller's fault, so it answers 503
+    /// with a spread Retry-After rather than a bare 500.
+    /// </summary>
+    [Fact]
+    public async Task RetriesExhausted_Returns503WithRetryAfter()
+    {
+        await using var seed = new TestApiFactory(bypassCoordinator: false, Database);
+        var deskId = await TestSeed.DeskAsync(seed, "Retry exhausted");
+
+        var interceptor = new CommitFailsInterceptor(times: int.MaxValue);
+
+        await using var factory = new TestApiFactory(bypassCoordinator: false, Database,
+            services => services.AddSingleton<IInterceptor>(interceptor));
+
+        var start = DateTimeOffset.UtcNow.AddDays(1).Date.AddHours(14);
+
+        var response = await Client(factory, "203.0.113.32").PostAsJsonAsync("/api/bookings", new
+        {
+            deskId,
+            userEmail = "exhausted@example.com",
+            userName = "Exhausted Probe",
+            startTime = start,
+            endTime = start.AddHours(1),
+            metadata = (object?)null
+        });
+
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
+        Assert.InRange(response.Headers.RetryAfter!.Delta!.Value.TotalSeconds, 1, 3);
     }
 
     private static HttpClient Client(TestApiFactory factory, string clientIp)

@@ -6,10 +6,11 @@ using System.Data.Common;
 namespace Coworking.IntegrationTests;
 
 /// <summary>
-/// Fails the first COMMIT with a real serialization failure. That is where PostgreSQL raises
-/// 40001 in this codebase, so the retry sees the same shape it sees in production.
+/// Fails COMMIT with a real serialization failure. That is where PostgreSQL raises 40001 in this
+/// codebase, so the retry sees the same shape it sees in production. Fail more times than the
+/// policy allows to reach the exhausted path.
 /// </summary>
-internal sealed class CommitFailsOnceInterceptor : DbTransactionInterceptor
+internal sealed class CommitFailsInterceptor(int times = 1) : DbTransactionInterceptor
 {
     public int Failures { get; private set; }
 
@@ -19,7 +20,7 @@ internal sealed class CommitFailsOnceInterceptor : DbTransactionInterceptor
         InterceptionResult result,
         CancellationToken cancellationToken = default)
     {
-        if (Failures > 0)
+        if (Failures >= times)
             return base.TransactionCommittingAsync(transaction, eventData, result, cancellationToken);
 
         Failures++;
