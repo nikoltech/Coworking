@@ -20,16 +20,12 @@ public static class LocalizationExtensions
         return services;
     }
 
-    /// <summary>
-    /// Culture and UI culture are kept equal: emails format dates in the language they are written in.
-    /// </summary>
     public static WebApplication UseAppLocalization(this WebApplication app)
     {
         var languages = app.Services.GetRequiredService<IOptions<LanguageOptions>>().Value;
 
-        // unknown codes throw here rather than silently resolving to the default later
         var supported = languages.Supported
-            .Select(CultureInfo.GetCultureInfo)
+            .Select(ToCulture)
             .ToArray();
 
         var options = new RequestLocalizationOptions
@@ -49,5 +45,18 @@ public static class LocalizationExtensions
         app.UseRequestLocalization(options);
 
         return app;
+    }
+
+    private static CultureInfo ToCulture(string code)
+    {
+        try
+        {
+            return CultureInfo.GetCultureInfo(code, predefinedOnly: true);
+        }
+        catch (CultureNotFoundException ex)
+        {
+            throw new InvalidOperationException(
+                $"{LanguageOptions.SectionName}:Supported holds '{code}', which is not a known culture.", ex);
+        }
     }
 }
