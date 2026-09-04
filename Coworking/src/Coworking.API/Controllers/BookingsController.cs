@@ -1,4 +1,4 @@
-﻿using AutoMapper;
+using AutoMapper;
 using Coworking.API.Controllers.Abstractions;
 using Coworking.API.Models.Requests;
 using Coworking.API.Models.Responces;
@@ -22,6 +22,7 @@ public sealed class BookingsController(IMediator mediator, IMapper mapper) : Api
     [Consumes("application/json")]
     [ProducesResponseType(typeof(CreateBookingResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status503ServiceUnavailable)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status422UnprocessableEntity)]
     public async Task<ActionResult<CreateBookingResponse>> Create([FromBody] CreateBookingRequest request, CancellationToken ct)
     {
@@ -42,6 +43,7 @@ public sealed class BookingsController(IMediator mediator, IMapper mapper) : Api
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status503ServiceUnavailable)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status422UnprocessableEntity)]
     public async Task<IActionResult> Cancel([FromRoute] Guid accessCode, CancellationToken ct)
     {

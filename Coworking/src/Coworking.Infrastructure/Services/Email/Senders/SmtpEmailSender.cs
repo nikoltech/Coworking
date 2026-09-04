@@ -60,7 +60,7 @@ internal sealed class SmtpEmailSender : IEmailSender
         }
     }
 
-    private static Exception Translate(Exception ex, string to) =>
+    internal static Exception Translate(Exception ex, string to) =>
         ex switch
         {
             EmailDeliveryException => ex,

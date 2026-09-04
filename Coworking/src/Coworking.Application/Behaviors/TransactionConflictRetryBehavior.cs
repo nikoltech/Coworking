@@ -1,3 +1,4 @@
+using Coworking.Application.Common.Exceptions;
 using Coworking.Application.Ports;
 using Coworking.Application.Ports.Transactions;
 using MediatR;
@@ -32,6 +33,15 @@ public class TransactionConflictRetryBehavior<TRequest, TResponse>(
                         retryCount, typeof(TRequest).Name, ex.GetType().Name);
                 });
 
-        return await retryPolicy.ExecuteAsync(async (cancellationToken) => await next(cancellationToken), ct);
+        try
+        {
+            return await retryPolicy.ExecuteAsync(async (cancellationToken) => await next(cancellationToken), ct);
+        }
+        catch (Exception ex) when (dbConflictDetector.IsTransient(ex))
+        {
+            // still transient after leaving the policy means the attempts ran out
+            throw new TransactionConflictException(
+                $"{typeof(TRequest).Name} could not complete after {MaxRetries} retries.", ex);
+        }
     }
 }

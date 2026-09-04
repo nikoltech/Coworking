@@ -1,29 +1,18 @@
+using Coworking.API.Infrastructure.ExceptionHandlers;
 using Coworking.Application.Common.Exceptions;
 using Coworking.Application.Features.Bookings.Commands.Cancel;
 using Coworking.Domain.Entities;
-using Coworking.Domain.Exceptions;
+using Microsoft.AspNetCore.Http;
 using System.Reflection;
 
 namespace Coworking.UnitTests.Api;
 
 /// <summary>
-/// ExceptionStatusMap ends in a "_ =>" arm, so a new exception inheriting from plain Exception
-/// becomes a 500 silently — which is how InvalidTransitionException and BookingOverlapException
-/// got there.
+/// ExceptionStatusMap falls back to 500, so a new exception becomes a server error silently.
+/// Only Domain and Application are scanned: anything else reaching a response is an adapter leak.
 /// </summary>
 public class ExceptionMappingConventionTests
 {
-    /// Bases ExceptionStatusMap has an arm for. Keep in sync when adding one.
-    private static readonly Type[] MappedBases =
-    [
-        typeof(DomainException),
-        typeof(FluentValidation.ValidationException),
-        typeof(NotFoundException),
-        typeof(ConflictException),
-        typeof(BusinessRuleException)
-    ];
-
-    /// Exceptions that are meant to surface as 500.
     private static readonly Type[] DeliberateServerErrors = [];
 
     private static readonly Assembly[] Scanned =
@@ -33,18 +22,28 @@ public class ExceptionMappingConventionTests
     ];
 
     [Fact]
-    public void EveryExceptionRootsUnderAMappedBase()
+    public void EveryExceptionIsMapped()
     {
         var unmapped = Scanned
             .SelectMany(a => a.GetTypes())
             .Where(t => t.IsAssignableTo(typeof(Exception)))
             .Where(t => !DeliberateServerErrors.Contains(t))
-            .Where(t => !MappedBases.Any(t.IsAssignableTo))
+            .Where(t => ExceptionStatusMap.Map(t).Status
+                        == StatusCodes.Status500InternalServerError)
             .Select(t => t.FullName)
             .ToList();
 
         Assert.True(unmapped.Count == 0,
-            "These exceptions fall into the 500 arm of ExceptionStatusMap. Give each one an arm "
-            + "in the map, or inherit it from DomainException:\n  " + string.Join("\n  ", unmapped));
+            "These exceptions fall back to 500. Add an entry to ExceptionStatusMap, or inherit "
+            + "from one that is already mapped:\n  " + string.Join("\n  ", unmapped));
+    }
+
+    [Theory]
+    [InlineData(typeof(NotFoundException), StatusCodes.Status404NotFound)]
+    [InlineData(typeof(ConflictException), StatusCodes.Status409Conflict)]
+    [InlineData(typeof(TransactionConflictException), StatusCodes.Status503ServiceUnavailable)]
+    public void MappedException_KeepsItsStatus(Type exceptionType, int expected)
+    {
+        Assert.Equal(expected, ExceptionStatusMap.Map(exceptionType).Status);
     }
 }

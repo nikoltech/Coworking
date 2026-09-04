@@ -17,6 +17,9 @@ internal sealed class GlobalExceptionHandler(
         // UseExceptionHandler already set 500; ProblemDetails.Status alone only changes the body
         httpContext.Response.StatusCode = status;
 
+        if (status == StatusCodes.Status503ServiceUnavailable)
+            httpContext.Response.Headers.RetryAfter = RetryAfterSeconds();
+
         Log(httpContext, exception, status, title);
 
         return await problemDetailsService.TryWriteAsync(new ProblemDetailsContext
@@ -25,6 +28,12 @@ internal sealed class GlobalExceptionHandler(
             Exception = exception
         });
     }
+
+    /// <summary>
+    /// Delta-seconds rather than a date: clients sit in other countries and their clocks do not
+    /// agree with ours. Spread so everyone told to retry does not come back at the same instant.
+    /// </summary>
+    private static string RetryAfterSeconds() => Random.Shared.Next(1, 4).ToString();
 
     /// <summary>
     /// The only place that sees every exception, including those raised outside MediatR.
