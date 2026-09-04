@@ -4,19 +4,21 @@ namespace Coworking.UnitTests.Bookings;
 
 public class CancelBookingValidatorTests
 {
-    [Fact]
-    public void EmptyAccessCode_IsRejected()
+    /// Guid is not serializable for xUnit, so the rows carry it as text to stay enumerable.
+    public static TheoryData<string, string, bool> AccessCodes => new()
     {
-        var result = new CancelBookingValidator().Validate(new CancelBookingCommand(Guid.Empty));
+        { "empty", Guid.Empty.ToString(), false },
+        { "wrong version", Guid.NewGuid().ToString(), false },
+        { "version 7", Guid.CreateVersion7().ToString(), true }
+    };
 
-        Assert.False(result.IsValid);
-    }
-
-    [Fact]
-    public void RealAccessCode_IsAccepted()
+    [Theory]
+    [MemberData(nameof(AccessCodes))]
+    public void AccessCode_IsAcceptedOnlyWhenItIsVersion7(string label, string accessCode, bool expected)
     {
-        var result = new CancelBookingValidator().Validate(new CancelBookingCommand(Guid.CreateVersion7()));
+        var result = new CancelBookingValidator()
+            .Validate(new CancelBookingCommand(Guid.Parse(accessCode)));
 
-        Assert.True(result.IsValid);
+        Assert.True(result.IsValid == expected, $"{label}: expected IsValid={expected}");
     }
 }

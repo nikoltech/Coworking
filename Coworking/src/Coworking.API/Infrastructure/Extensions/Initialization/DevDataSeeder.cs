@@ -220,7 +220,6 @@ internal static class DevDataSeeder
         string userTimeZoneId) =>
         new()
         {
-            AccessCode = Guid.NewGuid(),
             UserName = userName,
             UserEmail = userEmail,
             StartTime = start.ToUniversalTime(),

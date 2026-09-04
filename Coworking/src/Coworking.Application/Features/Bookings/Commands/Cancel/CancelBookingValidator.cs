@@ -8,5 +8,8 @@ public class CancelBookingValidator : AbstractValidator<CancelBookingCommand>
     {
         RuleFor(x => x.AccessCode)
             .NotEmpty().WithMessage("AccessCode is required.");
+
+        RuleFor(x => x.AccessCode)
+            .Must(code => code.Version == 7).WithMessage("AccessCode is invalid.");
     }
 }
