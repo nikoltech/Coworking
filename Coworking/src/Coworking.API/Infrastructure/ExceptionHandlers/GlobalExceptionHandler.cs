@@ -14,7 +14,6 @@ internal sealed class GlobalExceptionHandler(
     {
         var (status, title) = ExceptionStatusMap.Map(exception);
 
-        // UseExceptionHandler already set 500; ProblemDetails.Status alone only changes the body
         httpContext.Response.StatusCode = status;
 
         if (status == StatusCodes.Status503ServiceUnavailable)
@@ -25,20 +24,13 @@ internal sealed class GlobalExceptionHandler(
         return await problemDetailsService.TryWriteAsync(new ProblemDetailsContext
         {
             HttpContext = httpContext,
-            Exception = exception
+            Exception = exception,
+            ProblemDetails = { Status = status, Title = title }
         });
     }
 
-    /// <summary>
-    /// Delta-seconds rather than a date: clients sit in other countries and their clocks do not
-    /// agree with ours. Spread so everyone told to retry does not come back at the same instant.
-    /// </summary>
     private static string RetryAfterSeconds() => Random.Shared.Next(1, 4).ToString();
 
-    /// <summary>
-    /// The only place that sees every exception, including those raised outside MediatR.
-    /// Mapped 4xx are normal outcomes, so only unmapped ones are logged as incidents.
-    /// </summary>
     private void Log(HttpContext httpContext, Exception exception, int status, string title)
     {
         var method = httpContext.Request.Method;

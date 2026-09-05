@@ -20,17 +20,19 @@ namespace Coworking.API.Infrastructure.Extensions
             return services.AddProblemDetails(options =>
                 options.CustomizeProblemDetails = ctx =>
                 {
-                    var error = ctx.HttpContext.Features.Get<IExceptionHandlerFeature>()?.Error;
+                    var error = ctx.Exception
+                        ?? ctx.HttpContext.Features.Get<IExceptionHandlerFeature>()?.Error;
                     var env = ctx.HttpContext.RequestServices.GetRequiredService<IHostEnvironment>();
 
                     if (error is not null)
                     {
-                        bool isTechnicalError = ctx.ProblemDetails.Status >= 500;
+                        var statusCode = ctx.HttpContext.Response.StatusCode;
+
+                        bool isTechnicalError = statusCode >= 500;
+
                         ctx.ProblemDetails.Detail = (isTechnicalError && !env.IsDevelopment())
                             ? "An internal error occurred."
                             : error.Message;
-
-                        (ctx.ProblemDetails.Status, ctx.ProblemDetails.Title) = ExceptionStatusMap.Map(error);
 
                         if (error is ValidationException ve)
                         {
