@@ -19,7 +19,7 @@ public class ConcurrencyTokenTests
     {
         await using var factory = new TestApiFactory(bypassCoordinator: false, Database);
 
-        var accessCode = await TestSeed.BookingAsync(factory, "Token", BookingStatus.PendingPayment);
+        var (_, accessCode) = await TestSeed.BookingAsync(factory, "Token", BookingStatus.PendingPayment);
 
         using var first = factory.Services.CreateScope();
         using var second = factory.Services.CreateScope();

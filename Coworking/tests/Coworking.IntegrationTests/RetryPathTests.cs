@@ -1,3 +1,4 @@
+using Coworking.API.Controllers;
 using Coworking.Domain.Enums;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
@@ -50,15 +51,17 @@ public class RetryPathTests
     public async Task ConcurrencyConflictOnCancel_Returns409()
     {
         await using var seed = new TestApiFactory(bypassCoordinator: false, Database);
-        var accessCode = await TestSeed.BookingAsync(seed, "Cancel conflict", BookingStatus.PendingPayment);
+        var booking = await TestSeed.BookingAsync(seed, "Cancel conflict", BookingStatus.PendingPayment);
 
         var interceptor = new BookingUpdateConflictsOnceInterceptor();
 
         await using var factory = new TestApiFactory(bypassCoordinator: false, Database,
             services => services.AddSingleton<IInterceptor>(interceptor));
 
-        var response = await Client(factory, "203.0.113.31")
-            .DeleteAsync($"/api/bookings/{accessCode}");
+        var request = new HttpRequestMessage(HttpMethod.Delete, $"/api/bookings/{booking.Id}");
+        request.Headers.Add(BookingsController.AccessCodeHeader, booking.AccessCode.ToString());
+
+        var response = await Client(factory, "203.0.113.31").SendAsync(request);
 
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
         Assert.Equal(1, interceptor.Failures);

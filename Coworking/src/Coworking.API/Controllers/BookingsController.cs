@@ -14,6 +14,9 @@ namespace Coworking.API.Controllers;
 [Tags("Bookings")]
 public sealed class BookingsController(IMediator mediator, IMapper mapper) : ApiControllerBase
 {
+    /// <summary>Carries the access code: a credential in the path would reach every access log.</summary>
+    public const string AccessCodeHeader = "Access-Code";
+
     /// <summary>
     /// Creates a booking.
     /// </summary>
@@ -38,16 +41,19 @@ public sealed class BookingsController(IMediator mediator, IMapper mapper) : Api
     /// <summary>
     /// Cancels a booking. The access code returned on creation is the authorization.
     /// </summary>
-    [HttpDelete("{accessCode:guid}")]
+    [HttpDelete("{bookingId:int}")]
     [EnableRateLimiting("booking-write")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status503ServiceUnavailable)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status422UnprocessableEntity)]
-    public async Task<IActionResult> Cancel([FromRoute] Guid accessCode, CancellationToken ct)
+    public async Task<IActionResult> Cancel(
+        [FromRoute] int bookingId,
+        [FromHeader(Name = AccessCodeHeader)] Guid accessCode,
+        CancellationToken ct)
     {
-        await mediator.Send(new CancelBookingCommand(accessCode), ct);
+        await mediator.Send(new CancelBookingCommand(bookingId, accessCode), ct);
 
         return NoContent();
     }

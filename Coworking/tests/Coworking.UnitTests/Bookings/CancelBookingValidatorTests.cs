@@ -17,8 +17,17 @@ public class CancelBookingValidatorTests
     public void AccessCode_IsAcceptedOnlyWhenItIsVersion7(string label, string accessCode, bool expected)
     {
         var result = new CancelBookingValidator()
-            .Validate(new CancelBookingCommand(Guid.Parse(accessCode)));
+            .Validate(new CancelBookingCommand(BookingId: 1, Guid.Parse(accessCode)));
 
         Assert.True(result.IsValid == expected, $"{label}: expected IsValid={expected}");
+    }
+
+    [Fact]
+    public void BookingId_IsRequired()
+    {
+        var result = new CancelBookingValidator()
+            .Validate(new CancelBookingCommand(BookingId: 0, Guid.CreateVersion7()));
+
+        Assert.False(result.IsValid);
     }
 }

@@ -29,7 +29,7 @@ internal static class TestSeed
         return coworking.Desks.First().Id;
     }
 
-    public static async Task<Guid> BookingAsync(TestApiFactory factory, string label, BookingStatus status)
+    public static async Task<(int Id, Guid AccessCode)> BookingAsync(TestApiFactory factory, string label, BookingStatus status)
     {
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -42,7 +42,9 @@ internal static class TestSeed
         db.Set<Booking>().Add(NewBooking(coworking.Desks.First(), DefaultStart, status));
         await db.SaveChangesAsync();
 
-        return coworking.Desks.First().Bookings.First().AccessCode;
+        var booking = coworking.Desks.First().Bookings.First();
+
+        return (booking.Id, booking.AccessCode);
     }
 
     /// Seeds a booking onto an existing desk, for tests that then call the API for that slot.

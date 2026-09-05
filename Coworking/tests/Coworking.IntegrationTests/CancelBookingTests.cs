@@ -1,3 +1,4 @@
+using Coworking.API.Controllers;
 using Coworking.Domain.Entities;
 using Coworking.Domain.Enums;
 using Coworking.Infrastructure.Persistence.Contexts;
@@ -11,8 +12,8 @@ using System.Text.Json;
 namespace Coworking.IntegrationTests;
 
 /// <summary>
-/// DELETE /api/bookings/{accessCode}. The access code is the authorization, so an unknown
-/// code and someone else's code are the same answer: 404.
+/// DELETE /api/bookings/{bookingId} with the access code in a header. The code is the
+/// authorization, so a missing booking and someone else's code are the same answer: 404.
 /// </summary>
 public class CancelBookingTests
 {
@@ -29,9 +30,9 @@ public class CancelBookingTests
     {
         await using var factory = new TestApiFactory(bypassCoordinator: false, Database);
 
-        var accessCode = await TestSeed.BookingAsync(factory, "Cancel state", seeded);
+        var booking = await TestSeed.BookingAsync(factory, "Cancel state", seeded);
 
-        var response = await Client(factory, "203.0.113.10").DeleteAsync(Url(accessCode));
+        var response = await CancelAsync(Client(factory, "203.0.113.10"), booking);
 
         Assert.Equal(expected, response.StatusCode);
     }
@@ -41,29 +42,58 @@ public class CancelBookingTests
     {
         await using var factory = new TestApiFactory(bypassCoordinator: false, Database);
 
-        var accessCode = await TestSeed.BookingAsync(factory, "Cancel outbox", BookingStatus.PendingPayment);
+        var booking = await TestSeed.BookingAsync(factory, "Cancel outbox", BookingStatus.PendingPayment);
 
         var before = await OutboxCountAsync(factory);
 
-        var response = await Client(factory, "203.0.113.11").DeleteAsync(Url(accessCode));
+        var response = await CancelAsync(Client(factory, "203.0.113.11"), booking);
 
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
         Assert.Equal(0, response.Content.Headers.ContentLength ?? 0);
-        Assert.Equal(BookingStatus.Cancelled, await StatusAsync(factory, accessCode));
+        Assert.Equal(BookingStatus.Cancelled, await StatusAsync(factory, booking.AccessCode));
 
         // the row is only there if Publish ran inside the same transaction as the status change
         Assert.True(await OutboxCountAsync(factory) > before);
     }
 
     [Fact]
-    public async Task Delete_UnknownAccessCode_Returns404()
+    public async Task Delete_UnknownBooking_Returns404()
     {
         await using var factory = new TestApiFactory(bypassCoordinator: false, Database);
 
-        var response = await Client(factory, "203.0.113.12").DeleteAsync(Url(Guid.CreateVersion7()));
+        var response = await CancelAsync(
+            Client(factory, "203.0.113.12"), (int.MaxValue, Guid.CreateVersion7()));
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
         Assert.Equal("Not Found", await TitleAsync(response));
+    }
+
+    /// <summary>
+    /// Someone else's code on a real booking answers exactly like a missing one, so the reply
+    /// never confirms that the booking exists.
+    /// </summary>
+    [Fact]
+    public async Task Delete_WrongAccessCode_Returns404AndLeavesTheBooking()
+    {
+        await using var factory = new TestApiFactory(bypassCoordinator: false, Database);
+
+        var booking = await TestSeed.BookingAsync(factory, "Cancel wrong code", BookingStatus.PendingPayment);
+
+        var response = await CancelAsync(
+            Client(factory, "203.0.113.17"), (booking.Id, Guid.CreateVersion7()));
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        Assert.Equal(BookingStatus.PendingPayment, await StatusAsync(factory, booking.AccessCode));
+    }
+
+    [Fact]
+    public async Task Delete_WithoutAccessCodeHeader_Returns400()
+    {
+        await using var factory = new TestApiFactory(bypassCoordinator: false, Database);
+
+        var response = await Client(factory, "203.0.113.18").DeleteAsync("/api/bookings/1");
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
     [Fact]
@@ -71,7 +101,7 @@ public class CancelBookingTests
     {
         await using var factory = new TestApiFactory(bypassCoordinator: false, Database);
 
-        var response = await Client(factory, "203.0.113.13").DeleteAsync(Url(Guid.Empty));
+        var response = await CancelAsync(Client(factory, "203.0.113.13"), (1, Guid.Empty));
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
@@ -81,11 +111,11 @@ public class CancelBookingTests
     {
         await using var factory = new TestApiFactory(bypassCoordinator: false, Database);
 
-        var accessCode = await TestSeed.BookingAsync(factory, "Cancel twice", BookingStatus.PendingPayment);
+        var booking = await TestSeed.BookingAsync(factory, "Cancel twice", BookingStatus.PendingPayment);
         var client = Client(factory, "203.0.113.14");
 
-        Assert.Equal(HttpStatusCode.NoContent, (await client.DeleteAsync(Url(accessCode))).StatusCode);
-        Assert.Equal(HttpStatusCode.UnprocessableEntity, (await client.DeleteAsync(Url(accessCode))).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await CancelAsync(client, booking)).StatusCode);
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, (await CancelAsync(client, booking)).StatusCode);
     }
 
     /// <summary>
@@ -106,7 +136,8 @@ public class CancelBookingTests
         var taken = await CreateBookingAsync(client, deskId, start);
         Assert.Equal(HttpStatusCode.Conflict, taken.Status);
 
-        Assert.Equal(HttpStatusCode.NoContent, (await client.DeleteAsync(Url(created.AccessCode))).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent,
+            (await CancelAsync(client, (created.BookingId, created.AccessCode))).StatusCode);
 
         var reBooked = await CreateBookingAsync(client, deskId, start);
         Assert.Equal(HttpStatusCode.OK, reBooked.Status);
@@ -122,24 +153,31 @@ public class CancelBookingTests
     {
         await using var factory = new TestApiFactory(bypassCoordinator: false, Database);
 
-        var accessCode = await TestSeed.BookingAsync(factory, "Cancel race", BookingStatus.PendingPayment);
+        var booking = await TestSeed.BookingAsync(factory, "Cancel race", BookingStatus.PendingPayment);
         var client = Client(factory, "203.0.113.16");
 
         var results = await Task.WhenAll(
-            client.DeleteAsync(Url(accessCode)),
-            client.DeleteAsync(Url(accessCode)));
+            CancelAsync(client, booking),
+            CancelAsync(client, booking));
 
         var report = string.Join(", ", results.Select(r => (int)r.StatusCode));
 
         Assert.False(results.Any(r => (int)r.StatusCode >= 500), $"A conflict leaked as a server error: {report}");
         Assert.Equal(1, results.Count(r => r.StatusCode == HttpStatusCode.NoContent));
         Assert.Equal(1, results.Count(r => r.StatusCode is HttpStatusCode.Conflict or HttpStatusCode.UnprocessableEntity));
-        Assert.Equal(BookingStatus.Cancelled, await StatusAsync(factory, accessCode));
+        Assert.Equal(BookingStatus.Cancelled, await StatusAsync(factory, booking.AccessCode));
     }
 
     // helpers
 
-    private static string Url(Guid accessCode) => $"/api/bookings/{accessCode}";
+    private static Task<HttpResponseMessage> CancelAsync(
+        HttpClient client, (int Id, Guid AccessCode) booking)
+    {
+        var request = new HttpRequestMessage(HttpMethod.Delete, $"/api/bookings/{booking.Id}");
+        request.Headers.Add(BookingsController.AccessCodeHeader, booking.AccessCode.ToString());
+
+        return client.SendAsync(request);
+    }
 
     // distinct IP per test: the booking-write limiter partitions on it (10/min)
     private static HttpClient Client(TestApiFactory factory, string clientIp)
@@ -150,7 +188,7 @@ public class CancelBookingTests
         return client;
     }
 
-    private static async Task<(HttpStatusCode Status, Guid AccessCode)> CreateBookingAsync(
+    private static async Task<(HttpStatusCode Status, int BookingId, Guid AccessCode)> CreateBookingAsync(
         HttpClient client,
         int deskId,
         DateTimeOffset start)
@@ -166,11 +204,13 @@ public class CancelBookingTests
         });
 
         if (response.StatusCode != HttpStatusCode.OK)
-            return (response.StatusCode, Guid.Empty);
+            return (response.StatusCode, 0, Guid.Empty);
 
         using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
 
-        return (response.StatusCode, body.RootElement.GetProperty("accessCode").GetGuid());
+        return (response.StatusCode,
+            body.RootElement.GetProperty("bookingId").GetInt32(),
+            body.RootElement.GetProperty("accessCode").GetGuid());
     }
 
     private static async Task<string?> TitleAsync(HttpResponseMessage response)

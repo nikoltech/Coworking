@@ -28,7 +28,7 @@ public class CancelBookingCommandHandlerTests : IDisposable
     {
         var booking = BookingFactory.Seeded(_sqlite.Db, BookingStatus.PendingPayment);
 
-        await Handle(booking.AccessCode);
+        await Handle(booking.Id, booking.AccessCode);
 
         Assert.Equal(BookingStatus.Cancelled, await StatusInDatabase(booking.Id));
     }
@@ -38,7 +38,7 @@ public class CancelBookingCommandHandlerTests : IDisposable
     {
         var booking = BookingFactory.Seeded(_sqlite.Db, BookingStatus.PendingPayment);
 
-        await Handle(booking.AccessCode);
+        await Handle(booking.Id, booking.AccessCode);
 
         var published = Captured();
 
@@ -53,11 +53,22 @@ public class CancelBookingCommandHandlerTests : IDisposable
     }
 
     [Fact]
+    public async Task Handle_WhenAccessCodeDoesNotMatchTheBooking_ThrowsNotFound()
+    {
+        var booking = BookingFactory.Seeded(_sqlite.Db, BookingStatus.PendingPayment);
+
+        // the same answer as a missing booking, so the reply never confirms one exists
+        await Assert.ThrowsAsync<NotFoundException>(() => Handle(booking.Id, Guid.CreateVersion7()));
+
+        Assert.Equal(BookingStatus.PendingPayment, await StatusInDatabase(booking.Id));
+    }
+
+    [Fact]
     public async Task Handle_WhenAccessCodeUnknown_ThrowsNotFound()
     {
         BookingFactory.Seeded(_sqlite.Db, BookingStatus.PendingPayment);
 
-        await Assert.ThrowsAsync<NotFoundException>(() => Handle(Guid.CreateVersion7()));
+        await Assert.ThrowsAsync<NotFoundException>(() => Handle(bookingId: int.MaxValue, Guid.CreateVersion7()));
 
         await _mediator.DidNotReceive().Publish(Arg.Any<BookingCancelledNotification>(), Arg.Any<CancellationToken>());
     }
@@ -69,7 +80,7 @@ public class CancelBookingCommandHandlerTests : IDisposable
     {
         var booking = BookingFactory.Seeded(_sqlite.Db, terminal);
 
-        await Assert.ThrowsAsync<InvalidTransitionException<BookingStatus>>(() => Handle(booking.AccessCode));
+        await Assert.ThrowsAsync<InvalidTransitionException<BookingStatus>>(() => Handle(booking.Id, booking.AccessCode));
 
         await _mediator.DidNotReceive().Publish(Arg.Any<BookingCancelledNotification>(), Arg.Any<CancellationToken>());
         Assert.Equal(terminal, await StatusInDatabase(booking.Id));
@@ -83,7 +94,7 @@ public class CancelBookingCommandHandlerTests : IDisposable
         _mediator.Publish(Arg.Any<BookingCancelledNotification>(), Arg.Any<CancellationToken>())
                  .ThrowsAsync(new InvalidOperationException("broker down"));
 
-        await Assert.ThrowsAsync<InvalidOperationException>(() => Handle(booking.AccessCode));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => Handle(booking.Id, booking.AccessCode));
 
         Assert.Equal(BookingStatus.PendingPayment, await StatusInDatabase(booking.Id));
     }
@@ -97,14 +108,14 @@ public class CancelBookingCommandHandlerTests : IDisposable
         _mediator.When(m => m.Publish(Arg.Any<BookingCancelledNotification>(), Arg.Any<CancellationToken>()))
                  .Do(_ => DeleteFromAnotherContext(booking.Id));
 
-        await Assert.ThrowsAsync<ConflictException>(() => Handle(booking.AccessCode));
+        await Assert.ThrowsAsync<ConflictException>(() => Handle(booking.Id, booking.AccessCode));
     }
 
     // helpers
 
-    private Task Handle(Guid accessCode) =>
+    private Task Handle(int bookingId, Guid accessCode) =>
         new CancelBookingCommandHandler(_mediator, _sqlite.Db)
-            .Handle(new CancelBookingCommand(accessCode), CancellationToken.None);
+            .Handle(new CancelBookingCommand(bookingId, accessCode), CancellationToken.None);
 
     private BookingCancelledNotification Captured() =>
         (BookingCancelledNotification)_mediator.ReceivedCalls()

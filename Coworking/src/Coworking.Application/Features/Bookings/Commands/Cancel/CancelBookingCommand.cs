@@ -8,23 +8,22 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Coworking.Application.Features.Bookings.Commands.Cancel;
 
-public record CancelBookingCommand(
-    //Guid UserId,
-    Guid AccessCode) : IRequest;
+public record CancelBookingCommand(int BookingId, Guid AccessCode) : IRequest;
 
 internal class CancelBookingCommandHandler(IMediator mediator, IAppDbContext dataContext) : IRequestHandler<CancelBookingCommand>
 {
     public async Task Handle(CancelBookingCommand request, CancellationToken ct)
     {
-        Booking booking;
-
         await using var transaction = await dataContext.BeginTransactionAsync(ct);
 
-        booking = await dataContext.Set<Booking>()
+        var booking = await dataContext.Set<Booking>()
             .Include(b => b.Desk)
                 .ThenInclude(d => d.Coworking)
-            .FirstOrDefaultAsync(b => b.AccessCode == request.AccessCode, ct)
-            ?? throw new NotFoundException($"Booking with access code {request.AccessCode} not found.");
+            .FirstOrDefaultAsync(b => b.Id == request.BookingId, ct);
+
+        // a wrong code is answered exactly like a missing booking, so neither reveals the other
+        if (booking is null || booking.AccessCode != request.AccessCode)
+            throw new NotFoundException($"Booking {request.BookingId} not found.");
 
         booking.Cancel();
 
@@ -37,7 +36,7 @@ internal class CancelBookingCommandHandler(IMediator mediator, IAppDbContext dat
         catch (DbUpdateConcurrencyException ex)
         {
             throw new ConflictException(
-                $"Booking with access code {request.AccessCode} was modified concurrently.", ex);
+                $"Booking {request.BookingId} was modified concurrently.", ex);
         }
 
         await transaction.CommitAsync();
