@@ -24,6 +24,13 @@ await app.InitializeApplicationAsync(config);
 
 app.UseForwardedHeaders();
 
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHsts();
+}
+
+app.UseHttpsRedirection();
+
 app.UseAppLocalization();
 
 app.UseExceptionHandler();
@@ -35,7 +42,6 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
 app.UseCors(CorsExtensions.DefaultCorsPolicyName);
 
 app.UseRateLimiter();
