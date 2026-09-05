@@ -11,6 +11,7 @@ public static class DependencyInjection
         services.AddProxySettings(configuration);
         services.AddApiRateLimiting();
         services.AddAppLocalization(configuration);
+        services.AddAppHealthChecks();
 
         services.ConfigureErrorHandling();
         services.AddControllers();

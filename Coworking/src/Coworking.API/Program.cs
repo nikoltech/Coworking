@@ -42,6 +42,7 @@ app.UseRateLimiter();
 
 app.UseAuthorization();
 app.MapControllers();
+app.MapAppHealthChecks();
 
 if (app.Environment.IsDevelopment())
 {
