@@ -20,6 +20,8 @@ public static class DependencyInjection
         services.AddApiRateLimiting();
 
         services.AddAppHealthChecks();
+
+        // MassTransit needs it to carry trace context into the outbox
         services.AddTraceContext();
 
         return services;

@@ -14,6 +14,7 @@ var config = builder.Configuration;
 builder.Services.AddApplication();
 builder.Services.AddPersistence(config);
 builder.Services.AddInfrastructure(config);
+
 builder.Services.AddMessaging(config);
 
 builder.Services.ConfigureApi(config);
