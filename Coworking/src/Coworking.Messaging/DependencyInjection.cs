@@ -27,10 +27,6 @@ public static class DependencyInjection
         {
             x.ConfigureConsumers();
 
-            // Outbox: Publish() writes the message to the DB within the current transaction.
-            // A MassTransit background worker reads OutboxMessage and delivers to RabbitMQ.
-            // Guarantee: if the service crashes after Commit() — the message is not lost,
-            // the worker will deliver it on next start.
             x.AddEntityFrameworkOutbox<AppDbContext>(o =>
             {
                 o.UsePostgres();
@@ -62,10 +58,6 @@ public static class DependencyInjection
 
         services.AddMassTransit(x =>
         {
-            // Outbox: Publish() writes the message to the DB within the current transaction.
-            // A MassTransit background worker reads OutboxMessage and delivers to RabbitMQ.
-            // Guarantee: if the service crashes after Commit() — the message is not lost,
-            // the worker will deliver it on next start.
             x.AddEntityFrameworkOutbox<AppDbContext>(o =>
             {
                 o.UsePostgres();
