@@ -12,7 +12,7 @@ internal sealed class EmailTemplateService(IAppCache cache)
 
     private static readonly TimeSpan CacheLifetime = TimeSpan.FromMinutes(10);
 
-    private static readonly string TemplatesDirectory =
+    internal static readonly string TemplatesDirectory =
         Path.Combine(AppContext.BaseDirectory, "Services", "Email", "Templates");
 
     public async Task<string> RenderTemplateFromHbsFileAsync(string templateFileName, object model)
