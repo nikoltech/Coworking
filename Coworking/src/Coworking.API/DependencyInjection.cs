@@ -8,21 +8,19 @@ public static class DependencyInjection
     public static IServiceCollection ConfigureApi(this IServiceCollection services,
         IConfiguration configuration)
     {
-        services.AddProxySettings(configuration);
-        services.AddApiRateLimiting();
-        services.AddAppLocalization(configuration);
-        services.AddAppHealthChecks();
-
-        services.ConfigureErrorHandling();
         services.AddControllers();
+        services.AddApiServices();
+        services.ConfigureErrorHandling();
 
         services.AddHttpContextAccessor();
+        services.AddAppLocalization(configuration);
 
+        services.AddProxySettings(configuration);
         services.AddCors(configuration);
+        services.AddApiRateLimiting();
 
-        services.AddApiServices();
-
-
+        services.AddAppHealthChecks();
+        services.AddTraceContext();
 
         return services;
     }

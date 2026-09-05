@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Coworking.Application.Ports.Email;
 using Coworking.Application.Features.Bookings.Commands.Cancel.Notifications.Models;
 using Coworking.Application.Features.Bookings.Commands.Create.Notifications.Models;
@@ -28,7 +29,8 @@ internal sealed class EmailNotificationService(
         await channel.WriteAsync(new EmailMessageChannelDto(
             To: model.To,
             Subject: $"Booking created — {model.CoworkingName}. Waiting for payment confirmation.",
-            Body: body), ct);
+            Body: body,
+            TraceParent: Activity.Current?.Id), ct);
     }
 
     public async Task SendBookingCancelledAsync(BookingCancelledEmailModel model, CancellationToken ct)
@@ -49,6 +51,7 @@ internal sealed class EmailNotificationService(
         await channel.WriteAsync(new EmailMessageChannelDto(
             To: model.To,
             Subject: $"Booking cancelled — {model.CoworkingName}",
-            Body: body), ct);
+            Body: body,
+            TraceParent: Activity.Current?.Id), ct);
     }
 }

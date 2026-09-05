@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Coworking.Application.Ports.Email;
 using Coworking.Infrastructure.Services.Email.Messaging.Dtos;
 using Coworking.Infrastructure.Services.Email.Options;
@@ -20,7 +21,13 @@ public sealed class EmailBackgroundWorker(
     IOptions<SmtpOptions> smtpOptions,
     ILogger<EmailBackgroundWorker> logger) : BackgroundService
 {
+    /// <summary>Referenced by telemetry configuration to subscribe to this worker.</summary>
+    public const string ActivitySourceName = "Coworking.Email";
+
+    private const string SendActivityName = "email.send";
     private const int MaxRetryAttempts = 3;
+
+    private static readonly ActivitySource Source = new(ActivitySourceName);
 
     private readonly ResiliencePipeline _retryPipeline = BuildRetryPipeline(logger);
 
@@ -42,6 +49,9 @@ public sealed class EmailBackgroundWorker(
 
     private async Task SendWithRetryAsync(EmailMessageChannelDto email, CancellationToken ct)
     {
+        using var activity = Source.StartActivity(
+            SendActivityName, ActivityKind.Consumer, email.TraceParent);
+
         try
         {
             await _retryPipeline.ExecuteAsync(async token =>
