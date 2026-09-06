@@ -1,4 +1,5 @@
 ﻿using Coworking.API.Infrastructure.Helpers;
+using Coworking.API.Infrastructure.RateLimiting;
 using System.Threading.RateLimiting;
 
 namespace Coworking.API.Infrastructure.Extensions;
@@ -25,7 +26,7 @@ public static class RateLimitingExtensions
                         QueueLimit = 10
                     })!);
 
-            options.AddPolicy("booking-write", context =>
+            options.AddPolicy(RateLimitPolicies.BookingWrite, context =>
                 RateLimitPartition.GetSlidingWindowLimiter(
                     partitionKey: context.User.Identity?.Name
                                   ?? IpHelper.GetClientIp(context),
@@ -37,7 +38,7 @@ public static class RateLimitingExtensions
                         QueueLimit = 0
                     }));
 
-            options.AddPolicy("read-heavy", context =>
+            options.AddPolicy(RateLimitPolicies.ReadHeavy, context =>
                 RateLimitPartition.GetFixedWindowLimiter(
                     partitionKey: IpHelper.GetClientIp(context),
                     factory: _ => new FixedWindowRateLimiterOptions

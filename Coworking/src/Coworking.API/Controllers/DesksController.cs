@@ -7,8 +7,11 @@ using Coworking.Application.Features.Bookings.Queries.GetDeskAvailability;
 using Coworking.Application.Features.Desks.Queries.GetDesks;
 using Coworking.Application.Features.Desks.Queries.GetDesks.Dtos;
 using MediatR;
+using Coworking.API.Infrastructure.RateLimiting;
+using Coworking.API.Infrastructure.Validation;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using Swashbuckle.AspNetCore.Annotations;
 
 namespace Coworking.API.Controllers;
 
@@ -20,9 +23,11 @@ public sealed class DesksController(IMediator mediator, IMapper mapper) : ApiCon
     /// Returns desks by coworking id.
     /// </summary>
     [HttpGet("{coworkingId:int}")]
-    [EnableRateLimiting("read-heavy")]
+    [EnableRateLimiting(RateLimitPolicies.ReadHeavy)]
     [ProducesResponseType(typeof(IReadOnlyList<DeskDto>), StatusCodes.Status200OK)]
-    public async Task<ActionResult<IReadOnlyList<DeskDto>>> Get([FromRoute] int coworkingId, CancellationToken ct)
+    public async Task<ActionResult<IReadOnlyList<DeskDto>>> Get(
+        [FromRoute, PositiveId(int.MaxValue)] int coworkingId,
+        CancellationToken ct)
     {
         var result = await mediator.Send(new GetDesksQuery(coworkingId), ct);
 
@@ -34,11 +39,14 @@ public sealed class DesksController(IMediator mediator, IMapper mapper) : ApiCon
     /// Use slotSizeMinutes to expand them into a slot grid.
     /// </summary>
     [HttpGet("{deskId:int}/availability")]
-    [EnableRateLimiting("read-heavy")]
+    [SwaggerOperation(
+        Summary = "Returns desk availability as non-overlapping intervals sorted by start time.",
+        Description = "Use slotSizeMinutes to expand them into a slot grid. The range must be under 90 days.")]
+    [EnableRateLimiting(RateLimitPolicies.ReadHeavy)]
     [ProducesResponseType(typeof(DeskAvailabilityResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<ActionResult<DeskAvailabilityResponse>> GetAvailability(
-        [FromRoute] int deskId,
+        [FromRoute, PositiveId(int.MaxValue)] int deskId,
         [FromQuery, Required] DateOnly? dateFrom,
         [FromQuery, Required] DateOnly? dateTo,
         CancellationToken ct)

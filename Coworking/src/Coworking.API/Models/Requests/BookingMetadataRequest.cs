@@ -1,3 +1,10 @@
-﻿namespace Coworking.API.Models.Requests;
+﻿using Coworking.Domain.Constants;
+using System.ComponentModel.DataAnnotations;
 
-public record BookingMetadataRequest(string? UserTimeZoneId);
+namespace Coworking.API.Models.Requests;
+
+public record BookingMetadataRequest
+{
+    [MaxLength(BookingLimits.UserTimeZoneMaxLength)]
+    public string? UserTimeZoneId { get; init; }
+}

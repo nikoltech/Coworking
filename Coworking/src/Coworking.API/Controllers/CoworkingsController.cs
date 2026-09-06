@@ -2,6 +2,7 @@
 using Coworking.Application.Features.Coworkings.Queries.GetCoworkings;
 using Coworking.Application.Features.Coworkings.Queries.GetCoworkings.Dtos;
 using MediatR;
+using Coworking.API.Infrastructure.RateLimiting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 
@@ -15,7 +16,7 @@ public sealed class CoworkingsController(IMediator mediator) : ApiControllerBase
     /// Returns all coworking spaces.
     /// </summary>
     [HttpGet]
-    [EnableRateLimiting("read-heavy")]
+    [EnableRateLimiting(RateLimitPolicies.ReadHeavy)]
     [ProducesResponseType(typeof(IReadOnlyList<CoworkingDto>), StatusCodes.Status200OK)]
     public async Task<ActionResult<IReadOnlyList<CoworkingDto>>> Get(CancellationToken ct)
     {
