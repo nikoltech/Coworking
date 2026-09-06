@@ -7,7 +7,7 @@ namespace Coworking.Domain.Entities;
 
 public class Booking : ITrackEntity, IHasStateGraph<BookingStatus>
 {
-    public int Id { get; set; }
+    public long Id { get; set; }
 
     public Guid AccessCode { get; set; } = Guid.CreateVersion7();
 

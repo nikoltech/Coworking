@@ -1,4 +1,4 @@
-using Coworking.API.Controllers;
+﻿using Coworking.API.Controllers;
 using Coworking.Domain.Entities;
 using Coworking.Domain.Enums;
 using Coworking.Infrastructure.Persistence.Contexts;
@@ -62,7 +62,7 @@ public class CancelBookingTests
         await using var factory = new TestApiFactory(bypassCoordinator: false, Database);
 
         var response = await CancelAsync(
-            Client(factory, "203.0.113.12"), (int.MaxValue, Guid.CreateVersion7()));
+            Client(factory, "203.0.113.12"), (long.MaxValue, Guid.CreateVersion7()));
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
         Assert.Equal("Not Found", await TitleAsync(response));
@@ -171,7 +171,7 @@ public class CancelBookingTests
     // helpers
 
     private static Task<HttpResponseMessage> CancelAsync(
-        HttpClient client, (int Id, Guid AccessCode) booking)
+        HttpClient client, (long Id, Guid AccessCode) booking)
     {
         var request = new HttpRequestMessage(HttpMethod.Delete, $"/api/bookings/{booking.Id}");
         request.Headers.Add(BookingsController.AccessCodeHeader, booking.AccessCode.ToString());
@@ -188,7 +188,7 @@ public class CancelBookingTests
         return client;
     }
 
-    private static async Task<(HttpStatusCode Status, int BookingId, Guid AccessCode)> CreateBookingAsync(
+    private static async Task<(HttpStatusCode Status, long BookingId, Guid AccessCode)> CreateBookingAsync(
         HttpClient client,
         int deskId,
         DateTimeOffset start)
@@ -209,7 +209,7 @@ public class CancelBookingTests
         using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
 
         return (response.StatusCode,
-            body.RootElement.GetProperty("bookingId").GetInt32(),
+            body.RootElement.GetProperty("bookingId").GetInt64(),
             body.RootElement.GetProperty("accessCode").GetGuid());
     }
 

@@ -1,4 +1,4 @@
-using Coworking.Application.Common.Exceptions;
+﻿using Coworking.Application.Common.Exceptions;
 using Coworking.Application.Features.Bookings.Commands.Cancel;
 using Coworking.Application.Features.Bookings.Commands.Cancel.Notifications;
 using Coworking.Domain.Common.StateMachine;
@@ -68,7 +68,7 @@ public class CancelBookingCommandHandlerTests : IDisposable
     {
         BookingFactory.Seeded(_sqlite.Db, BookingStatus.PendingPayment);
 
-        await Assert.ThrowsAsync<NotFoundException>(() => Handle(bookingId: int.MaxValue, Guid.CreateVersion7()));
+        await Assert.ThrowsAsync<NotFoundException>(() => Handle(bookingId: long.MaxValue, Guid.CreateVersion7()));
 
         await _mediator.DidNotReceive().Publish(Arg.Any<BookingCancelledNotification>(), Arg.Any<CancellationToken>());
     }
@@ -113,7 +113,7 @@ public class CancelBookingCommandHandlerTests : IDisposable
 
     // helpers
 
-    private Task Handle(int bookingId, Guid accessCode) =>
+    private Task Handle(long bookingId, Guid accessCode) =>
         new CancelBookingCommandHandler(_mediator, _sqlite.Db)
             .Handle(new CancelBookingCommand(bookingId, accessCode), CancellationToken.None);
 
@@ -122,7 +122,7 @@ public class CancelBookingCommandHandlerTests : IDisposable
             .Single(c => c.GetMethodInfo().Name == nameof(IMediator.Publish))
             .GetArguments()[0]!;
 
-    private async Task<BookingStatus> StatusInDatabase(int bookingId)
+    private async Task<BookingStatus> StatusInDatabase(long bookingId)
     {
         await using var context = _sqlite.NewContext();
 
@@ -132,7 +132,7 @@ public class CancelBookingCommandHandlerTests : IDisposable
             .SingleAsync();
     }
 
-    private void DeleteFromAnotherContext(int bookingId)
+    private void DeleteFromAnotherContext(long bookingId)
     {
         using var context = _sqlite.NewContext();
 

@@ -1,11 +1,14 @@
-using AutoMapper;
+﻿using AutoMapper;
 using Coworking.API.Controllers.Abstractions;
 using Coworking.API.Models.Requests;
 using Coworking.API.Models.Responces;
 using Coworking.Application.Features.Bookings.Commands.Cancel;
 using Coworking.Application.Features.Bookings.Commands.Create;
 using MediatR;
+using Coworking.API.Infrastructure.RateLimiting;
+using Coworking.API.Infrastructure.Validation;
 using Microsoft.AspNetCore.Mvc;
+using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.RateLimiting;
 
 namespace Coworking.API.Controllers;
@@ -14,14 +17,13 @@ namespace Coworking.API.Controllers;
 [Tags("Bookings")]
 public sealed class BookingsController(IMediator mediator, IMapper mapper) : ApiControllerBase
 {
-    /// <summary>Carries the access code: a credential in the path would reach every access log.</summary>
     public const string AccessCodeHeader = "Access-Code";
 
     /// <summary>
     /// Creates a booking.
     /// </summary>
     [HttpPost]
-    [EnableRateLimiting("booking-write")]
+    [EnableRateLimiting(RateLimitPolicies.BookingWrite)]
     [Consumes("application/json")]
     [ProducesResponseType(typeof(CreateBookingResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
@@ -41,16 +43,16 @@ public sealed class BookingsController(IMediator mediator, IMapper mapper) : Api
     /// <summary>
     /// Cancels a booking. The access code returned on creation is the authorization.
     /// </summary>
-    [HttpDelete("{bookingId:int}")]
-    [EnableRateLimiting("booking-write")]
+    [HttpDelete("{bookingId:long}")]
+    [EnableRateLimiting(RateLimitPolicies.BookingWrite)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status503ServiceUnavailable)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status422UnprocessableEntity)]
     public async Task<IActionResult> Cancel(
-        [FromRoute] int bookingId,
-        [FromHeader(Name = AccessCodeHeader)] Guid accessCode,
+        [FromRoute, PositiveId(long.MaxValue)] long bookingId,
+        [FromHeader(Name = AccessCodeHeader), Required] Guid accessCode,
         CancellationToken ct)
     {
         await mediator.Send(new CancelBookingCommand(bookingId, accessCode), ct);

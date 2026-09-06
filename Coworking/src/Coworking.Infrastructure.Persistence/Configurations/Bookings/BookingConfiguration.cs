@@ -1,4 +1,5 @@
-﻿using Coworking.Domain.Entities;
+﻿using Coworking.Domain.Constants;
+using Coworking.Domain.Entities;
 using Coworking.Infrastructure.Persistence.Configurations.Common;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -24,8 +25,16 @@ public class BookingConfiguration : IEntityTypeConfiguration<Booking>
             .HasConversion<string>()
             .HasMaxLength(50);
 
+        builder.Property(x => x.UserEmail)
+            .IsRequired()
+            .HasMaxLength(BookingLimits.UserEmailMaxLength);
+
+        builder.Property(x => x.UserName)
+            .IsRequired()
+            .HasMaxLength(BookingLimits.UserNameMaxLength);
+
         builder.Property(x => x.UserTimeZoneId)
-            .HasMaxLength(100);
+            .HasMaxLength(BookingLimits.UserTimeZoneMaxLength);
 
         builder.HasIndex(x => x.AccessCode)
                .IsUnique();

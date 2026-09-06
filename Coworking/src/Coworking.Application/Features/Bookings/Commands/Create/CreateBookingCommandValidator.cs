@@ -1,4 +1,5 @@
 ﻿using Coworking.Application.Features.Bookings.Commands.Create.Requests;
+using Coworking.Domain.Constants;
 using FluentValidation;
 
 namespace Coworking.Application.Features.Bookings.Commands.Create;
@@ -12,6 +13,15 @@ public class CreateBookingValidator : AbstractValidator<CreateBookingCommand>
     public CreateBookingValidator()
     {
         RuleFor(x => x.DeskId).GreaterThan(0);
+
+        RuleFor(x => x.UserEmail)
+            .NotEmpty()
+            .EmailAddress()
+            .MaximumLength(BookingLimits.UserEmailMaxLength);
+
+        RuleFor(x => x.UserName)
+            .NotEmpty()
+            .MaximumLength(BookingLimits.UserNameMaxLength);
 
         RuleFor(x => x.StartTime)
             .Must(IsWholeMinute)

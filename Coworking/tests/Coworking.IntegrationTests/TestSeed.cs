@@ -1,4 +1,4 @@
-using Coworking.Domain.Entities;
+﻿using Coworking.Domain.Entities;
 using Coworking.Domain.Enums;
 using Coworking.Domain.ValueObjects;
 using Coworking.Infrastructure.Persistence.Contexts;
@@ -29,7 +29,7 @@ internal static class TestSeed
         return coworking.Desks.First().Id;
     }
 
-    public static async Task<(int Id, Guid AccessCode)> BookingAsync(TestApiFactory factory, string label, BookingStatus status)
+    public static async Task<(long Id, Guid AccessCode)> BookingAsync(TestApiFactory factory, string label, BookingStatus status)
     {
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();

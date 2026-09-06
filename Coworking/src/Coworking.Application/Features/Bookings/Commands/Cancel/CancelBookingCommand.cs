@@ -1,4 +1,4 @@
-using Coworking.Application.Ports;
+﻿using Coworking.Application.Ports;
 using Coworking.Application.Common.Exceptions;
 using Coworking.Application.Features.Bookings.Commands.Cancel.Notifications;
 using Coworking.Domain.Entities;
@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Coworking.Application.Features.Bookings.Commands.Cancel;
 
-public record CancelBookingCommand(int BookingId, Guid AccessCode) : IRequest;
+public record CancelBookingCommand(long BookingId, Guid AccessCode) : IRequest;
 
 internal class CancelBookingCommandHandler(IMediator mediator, IAppDbContext dataContext) : IRequestHandler<CancelBookingCommand>
 {

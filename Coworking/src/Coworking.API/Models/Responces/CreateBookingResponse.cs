@@ -3,5 +3,5 @@
 public record CreateBookingResponse
 (
     Guid AccessCode,
-    int BookingId
+    long BookingId
 );
