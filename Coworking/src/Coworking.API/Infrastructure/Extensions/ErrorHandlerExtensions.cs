@@ -1,6 +1,4 @@
 ﻿using Coworking.API.Infrastructure.ExceptionHandlers;
-using Coworking.Application.Common.Exceptions;
-using FluentValidation;
 using Microsoft.AspNetCore.Diagnostics;
 
 namespace Coworking.API.Infrastructure.Extensions
@@ -30,16 +28,10 @@ namespace Coworking.API.Infrastructure.Extensions
 
                         bool isTechnicalError = statusCode >= 500;
 
-                        ctx.ProblemDetails.Detail = (isTechnicalError && !env.IsDevelopment())
-                            ? "An internal error occurred."
-                            : error.Message;
+                        bool hideDetails = isTechnicalError && !env.IsDevelopment();
 
-                        if (error is ValidationException ve)
-                        {
-                            ctx.ProblemDetails.Extensions["errors"] = ve.Errors
-                                .GroupBy(e => e.PropertyName)
-                                .ToDictionary(g => g.Key, g => g.Select(e => e.ErrorMessage));
-                        }
+                        ctx.ProblemDetails.Detail = hideDetails ? "An internal error occurred." : error.Message;
+
                     }
 
                     // traceId stays in every environment — it is the only handle

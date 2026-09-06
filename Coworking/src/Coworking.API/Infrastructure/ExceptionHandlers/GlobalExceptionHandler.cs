@@ -1,4 +1,6 @@
+﻿using FluentValidation;
 using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.AspNetCore.Mvc;
 
 namespace Coworking.API.Infrastructure.ExceptionHandlers;
 
@@ -21,13 +23,26 @@ internal sealed class GlobalExceptionHandler(
 
         Log(httpContext, exception, status, title);
 
+        var problemDetails = exception is ValidationException validation
+            ? new ValidationProblemDetails(ToErrors(validation))
+            : new ProblemDetails();
+
+        problemDetails.Status = status;
+        problemDetails.Title = title;
+
         return await problemDetailsService.TryWriteAsync(new ProblemDetailsContext
         {
             HttpContext = httpContext,
             Exception = exception,
-            ProblemDetails = { Status = status, Title = title }
+            ProblemDetails = problemDetails
         });
     }
+
+    /// ValidationProblemDetails owns the wire name for the field map, so it is never spelled here.
+    private static Dictionary<string, string[]> ToErrors(ValidationException exception) =>
+        exception.Errors
+            .GroupBy(failure => failure.PropertyName)
+            .ToDictionary(group => group.Key, group => group.Select(f => f.ErrorMessage).ToArray());
 
     private static string RetryAfterSeconds() => Random.Shared.Next(1, 4).ToString();
 
