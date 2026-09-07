@@ -1,4 +1,4 @@
-using Coworking.External.Squidex.Localization;
+﻿using Coworking.External.Squidex.Localization;
 using Coworking.Infrastructure.Persistence.Contexts;
 using Microsoft.EntityFrameworkCore;
 
@@ -20,7 +20,7 @@ public static class AppInitializationExtensions
 
             // stays off until AddSquidex() is wired into Infrastructure DI;
             // throws if Squidex is unreachable or its master locale contradicts appsettings
-             await SquidexLocaleSync.ValidateAllAsync(services, app.Lifetime.ApplicationStopping);
+            // await SquidexLocaleSync.ValidateAllAsync(services, app.Lifetime.ApplicationStopping);
         }
         catch (Exception ex)
         {

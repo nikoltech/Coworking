@@ -16,7 +16,7 @@ public static class SquidexPaths
 
     // JSON paths (dot separator) — use with RequestQuery
 
-    /// <summary>Invariant field path for JSON query. Example: data.Title.iv</summary>
+    /// <summary>Invariant field path for JSON query. Example: data.Slug.iv</summary>
     public static string Iv(string fieldName) =>
         $"{DataRoot}.{fieldName}.iv";
 
@@ -26,7 +26,7 @@ public static class SquidexPaths
 
     // OData paths (slash separator) — use with raw OData strings
 
-    /// <summary>Invariant field path for OData. Example: data/Title/iv</summary>
+    /// <summary>Invariant field path for OData. Example: data/Slug/iv</summary>
     public static string ODataIv(string fieldName) =>
         $"{DataRoot}/{fieldName}/iv";
 

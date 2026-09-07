@@ -1,4 +1,4 @@
-using Coworking.External.Squidex.Abstractions.Models;
+﻿using Coworking.External.Squidex.Abstractions.Models;
 using Coworking.External.Squidex.Abstractions.Options;
 using Coworking.External.Squidex.Client;
 using Coworking.External.Squidex.Exceptions;
@@ -304,6 +304,29 @@ public sealed class SquidexApiClientTests
     }
 
     [Fact]
+    public async Task GetByIdConditionalAsync_SendsKnownETag_AndReportsNotModified()
+    {
+        const string knownETag = "W/\"9f1c\"";
+        string? sentIfNoneMatch = null;
+
+        _mockHttp
+            .When(HttpMethod.Get, "*/api/content/test-app/cities/city-1")
+            .Respond(req =>
+            {
+                sentIfNoneMatch = req.Headers.IfNoneMatch.ToString();
+                return new HttpResponseMessage(HttpStatusCode.NotModified);
+            });
+
+        var (content, etag, notModified) = await CreateClient()
+            .GetByIdConditionalAsync<SquidexFakes.TestSchema>("cities", "city-1", knownETag);
+
+        sentIfNoneMatch.Should().Be(knownETag);
+        notModified.Should().BeTrue();
+        content.Should().BeNull();
+        etag.Should().Be(knownETag);
+    }
+
+    [Fact]
     public async Task CreateAsync_PostsWithPublishParam()
     {
         var schema = SquidexFakes.MakeTestSchema("new-city");
@@ -556,6 +579,29 @@ public sealed class SquidexApiClientTests
 
         locales.Single(l => l.IsMaster).Iso2Code.Should().Be(TestLocales.En);
         locales.Single(l => !l.IsMaster).Iso2Code.Should().Be(TestLocales.UkUA);
+    }
+
+    [Fact]
+    public async Task GetAppLocalesAsync_OmitsXLanguages_SoLocalesNeverDependOnThemselves()
+    {
+        var sentLanguages = true;
+
+        _mockHttp
+            .When(HttpMethod.Get, $"*/api/apps/{_options.AppName}/languages")
+            .Respond(req =>
+            {
+                sentLanguages = req.Headers.Contains(SquidexRequestHeaders.Languages);
+                return new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent(
+                        SquidexFakes.AppLanguagesJson(TestLocales.UkUA, TestLocales.En),
+                        Encoding.UTF8, "application/json")
+                };
+            });
+
+        await CreateClient().GetAppLocalesAsync();
+
+        sentLanguages.Should().BeFalse();
     }
 
     // Private helper

@@ -118,27 +118,27 @@ internal sealed class SquidexApiClient : SquidexHttpClientBase, ISquidexApiClien
     }
 
     /// <inheritdoc/>
-    public async Task<(ContentDto<T>? Content, bool NotModified)> GetByIdConditionalAsync<T>(
+    public async Task<(ContentDto<T>? Content, string? ETag, bool NotModified)> GetByIdConditionalAsync<T>(
         string schema, string id,
-        int? knownVersion = null,
+        string? knownETag = null,
         QueryOptions? queryOptions = null,
         CancellationToken ct = default)
     {
         var request = BuildRequest(HttpMethod.Get, $"{ContentUrl(schema)}/{id}", queryOptions);
 
-        if (knownVersion.HasValue)
-            request.Headers.IfNoneMatch.Add(
-                new EntityTagHeaderValue($"\"{knownVersion}\""));
+        if (!string.IsNullOrEmpty(knownETag) &&
+            EntityTagHeaderValue.TryParse(knownETag, out var tag))
+            request.Headers.IfNoneMatch.Add(tag);
 
         var response = await SendWithRetryAsync(request, ct);
 
         if (response.StatusCode == HttpStatusCode.NotModified)
-            return (null, NotModified: true);
+            return (null, knownETag, NotModified: true);
 
         await response.EnsureSquidexSuccessAsync(ct);
 
         var content = await response.Content.ReadFromJsonAsync<ContentDto<T>>(Json, ct);
-        return (content, NotModified: false);
+        return (content, response.Headers.ETag?.ToString(), NotModified: false);
     }
 
     // Mutations

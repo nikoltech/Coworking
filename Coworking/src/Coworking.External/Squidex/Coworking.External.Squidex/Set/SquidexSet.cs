@@ -58,11 +58,11 @@ public class SquidexSet<T> : ISquidexSet<T> where T : class
         Client.GetByIdAsync<T>(Schema, id, queryOptions, ct);
 
     /// <inheritdoc/>
-    public Task<(ContentDto<T>? Content, bool NotModified)> GetByIdConditionalAsync(string id,
-        int? knownVersion = null,
+    public Task<(ContentDto<T>? Content, string? ETag, bool NotModified)> GetByIdConditionalAsync(string id,
+        string? knownETag = null,
         QueryOptions? queryOptions = null,
         CancellationToken ct = default) =>
-        Client.GetByIdConditionalAsync<T>(Schema, id, knownVersion, queryOptions, ct);
+        Client.GetByIdConditionalAsync<T>(Schema, id, knownETag, queryOptions, ct);
 
     public Task<ContentDto<T>> CreateAsync(T data,
         bool publish = true,

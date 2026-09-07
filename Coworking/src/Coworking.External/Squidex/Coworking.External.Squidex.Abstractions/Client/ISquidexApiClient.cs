@@ -26,13 +26,13 @@ public interface ISquidexApiClient
         CancellationToken ct = default);
 
     /// <summary>
-    /// For conditional GET — client caches ETag and sends it as If-None-Match header.
+    /// Conditional GET. Pass the ETag from a previous call as If-None-Match, and keep the one
+    /// returned here for the next. Squidex matches on a content hash, not on the item's version.
     /// </summary>
-    /// <param name="knownVersion">Optional ETag for conditional GET</param>
-    /// <returns>If content is not modified, returns NotModified=true and null content. Otherwise, returns content with NotModified=false.</returns>
-    Task<(ContentDto<T>? Content, bool NotModified)> GetByIdConditionalAsync<T>(
+    /// <returns>NotModified=true with null content when unchanged; otherwise the content and its ETag.</returns>
+    Task<(ContentDto<T>? Content, string? ETag, bool NotModified)> GetByIdConditionalAsync<T>(
         string schema, string id,
-        int? knownVersion = null,
+        string? knownETag = null,
         QueryOptions? queryOptions = null,
         CancellationToken ct = default);
 

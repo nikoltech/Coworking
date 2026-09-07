@@ -32,12 +32,12 @@ public interface ISquidexSet<T> where T : class
         CancellationToken ct = default);
 
     /// <summary>
-    /// Gets content by ID, returning a flag indicating if the content has not been modified since the known version.
+    /// Conditional GET. Pass the ETag from a previous call as If-None-Match, and keep the one
+    /// returned here for the next. Squidex matches on a content hash, not on the item's version.
     /// </summary>
-    /// <param name="knownVersion">Optional ETag for conditional GET.</param>
-    /// <returns>If content is not modified, returns NotModified=true and null content. Otherwise, returns content with NotModified=false.</returns>
-    Task<(ContentDto<T>? Content, bool NotModified)> GetByIdConditionalAsync(string id,
-        int? knownVersion = null,
+    /// <returns>NotModified=true with null content when unchanged; otherwise the content and its ETag.</returns>
+    Task<(ContentDto<T>? Content, string? ETag, bool NotModified)> GetByIdConditionalAsync(string id,
+        string? knownETag = null,
         QueryOptions? queryOptions = null,
         CancellationToken ct = default);
 

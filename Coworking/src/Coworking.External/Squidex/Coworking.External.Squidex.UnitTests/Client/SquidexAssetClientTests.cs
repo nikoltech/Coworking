@@ -1,4 +1,4 @@
-using Coworking.External.Squidex.Abstractions.Client;
+﻿using Coworking.External.Squidex.Abstractions.Client;
 using Coworking.External.Squidex.Abstractions.Models;
 using Coworking.External.Squidex.Abstractions.Options;
 using Coworking.External.Squidex.Auth;
@@ -22,7 +22,7 @@ public sealed class SquidexAssetClientTests
     private SquidexAssetClient CreateClient(SquidexAppOptions? options = null) =>
         new(_mockHttp.ToHttpClient(), options ?? _options, TestClientNames.Default);
 
-    private string AssetsUrl => $"*/api/assets/{_options.AppName}";
+    private string AssetsUrl => $"*/api/apps/{_options.AppName}/assets";
 
     // Query
 
@@ -101,7 +101,7 @@ public sealed class SquidexAssetClientTests
     public async Task GetByIdAsync_ReturnsNull_WhenNotFound()
     {
         _mockHttp
-            .When(HttpMethod.Get, $"*/api/assets/{_options.AppName}/missing")
+            .When(HttpMethod.Get, $"*/api/apps/{_options.AppName}/assets/missing")
             .Respond(HttpStatusCode.NotFound);
 
         var result = await CreateClient().GetByIdAsync("missing");
@@ -113,7 +113,7 @@ public sealed class SquidexAssetClientTests
     public async Task GetByIdAsync_ReturnsAsset_WhenFound()
     {
         _mockHttp
-            .When(HttpMethod.Get, $"*/api/assets/{_options.AppName}/asset-1")
+            .When(HttpMethod.Get, $"*/api/apps/{_options.AppName}/assets/asset-1")
             .RespondJson(SquidexFakes.MakeAsset("asset-1", "kyiv.png"));
 
         var result = await CreateClient().GetByIdAsync("asset-1");
@@ -143,10 +143,28 @@ public sealed class SquidexAssetClientTests
     }
 
     [Fact]
+    public async Task UploadAsync_SetsMimeTypeOnTheFilePart_NotJustTheEnvelope()
+    {
+        string? partContentType = null;
+        _mockHttp.When(HttpMethod.Post, AssetsUrl).Respond(req =>
+        {
+            // Squidex validates the part's own type; the multipart envelope tells it nothing
+            var parts = (MultipartFormDataContent)req.Content!;
+            partContentType = parts.First().Headers.ContentType?.MediaType;
+            return OkResponse(SquidexFakes.MakeAsset("new-asset"));
+        });
+
+        await using var stream = new MemoryStream(Encoding.UTF8.GetBytes("file-bytes"));
+        await CreateClient().UploadAsync(stream, "upload.png", "image/png");
+
+        partContentType.Should().Be("image/png");
+    }
+
+    [Fact]
     public async Task UpdateMetadataAsync_SendsPutWithJsonBody()
     {
         string? body = null;
-        _mockHttp.When(HttpMethod.Put, $"*/api/assets/{_options.AppName}/asset-1").Respond(async req =>
+        _mockHttp.When(HttpMethod.Put, $"*/api/apps/{_options.AppName}/assets/asset-1").Respond(async req =>
         {
             body = await req.Content!.ReadAsStringAsync();
             return OkResponse(SquidexFakes.MakeAsset("asset-1", "renamed.png"));
@@ -165,7 +183,7 @@ public sealed class SquidexAssetClientTests
     {
         string? capturedUrl = null;
         _mockHttp
-            .When(HttpMethod.Delete, $"*/api/assets/{_options.AppName}/del-id*")
+            .When(HttpMethod.Delete, $"*/api/apps/{_options.AppName}/assets/del-id*")
             .Respond(req =>
             {
                 capturedUrl = req.RequestUri?.ToString();
@@ -182,7 +200,7 @@ public sealed class SquidexAssetClientTests
     {
         string? capturedUrl = null;
         _mockHttp
-            .When(HttpMethod.Delete, $"*/api/assets/{_options.AppName}/del-id*")
+            .When(HttpMethod.Delete, $"*/api/apps/{_options.AppName}/assets/del-id*")
             .Respond(req =>
             {
                 capturedUrl = req.RequestUri?.ToString();

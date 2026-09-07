@@ -1,4 +1,4 @@
-# Coworking.External.Squidex
+﻿# Coworking.External.Squidex
 
 Status: unit-tested (159 tests green).
 
@@ -90,6 +90,11 @@ Both throw — on an unreachable app as much as on a contradiction — and neith
 that is already resolved. A sync may be called again at runtime to pick up a language added in
 the CMS; if that call fails, the previous locales keep serving.
 
+Both read `/apps/{app}/languages`, which is app management rather than content. Of the built-in
+roles only **Owner** may call it — Developer, Editor and Reader all get `403`. Either give the
+client **Owner**, or add `languages.read` to a custom role, or keep the locales in config, where
+no such call is made.
+
 ### Retries and deadlines
 
 Retried statuses: **408, 429, 500, 502, 503, 504** — nothing else. A 400 or a 409 comes
@@ -124,6 +129,9 @@ public sealed class CitySchema : ISquidexSchema
 
     [JsonPropertyName("IsRegionCity")]
     public IvField<bool?>? IsRegionCity { get; set; }
+
+    [JsonPropertyName("SOrder")]
+    public IvField<int?>? SOrder { get; set; }
 }
 ```
 
@@ -145,8 +153,8 @@ public class GetCitiesHandler(ISquidexContext squidex)
 ```csharp
 var page = await set.QueryAsync(
     RequestQuery.Create()
-        .WithFilter(SquidexFilter.Eq(CityPaths.IsRegionCity, true))
-        .WithSort([SortOption.Asc(CityPaths.SOrder)])
+        .WithFilter(SquidexFilter.Eq(SquidexPaths.Iv("IsRegionCity"), true))
+        .WithSort([SortOption.Asc(SquidexPaths.Iv("SOrder"))])
         .WithTake(20),
     ct: ct);
 
@@ -154,13 +162,25 @@ var title = page.Items[0].Data.Title?.GetLocalized("uk-UA", "en"); // localized
 var region = page.Items[0].Data.IsRegionCity?.Value ?? false;      // invariant
 ```
 
+A field's partitioning decides its path, and `SquidexPaths` builds both — `Iv` for invariant
+fields, `Localized` for one language of a localized field:
+
+```csharp
+SquidexPaths.Iv("IsRegionCity")            // data.IsRegionCity.iv
+SquidexPaths.Localized("Title", "uk-UA")   // data.Title.uk-UA
+```
+
+There is no path that spans every language: a localized field is filtered one locale at a
+time. Mixing the two up is not a silent miss — Squidex answers `400`, *"Path 'data.Title.iv'
+does not point to a valid property in the model"*.
+
 Every page at once, or a cheap existence check:
 
 ```csharp
 var all = await set.GetAllAsync(ct: ct);
 
 var exists = await set.ExistsAsync(
-    SquidexFilter.Eq(CityPaths.PlaceId, "abc"),
+    SquidexFilter.Eq(SquidexPaths.Localized("Title", "uk-UA"), "Київ"),
     ct: ct);
 ```
 
@@ -289,6 +309,7 @@ public interface ICityRepository : ISquidexSet<CitySchema>
 {
     Task<ContentDto<CitySchema>?> GetByTitleAsync(
         string title,
+        string locale,
         CancellationToken ct = default);
 }
 
@@ -297,11 +318,12 @@ public sealed class CityRepository(ISquidexApiClient client, ISquidexPaginator p
 {
     public async Task<ContentDto<CitySchema>?> GetByTitleAsync(
         string title,
+        string locale,
         CancellationToken ct = default)
     {
         var query = RequestQuery.Create()
             .WithTake(1)
-            .WithFilter(SquidexFilter.Eq(CityPaths.Title, title));
+            .WithFilter(SquidexFilter.Eq(SquidexPaths.Localized("Title", locale), title));
 
         return (await QueryAsync(query, ct: ct)).Items.FirstOrDefault();
     }

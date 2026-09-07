@@ -3,6 +3,7 @@ using Coworking.External.Squidex.Abstractions.Models;
 using Coworking.External.Squidex.Abstractions.Options;
 using Coworking.External.Squidex.Exceptions;
 using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 
 namespace Coworking.External.Squidex.Client;
@@ -44,8 +45,11 @@ internal sealed class SquidexAssetClient : SquidexHttpClientBase, ISquidexAssetC
         string mimeType,
         CancellationToken ct = default)
     {
-        var content = new MultipartFormDataContent();
-        content.Add(new StreamContent(stream), "file", fileName);
+        // Squidex does not infer the mime type, it validates the one sent with the part
+        var file = new StreamContent(stream);
+        file.Headers.ContentType = new MediaTypeHeaderValue(mimeType);
+
+        var content = new MultipartFormDataContent { { file, "file", fileName } };
 
         var request = CreateRequest(HttpMethod.Post, AssetsUrl());
         request.Content = content;
@@ -84,7 +88,7 @@ internal sealed class SquidexAssetClient : SquidexHttpClientBase, ISquidexAssetC
     // private
 
     private string AssetsUrl() =>
-        $"{AppOptions.BaseUrl.TrimEnd('/')}/api/assets/{AppOptions.AppName}";
+        $"{AppOptions.BaseUrl.TrimEnd('/')}/api/apps/{AppOptions.AppName}/assets";
 
     private static string ToQueryString(AssetQuery query)
     {

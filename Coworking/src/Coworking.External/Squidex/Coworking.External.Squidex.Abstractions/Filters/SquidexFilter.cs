@@ -3,12 +3,11 @@
 /// <summary>
 /// Builds Squidex filter objects without string operation literals.
 ///
-/// Always use path constants from *Paths.cs per schema — never raw strings:
-///   do:     SquidexFilter.Eq(CityPaths.Title, "Kyiv")
+/// Build the path with <c>SquidexPaths</c> — never hand-write the partition suffix:
+///   do:     SquidexFilter.Eq(SquidexPaths.Localized("Title", locale), "Kyiv")
 ///   don't:  SquidexFilter.Eq("data.Title.iv", "Kyiv")
 ///
-/// Path constants are the single source of truth — update there and
-/// all filters update automatically.
+/// A localized field addressed as <c>.iv</c> is rejected by Squidex with 400.
 /// </summary>
 public static class SquidexFilter
 {
