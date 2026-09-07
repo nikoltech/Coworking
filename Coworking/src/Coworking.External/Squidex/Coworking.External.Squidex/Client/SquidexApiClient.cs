@@ -154,7 +154,13 @@ internal sealed class SquidexApiClient : SquidexHttpClientBase, ISquidexApiClien
     }
 
     /// <summary>
-    /// Updates content item with optimistic concurrency control using ETag.
+    /// Replaces the content item, with optimistic concurrency control using ETag.
+    /// <para>
+    /// Sends only the locales <paramref name="data"/> carries, and Squidex drops the rest.
+    /// Content read back under X-Flatten, QueryOptions.ForLocale or an explicit Languages list
+    /// holds only those locales, so writing it back this way erases the others — use
+    /// <see cref="PatchAsync"/>, which merges per field and locale.
+    /// </para>
     /// </summary>
     /// <param name="expectedVersion">Optional ETag for concurrency control</param>
     public Task<ContentDto<T>> UpdateAsync<T>(string schema, string id, T data,
@@ -213,8 +219,9 @@ internal sealed class SquidexApiClient : SquidexHttpClientBase, ISquidexApiClien
 
     public async Task<IReadOnlyList<SquidexLocaleInfo>> GetAppLocalesAsync(CancellationToken ct = default)
     {
+        // app metadata, not content: no X-Languages, or resolving locales would need locales
         var url = $"{AppOptions.BaseUrl.TrimEnd('/')}/api/apps/{AppOptions.AppName}/languages";
-        var request = BuildRequest(HttpMethod.Get, url);
+        var request = CreateRequest(HttpMethod.Get, url);
         var response = await SendWithRetryAsync(request, ct);
 
         await response.EnsureSquidexSuccessAsync(ct);

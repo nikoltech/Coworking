@@ -1,11 +1,14 @@
-﻿using Coworking.External.Squidex.Abstractions.Models;
 using Coworking.External.Squidex.Abstractions.Client;
+using Coworking.External.Squidex.Abstractions.Models;
+using Coworking.External.Squidex.Abstractions.Options;
+using Coworking.External.Squidex.Client;
 using Coworking.External.Squidex.Localization;
 using Coworking.External.Squidex.UnitTests.Helpers;
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
+using RichardSzalay.MockHttp;
 
 namespace Coworking.External.Squidex.UnitTests.Localization;
 
@@ -13,325 +16,226 @@ public sealed class SquidexLocaleProviderTests
 {
     private readonly ISquidexApiClient _client = Substitute.For<ISquidexApiClient>();
 
-    // Before initialization
+    private static SquidexLocaleProvider Provider(Func<SquidexAppOptions, SquidexAppOptions> configure) =>
+        new(configure(SquidexFakes.DefaultAppOptions()), NullLogger<SquidexLocaleProvider>.Instance);
+
+    // ── Resolved from configuration alone ────────────────────────────────────
 
     [Fact]
-    public void SupportedLocales_ReturnsFromAppsettings_WhenConfigured()
+    public void BothConfigured_ResolvesWithoutSquidex()
     {
-        var provider = new SquidexLocaleProvider(SquidexFakes.DefaultAppOptions(), NullLogger<SquidexLocaleProvider>.Instance);
+        var provider = Provider(o => o);
 
-        provider.SupportedLocales.Should()
-            .BeEquivalentTo([TestLocales.UkUA, TestLocales.En]);
+        provider.DefaultLocale.Should().Be(TestLocales.UkUA);
+        provider.SupportedLocales.Should().BeEquivalentTo([TestLocales.UkUA, TestLocales.En]);
     }
 
     [Fact]
-    public void SupportedLocales_ReturnsDefaultLocale_WhenNoLocalesConfigured()
+    public void DefaultLocaleAlone_ResolvesToSingleLocale()
     {
-        var options = SquidexFakes.AppOptionsWithoutLocales();
-        var provider = new SquidexLocaleProvider(options, NullLogger<SquidexLocaleProvider>.Instance);
+        var provider = Provider(o => o with { SupportedLocales = [] });
 
+        provider.DefaultLocale.Should().Be(TestLocales.UkUA);
         provider.SupportedLocales.Should().BeEquivalentTo([TestLocales.UkUA]);
     }
 
     [Fact]
-    public void DefaultLocale_ReturnsValueFromOptions_BeforeInitialize()
+    public void SupportedLocalesAlone_StaysUnresolved()
     {
-        var provider = new SquidexLocaleProvider(SquidexFakes.DefaultAppOptions(), NullLogger<SquidexLocaleProvider>.Instance);
+        var provider = Provider(o => o with { DefaultLocale = string.Empty });
 
-        provider.DefaultLocale.Should().Be(TestLocales.UkUA);
-    }
+        Func<string> defaultLocale = () => provider.DefaultLocale;
+        Func<IReadOnlyList<string>> supported = () => provider.SupportedLocales;
 
-    // After initialization — appsettings set
-
-    [Fact]
-    public async Task InitializeAsync_AlwaysCallsSquidex_EvenWhenBothExplicitlyConfigured()
-    {
-        // Arrange — both DefaultLocale and SupportedLocales configured in appsettings.
-        // InitializeAsync still confirms against Squidex — appsettings alone (constructor
-        // seeding) is what avoids the network call, not calling InitializeAsync at all.
-        var provider = new SquidexLocaleProvider(SquidexFakes.DefaultAppOptions(), NullLogger<SquidexLocaleProvider>.Instance);
-
-        _client.GetAppLocalesAsync(Arg.Any<CancellationToken>())
-               .Returns(SquidexFakes.MakeLocales(masterLocale: TestLocales.UkUA, TestLocales.En));
-
-        // Act
-        await provider.InitializeAsync(_client);
-
-        // Assert — Squidex called, but explicit appsettings values still win
-        await _client.Received(1).GetAppLocalesAsync(Arg.Any<CancellationToken>());
-        provider.SupportedLocales.Should().BeEquivalentTo([TestLocales.UkUA, TestLocales.En]);
+        defaultLocale.Should().Throw<InvalidOperationException>();
+        supported.Should().Throw<InvalidOperationException>();
     }
 
     [Fact]
-    public async Task InitializeAsync_KeepsDefaultLocaleFromAppsettings_WhenLocalesConfigured()
+    public void NothingConfigured_StaysUnresolved()
     {
-        // Arrange — DefaultLocale explicitly set (non-"en", so unambiguously explicit) + SupportedLocales set
-        var options = SquidexFakes.DefaultAppOptions() with { DefaultLocale = TestLocales.De };
-        var provider = new SquidexLocaleProvider(options, NullLogger<SquidexLocaleProvider>.Instance);
+        var provider = Provider(o => o with { DefaultLocale = string.Empty, SupportedLocales = [] });
 
-        _client.GetAppLocalesAsync(Arg.Any<CancellationToken>())
-               .Returns(SquidexFakes.MakeLocales(masterLocale: TestLocales.De, TestLocales.En));
+        Func<string> act = () => provider.DefaultLocale;
 
-        // Act
-        await provider.InitializeAsync(_client);
-
-        // Assert — DefaultLocale stays from appsettings, matching Squidex's master
-        provider.DefaultLocale.Should().Be(TestLocales.De);
+        act.Should().Throw<InvalidOperationException>();
     }
 
-    // After initialization — appsettings empty, fetches from Squidex
+    // ── SyncAsync ────────────────────────────────────────────────────────────
 
     [Fact]
-    public async Task InitializeAsync_FetchesFromSquidex_WhenSupportedLocalesNotConfigured()
+    public async Task SyncAsync_FillsBoth_WhenNothingConfigured()
     {
-        // Arrange
-        var options = SquidexFakes.AppOptionsWithoutLocales();
-        var provider = new SquidexLocaleProvider(options, NullLogger<SquidexLocaleProvider>.Instance);
+        var provider = Provider(o => o with { DefaultLocale = string.Empty, SupportedLocales = [] });
 
         _client.GetAppLocalesAsync(Arg.Any<CancellationToken>())
                .Returns(SquidexFakes.MakeLocales(TestLocales.UkUA, TestLocales.En, TestLocales.De));
 
-        // Act
-        await provider.InitializeAsync(_client);
+        await provider.SyncAsync(_client);
 
-        // Assert
-        provider.SupportedLocales.Should()
-            .BeEquivalentTo([TestLocales.UkUA, TestLocales.En, TestLocales.De]);
-    }
-
-    [Fact]
-    public async Task InitializeAsync_SetsDefaultLocale_FromIsMasterField()
-    {
-        // Arrange — DefaultLocale not configured. Squidex says "uk-UA" is master
-        var options = SquidexFakes.AppOptionsWithoutLocales() with { DefaultLocale = string.Empty };
-        var provider = new SquidexLocaleProvider(options, NullLogger<SquidexLocaleProvider>.Instance);
-
-        _client.GetAppLocalesAsync(Arg.Any<CancellationToken>())
-               .Returns(SquidexFakes.MakeLocales(
-                   masterLocale: TestLocales.UkUA,
-                   TestLocales.En));
-
-        // Act
-        await provider.InitializeAsync(_client);
-
-        // Assert — DefaultLocale set from IsMaster
         provider.DefaultLocale.Should().Be(TestLocales.UkUA);
+        provider.SupportedLocales.Should().BeEquivalentTo([TestLocales.UkUA, TestLocales.En, TestLocales.De]);
     }
 
     [Fact]
-    public async Task InitializeAsync_Throws_WhenExplicitDefaultLocaleDisagreesWithSquidexMaster()
+    public async Task SyncAsync_FillsDefaultOnly_WhenSupportedLocalesConfigured()
     {
-        // Arrange — DefaultLocale explicitly set to "de", SupportedLocales not configured,
-        // so a fetch still happens to fill it in. Squidex says "uk-UA" is master —
-        // this is a configuration error, not a transient failure.
-        var options = SquidexFakes.AppOptionsWithoutLocales() with { DefaultLocale = TestLocales.De };
-        var provider = new SquidexLocaleProvider(options, NullLogger<SquidexLocaleProvider>.Instance);
+        var provider = Provider(o => o with { DefaultLocale = string.Empty });
 
         _client.GetAppLocalesAsync(Arg.Any<CancellationToken>())
-               .Returns(SquidexFakes.MakeLocales(
-                   masterLocale: TestLocales.UkUA,
-                   TestLocales.En));
+               .Returns(SquidexFakes.MakeLocales(TestLocales.UkUA, TestLocales.En, TestLocales.De));
 
-        // Act
-        var act = () => provider.InitializeAsync(_client);
+        await provider.SyncAsync(_client);
 
-        // Assert — mismatch between configured DefaultLocale and Squidex's actual master throws
-        await act.Should().ThrowAsync<InvalidOperationException>()
-            .WithMessage("*de*uk-UA*");
-    }
-
-    [Fact]
-    public async Task InitializeAsync_FillsInDefaultLocale_WhenOnlySupportedLocalesConfigured()
-    {
-        // Arrange — SupportedLocales explicit, DefaultLocale not configured. Squidex says "uk-UA" is master.
-        var options = SquidexFakes.DefaultAppOptions() with { DefaultLocale = string.Empty };
-        var provider = new SquidexLocaleProvider(options, NullLogger<SquidexLocaleProvider>.Instance);
-
-        _client.GetAppLocalesAsync(Arg.Any<CancellationToken>())
-               .Returns(SquidexFakes.MakeLocales(
-                   masterLocale: TestLocales.UkUA,
-                   TestLocales.En));
-
-        // Act
-        await provider.InitializeAsync(_client);
-
-        // Assert — DefaultLocale filled in from IsMaster, SupportedLocales stays as configured
         provider.DefaultLocale.Should().Be(TestLocales.UkUA);
         provider.SupportedLocales.Should().BeEquivalentTo([TestLocales.UkUA, TestLocales.En]);
     }
 
     [Fact]
-    public void SupportedLocales_AlwaysIncludesDefaultLocale_AfterNormalization()
+    public async Task SyncAsync_KeepsConfiguredValues()
     {
-        // Arrange — DefaultLocale explicit but not part of the explicitly configured SupportedLocales
-        var options = SquidexFakes.DefaultAppOptions() with
-        {
-            DefaultLocale = TestLocales.De,
-            SupportedLocales = [TestLocales.UkUA, TestLocales.En],
-        };
-
-        // Act
-        var provider = new SquidexLocaleProvider(options, NullLogger<SquidexLocaleProvider>.Instance);
-
-        // Assert — DefaultLocale is unioned in, no duplicates
-        provider.SupportedLocales.Should().BeEquivalentTo([TestLocales.UkUA, TestLocales.En, TestLocales.De]);
-    }
-
-    [Fact]
-    public void DefaultLocale_Throws_WhenNotConfiguredAndNotYetInitialized()
-    {
-        // Arrange — neither DefaultLocale nor SupportedLocales explicitly configured
-        var options = SquidexFakes.AppOptionsWithoutLocales() with { DefaultLocale = string.Empty };
-        var provider = new SquidexLocaleProvider(options, NullLogger<SquidexLocaleProvider>.Instance);
-
-        // Act
-        var act = () => provider.DefaultLocale;
-
-        // Assert
-        act.Should().Throw<InvalidOperationException>();
-    }
-
-    [Fact]
-    public async Task InitializeAsync_BecomesUnresolved_WhenSquidexUnreachable()
-    {
-        // Arrange — Squidex is the only guarantor; a failed fetch is never papered over
-        // with the appsettings value, even though DefaultLocale was explicit here.
-        var options = SquidexFakes.AppOptionsWithoutLocales();
-        var provider = new SquidexLocaleProvider(options, NullLogger<SquidexLocaleProvider>.Instance);
+        var provider = Provider(o => o);
 
         _client.GetAppLocalesAsync(Arg.Any<CancellationToken>())
-               .Throws(new HttpRequestException("Connection refused"));
+               .Returns(SquidexFakes.MakeLocales(TestLocales.UkUA, TestLocales.En, TestLocales.De));
 
-        // Act
-        await provider.InitializeAsync(_client);
+        await provider.SyncAsync(_client);
 
-        // Assert
-        Func<IReadOnlyList<string>> supportedLocales = () => provider.SupportedLocales;
-        Func<string> defaultLocale = () => provider.DefaultLocale;
-        supportedLocales.Should().Throw<InvalidOperationException>();
-        defaultLocale.Should().Throw<InvalidOperationException>();
+        provider.SupportedLocales.Should().BeEquivalentTo([TestLocales.UkUA, TestLocales.En]);
     }
 
     [Fact]
-    public async Task InitializeAsync_BecomesUnresolved_WhenSquidexReturnsEmpty()
+    public async Task SyncAsync_Throws_WhenConfiguredDefaultIsNotMaster()
     {
-        // Arrange
-        var options = SquidexFakes.AppOptionsWithoutLocales();
-        var provider = new SquidexLocaleProvider(options, NullLogger<SquidexLocaleProvider>.Instance);
-
-        _client.GetAppLocalesAsync(Arg.Any<CancellationToken>())
-               .Returns(new List<SquidexLocaleInfo>() as IReadOnlyList<SquidexLocaleInfo>);
-
-        // Act
-        await provider.InitializeAsync(_client);
-
-        // Assert
-        Func<IReadOnlyList<string>> act = () => provider.SupportedLocales;
-        act.Should().Throw<InvalidOperationException>();
-    }
-
-    [Fact]
-    public async Task InitializeAsync_RefetchesOnEveryCall_ForOnDemandResync()
-    {
-        // Arrange — not fully explicit, so InitializeAsync can be called again after startup
-        // (e.g. to pick up a locale added in Squidex without restarting the app).
-        var options = SquidexFakes.AppOptionsWithoutLocales();
-        var provider = new SquidexLocaleProvider(options, NullLogger<SquidexLocaleProvider>.Instance);
+        var provider = Provider(o => o with { DefaultLocale = TestLocales.De, SupportedLocales = [] });
 
         _client.GetAppLocalesAsync(Arg.Any<CancellationToken>())
                .Returns(SquidexFakes.MakeLocales(TestLocales.UkUA, TestLocales.En));
 
-        // Act
-        await provider.InitializeAsync(_client);
-        await provider.InitializeAsync(_client); // second call — re-syncs, not a no-op
+        var act = () => provider.SyncAsync(_client);
 
-        // Assert — fetched again on the second call
-        await _client.Received(2).GetAppLocalesAsync(Arg.Any<CancellationToken>());
+        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("*de*uk-UA*");
     }
 
     [Fact]
-    public async Task InitializeAsync_AlwaysCallsSquidex_WhenBothExplicitlyConfigured_OnEveryCall()
+    public async Task SyncAsync_Throws_WhenSquidexReturnsNoLanguages()
     {
-        // Arrange — both DefaultLocale and SupportedLocales explicit
-        var provider = new SquidexLocaleProvider(SquidexFakes.DefaultAppOptions(), NullLogger<SquidexLocaleProvider>.Instance);
+        var provider = Provider(o => o with { DefaultLocale = string.Empty, SupportedLocales = [] });
 
         _client.GetAppLocalesAsync(Arg.Any<CancellationToken>())
-               .Returns(SquidexFakes.MakeLocales(masterLocale: TestLocales.UkUA, TestLocales.En));
+               .Returns(new List<SquidexLocaleInfo>() as IReadOnlyList<SquidexLocaleInfo>);
 
-        // Act
-        await provider.InitializeAsync(_client);
-        await provider.InitializeAsync(_client);
+        var act = () => provider.SyncAsync(_client);
 
-        // Assert — every call re-confirms against Squidex, appsettings values still win
-        await _client.Received(2).GetAppLocalesAsync(Arg.Any<CancellationToken>());
+        await act.Should().ThrowAsync<InvalidOperationException>();
+    }
+
+    [Fact]
+    public async Task SyncAsync_PropagatesTransportFailure()
+    {
+        var provider = Provider(o => o with { DefaultLocale = string.Empty, SupportedLocales = [] });
+
+        _client.GetAppLocalesAsync(Arg.Any<CancellationToken>())
+               .Throws(new HttpRequestException("Connection refused"));
+
+        var act = () => provider.SyncAsync(_client);
+
+        await act.Should().ThrowAsync<HttpRequestException>();
+    }
+
+    [Fact]
+    public async Task SyncAsync_LeavesPreviousStateIntact_WhenItFails()
+    {
+        var provider = Provider(o => o with { SupportedLocales = [] });
+
+        _client.GetAppLocalesAsync(Arg.Any<CancellationToken>())
+               .Throws(new HttpRequestException("Connection refused"));
+
+        var act = () => provider.SyncAsync(_client);
+        await act.Should().ThrowAsync<HttpRequestException>();
+
         provider.DefaultLocale.Should().Be(TestLocales.UkUA);
+        provider.SupportedLocales.Should().BeEquivalentTo([TestLocales.UkUA]);
     }
 
     [Fact]
-    public async Task InitializeAsync_RetriesOnNextCall_AfterAPriorFetchFailed()
+    public async Task SyncAsync_RefetchesOnEveryCall()
     {
-        // Arrange — first attempt fails (transient outage), second attempt succeeds
-        var options = SquidexFakes.AppOptionsWithoutLocales();
-        var provider = new SquidexLocaleProvider(options, NullLogger<SquidexLocaleProvider>.Instance);
+        var provider = Provider(o => o with { DefaultLocale = string.Empty, SupportedLocales = [] });
 
         _client.GetAppLocalesAsync(Arg.Any<CancellationToken>())
-               .Throws(new HttpRequestException("Connection refused"));
+               .Returns(SquidexFakes.MakeLocales(TestLocales.UkUA, TestLocales.En));
 
-        // Act — first call fails, falls back
-        await provider.InitializeAsync(_client);
+        await provider.SyncAsync(_client);
+        await provider.SyncAsync(_client);
 
-        _client.GetAppLocalesAsync(Arg.Any<CancellationToken>())
-               .Returns(SquidexFakes.MakeLocales(TestLocales.UkUA, TestLocales.En, TestLocales.De));
-
-        // second call — retries, this time succeeds
-        await provider.InitializeAsync(_client);
-
-        // Assert — a failed attempt is not cached as final; the fuller list from the retry wins
-        provider.SupportedLocales.Should().BeEquivalentTo([TestLocales.UkUA, TestLocales.En, TestLocales.De]);
         await _client.Received(2).GetAppLocalesAsync(Arg.Any<CancellationToken>());
     }
 
+    // ── ValidateAsync ────────────────────────────────────────────────────────
+
     [Fact]
-    public async Task InitializeAsync_DiscardsStaleFetchedList_WhenALaterRefreshFails()
+    public async Task ValidateAsync_Passes_WhenConfiguredDefaultIsMaster()
     {
-        // Arrange — first refresh succeeds with a fuller list, second refresh fails
-        var options = SquidexFakes.AppOptionsWithoutLocales();
-        var provider = new SquidexLocaleProvider(options, NullLogger<SquidexLocaleProvider>.Instance);
+        var provider = Provider(o => o);
+
+        _client.GetAppLocalesAsync(Arg.Any<CancellationToken>())
+               .Returns(SquidexFakes.MakeLocales(TestLocales.UkUA, TestLocales.En));
+
+        await provider.ValidateAsync(_client);
+
+        provider.SupportedLocales.Should().BeEquivalentTo([TestLocales.UkUA, TestLocales.En]);
+    }
+
+    [Fact]
+    public async Task ValidateAsync_Throws_WhenConfiguredDefaultIsNotMaster()
+    {
+        var provider = Provider(o => o with { DefaultLocale = TestLocales.De });
+
+        _client.GetAppLocalesAsync(Arg.Any<CancellationToken>())
+               .Returns(SquidexFakes.MakeLocales(TestLocales.UkUA, TestLocales.En));
+
+        var act = () => provider.ValidateAsync(_client);
+
+        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("*de*uk-UA*");
+    }
+
+    [Fact]
+    public async Task ValidateAsync_DoesNotChangeState()
+    {
+        var provider = Provider(o => o with { SupportedLocales = [] });
 
         _client.GetAppLocalesAsync(Arg.Any<CancellationToken>())
                .Returns(SquidexFakes.MakeLocales(TestLocales.UkUA, TestLocales.En, TestLocales.De));
 
-        await provider.InitializeAsync(_client);
-        provider.SupportedLocales.Should().BeEquivalentTo([TestLocales.UkUA, TestLocales.En, TestLocales.De]);
+        await provider.ValidateAsync(_client);
 
-        _client.GetAppLocalesAsync(Arg.Any<CancellationToken>())
-               .Throws(new HttpRequestException("Connection refused"));
-
-        // Act — a later refresh fails
-        await provider.InitializeAsync(_client);
-
-        // Assert — the previously fetched (now stale) fuller list is discarded, not silently kept
-        Func<IReadOnlyList<string>> act = () => provider.SupportedLocales;
-        act.Should().Throw<InvalidOperationException>();
+        provider.SupportedLocales.Should().BeEquivalentTo([TestLocales.UkUA]);
     }
 
+    // ── Resolving locales must not itself need locales ───────────────────────
+
     [Fact]
-    public async Task InitializeAsync_BecomesUnresolved_WhenBothExplicitButFetchFails()
+    public async Task SyncAsync_ReachesSquidex_WhenNoLocalesAreKnown()
     {
-        // Arrange — both explicit; the check against Squidex fails. Even explicit config
-        // doesn't survive a failed check against Squidex, the sole guarantor of locales.
-        var provider = new SquidexLocaleProvider(SquidexFakes.DefaultAppOptions(), NullLogger<SquidexLocaleProvider>.Instance);
+        var options = SquidexFakes.DefaultAppOptions() with
+        {
+            DefaultLocale = string.Empty,
+            SupportedLocales = []
+        };
 
-        _client.GetAppLocalesAsync(Arg.Any<CancellationToken>())
-               .Throws(new HttpRequestException("Connection refused"));
+        var provider = new SquidexLocaleProvider(options, NullLogger<SquidexLocaleProvider>.Instance);
 
-        // Act
-        await provider.InitializeAsync(_client);
+        var mockHttp = new MockHttpMessageHandler();
+        mockHttp.When("*/api/apps/*/languages")
+            .Respond("application/json", SquidexFakes.AppLanguagesJson(TestLocales.UkUA, TestLocales.En));
 
-        // Assert
-        Func<string> defaultLocale = () => provider.DefaultLocale;
-        Func<IReadOnlyList<string>> supportedLocales = () => provider.SupportedLocales;
-        defaultLocale.Should().Throw<InvalidOperationException>();
-        supportedLocales.Should().Throw<InvalidOperationException>();
+        var client = new SquidexApiClient(
+            mockHttp.ToHttpClient(), options, TestClientNames.Default, provider);
+
+        await provider.SyncAsync(client);
+
+        provider.DefaultLocale.Should().Be(TestLocales.UkUA);
+        provider.SupportedLocales.Should().BeEquivalentTo([TestLocales.UkUA, TestLocales.En]);
     }
 }

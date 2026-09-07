@@ -73,18 +73,22 @@ Every query needs a locale: it sends `SupportedLocales` as `X-Languages`, or `De
 alone when `X-Flatten` is on — unless that call passes its own `QueryOptions.Languages`. Both
 config keys are optional, so there are two ways to supply them:
 
-- **Put them in config** and the client never asks Squidex for them.
-- **Leave them out** and call `SquidexLocaleInitializer.InitializeAllAsync` at startup — it
-  reads the app's real languages and fills in whichever key you left blank.
+- **Put them in config** and the client never asks Squidex for them. `DefaultLocale` alone is
+  enough; `SupportedLocales` alone is not, since the default cannot be guessed.
+- **Leave them out** and call `SquidexLocaleSync.SyncAllAsync` at startup — it reads the app's
+  real languages and fills in whichever key you left blank.
 
-`AddSquidex` does not call the initializer: it is an opt-in helper for keeping locales in sync
-with the CMS, and where — or whether — to run it is yours to decide. Until it has run and
-succeeded, anything the config did not supply stays unresolved, and reading it throws rather
+`AddSquidex` calls neither: both are opt-in, and where to run them is yours to decide. Locales
+the config did not supply stay unresolved until a sync succeeds, and reading them throws rather
 than guessing a locale.
 
-The call always contacts Squidex, config or not — that is what it is for. If it cannot reach
-the app, or the master locale contradicts a configured `DefaultLocale`, the locales are left
-unresolved and reading them throws.
+`SquidexLocaleSync.ValidateAllAsync` is the other half: it checks a configured `DefaultLocale`
+against the app's master locale and changes nothing. Use it when the config owns the locales
+and you want drift to surface at startup.
+
+Both throw — on an unreachable app as much as on a contradiction — and neither touches state
+that is already resolved. A sync may be called again at runtime to pick up a language added in
+the CMS; if that call fails, the previous locales keep serving.
 
 ### Retries and deadlines
 
@@ -176,6 +180,11 @@ await set.UpdateAsync(
 
 await set.DeleteAsync(created.Id, ct: ct);
 ```
+
+> `UpdateAsync` sends only the locales the object carries, and Squidex drops the rest. Content
+> read under `X-Flatten`, `QueryOptions.ForLocale` or an explicit `Languages` list holds just
+> those locales — writing it back erases the others. Use `PatchAsync` there: it merges per
+> field and locale.
 
 **Another client's credentials**, for one call:
 

@@ -18,8 +18,9 @@ public static class AppInitializationExtensions
         {
             await InitDatabase(config, app);
 
-            // locale init stays off until AddSquidex() is wired into Infrastructure DI:
-            // await SquidexLocaleInitializer.InitializeAllAsync(services, app.Lifetime.ApplicationStopping);
+            // stays off until AddSquidex() is wired into Infrastructure DI;
+            // throws if Squidex is unreachable or its master locale contradicts appsettings
+             await SquidexLocaleSync.ValidateAllAsync(services, app.Lifetime.ApplicationStopping);
         }
         catch (Exception ex)
         {

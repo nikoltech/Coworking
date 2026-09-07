@@ -21,6 +21,13 @@ public static class DependencyInjection
             .ValidateDataAnnotations()
             .Validate(o => string.IsNullOrEmpty(o.DefaultApp) || o.Apps.ContainsKey(o.DefaultApp),
                 "Squidex: DefaultApp must be one of the configured Apps.")
+            .Validate(o => o.Apps.Values.All(a => a.Clients.ContainsKey(a.DefaultClient)),
+                "Squidex: DefaultClient must be one of the app's configured Clients.")
+            .Validate(o => o.Apps.Values.All(a =>
+                    a.SupportedLocales.Count == 0
+                    || string.IsNullOrEmpty(a.DefaultLocale)
+                    || a.SupportedLocales.Contains(a.DefaultLocale)),
+                "Squidex: DefaultLocale must be one of the app's SupportedLocales.")
             .ValidateOnStart();
 
         services.AddMemoryCache();

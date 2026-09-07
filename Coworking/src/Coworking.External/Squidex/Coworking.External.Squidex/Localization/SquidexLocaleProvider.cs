@@ -8,123 +8,102 @@ namespace Coworking.External.Squidex.Localization;
 /// <summary>Resolves locales for a specific Squidex app.</summary>
 public sealed class SquidexLocaleProvider
 {
+    private sealed record LocaleState(string Default, IReadOnlyList<string> Supported);
+
     private readonly SquidexAppOptions _appOptions;
     private readonly ILogger _logger;
     private readonly bool _hasExplicitDefault;
     private readonly bool _hasExplicitSupported;
-    private IReadOnlyList<string>? _supportedLocales;
-    private string? _defaultLocale;
+    private readonly SemaphoreSlim _gate = new(1, 1);
+
+    private volatile LocaleState? _state;
 
     public SquidexLocaleProvider(SquidexAppOptions appOptions, ILogger<SquidexLocaleProvider> logger)
     {
         _appOptions = appOptions;
         _logger = logger;
 
-        // Explicit = actually set in appsettings; both gate whether InitializeAsync needs Squidex at all.
         _hasExplicitDefault = !string.IsNullOrEmpty(appOptions.DefaultLocale);
         _hasExplicitSupported = appOptions.SupportedLocales.Count > 0;
 
-        SeedFromConfig();
+        _state = SeedFromConfig();
     }
 
-    public string DefaultLocale => _defaultLocale ?? throw NotResolved();
+    public string DefaultLocale => Resolved().Default;
 
-    public IReadOnlyList<string> SupportedLocales => _supportedLocales ?? throw NotResolved();
+    public IReadOnlyList<string> SupportedLocales => Resolved().Supported;
 
-    public async Task InitializeAsync(ISquidexApiClient client, CancellationToken ct = default)
+    /// <summary>
+    /// Replaces whatever configuration did not pin with the app's own languages.
+    /// Throws if Squidex cannot answer, leaving the previous state untouched.
+    /// </summary>
+    public async Task SyncAsync(ISquidexApiClient client, CancellationToken ct = default)
     {
-        var locales = await FetchAsync(client, ct);
-        if (locales is null)
-            return; // failure already invalidated + logged
-
-        var master = locales.First(l => l.IsMaster); // Squidex guarantees exactly one
-        EnsureMasterMatchesConfig(master.Iso2Code);
-
-        _supportedLocales = _hasExplicitSupported ? _appOptions.SupportedLocales : locales.Select(l => l.Iso2Code).ToList();
-        _defaultLocale = _hasExplicitDefault ? _appOptions.DefaultLocale : master.Iso2Code;
-
-        _logger.LogInformation("Fetched locales from Squidex for app '{AppName}': {Locales}, default '{Default}'.",
-            _appOptions.AppName, string.Join(",", _supportedLocales), _defaultLocale);
-
-        Normalize();
-    }
-
-    private void SeedFromConfig()
-    {
-        // DefaultLocale alone is enough to serve a safe single-locale SupportedLocales until a fetch fills it in.
-        if (_hasExplicitDefault)
-        {
-            _defaultLocale = _appOptions.DefaultLocale;
-            _supportedLocales = _hasExplicitSupported ? _appOptions.SupportedLocales : [_appOptions.DefaultLocale];
-        }
-        else if (_hasExplicitSupported)
-        {
-            _supportedLocales = _appOptions.SupportedLocales;
-        }
-
-        Normalize();
-    }
-
-    private async Task<IReadOnlyList<SquidexLocaleInfo>?> FetchAsync(ISquidexApiClient client, CancellationToken ct)
-    {
-        IReadOnlyList<SquidexLocaleInfo> locales;
+        await _gate.WaitAsync(ct);
         try
         {
-            locales = await client.GetAppLocalesAsync(ct);
-        }
-        catch (Exception ex)
-        {
-            InvalidateAndLog(ex);
-            return null;
-        }
+            var locales = await FetchAsync(client, ct);
+            var master = Master(locales);
 
-        if (locales.Count == 0)
-        {
-            InvalidateAndLog(null);
-            return null;
-        }
+            EnsureMasterMatchesConfig(master);
 
-        return locales;
+            var state = Compose(
+                _hasExplicitDefault ? _appOptions.DefaultLocale : master,
+                _hasExplicitSupported ? _appOptions.SupportedLocales : [.. locales.Select(l => l.Iso2Code)]);
+
+            _state = state;
+
+            _logger.LogInformation("Squidex app '{AppName}': locales {Locales}, default '{Default}'.",
+                _appOptions.AppName, string.Join(",", state.Supported), state.Default);
+        }
+        finally
+        {
+            _gate.Release();
+        }
     }
 
-    /// <remarks>Skips if DefaultLocale isn't explicitly configured.</remarks>
-    private void EnsureMasterMatchesConfig(string masterIso2Code)
-    {
-        if (!_hasExplicitDefault || string.Equals(masterIso2Code, _appOptions.DefaultLocale, StringComparison.Ordinal))
-            return;
+    /// <summary>Checks configuration against the app's own languages. Never changes state.</summary>
+    public async Task ValidateAsync(ISquidexApiClient client, CancellationToken ct = default) =>
+        EnsureMasterMatchesConfig(Master(await FetchAsync(client, ct)));
 
-        Invalidate();
+    private LocaleState? SeedFromConfig() =>
+        _hasExplicitDefault
+            ? new LocaleState(
+                _appOptions.DefaultLocale,
+                _hasExplicitSupported ? _appOptions.SupportedLocales : [_appOptions.DefaultLocale])
+            : null;
+
+    private async Task<IReadOnlyList<SquidexLocaleInfo>> FetchAsync(ISquidexApiClient client, CancellationToken ct)
+    {
+        var locales = await client.GetAppLocalesAsync(ct);
+
+        return locales.Count > 0
+            ? locales
+            : throw new InvalidOperationException(
+                $"Squidex app '{_appOptions.AppName}' returned no languages.");
+    }
+
+    private static string Master(IReadOnlyList<SquidexLocaleInfo> locales) =>
+        locales.First(l => l.IsMaster).Iso2Code;
+
+    private void EnsureMasterMatchesConfig(string master)
+    {
+        if (!_hasExplicitDefault || string.Equals(master, _appOptions.DefaultLocale, StringComparison.Ordinal))
+            return;
 
         throw new InvalidOperationException(
             $"Squidex app '{_appOptions.AppName}': configured DefaultLocale '{_appOptions.DefaultLocale}' " +
-            $"does not match Squidex's actual master locale '{masterIso2Code}'.");
+            $"does not match Squidex's actual master locale '{master}'.");
     }
 
-    private void InvalidateAndLog(Exception? ex)
-    {
-        Invalidate();
+    private LocaleState Compose(string defaultLocale, IReadOnlyList<string> supported) =>
+        supported.Contains(defaultLocale)
+            ? new LocaleState(defaultLocale, supported)
+            : throw new InvalidOperationException(
+                $"Squidex app '{_appOptions.AppName}': SupportedLocales " +
+                $"[{string.Join(", ", supported)}] does not contain DefaultLocale '{defaultLocale}'.");
 
-        _logger.LogCritical(ex,
-            "Squidex app '{AppName}': locale fetch failed or returned none — " +
-            "content queries for this app will throw until this is fixed.",
-            _appOptions.AppName);
-    }
-
-    private void Invalidate()
-    {
-        _defaultLocale = null;
-        _supportedLocales = null;
-    }
-
-    private void Normalize()
-    {
-        if (_defaultLocale is null || _supportedLocales is null)
-            return;
-
-        _supportedLocales = _supportedLocales.Append(_defaultLocale).Distinct().ToList();
-    }
-
-    private InvalidOperationException NotResolved() => new(
+    private LocaleState Resolved() => _state ?? throw new InvalidOperationException(
         $"Squidex locales for app '{_appOptions.AppName}' are not resolved — " +
-        "set DefaultLocale explicitly in configuration, or ensure Squidex is reachable at startup.");
+        "set DefaultLocale in configuration, or synchronise with Squidex at startup.");
 }
