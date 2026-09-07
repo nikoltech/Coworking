@@ -11,12 +11,12 @@ public sealed class CityRepository(ISquidexApiClient client, ISquidexPaginator p
     : SquidexSet<CitySchema>(client, paginator, CitySchema.SchemaName), ICityRepository
 {
     public async Task<ContentDto<CitySchema>?> GetByTitleAsync(
-        string title, CancellationToken ct = default)
+        string title, string locale, CancellationToken ct = default)
     {
         var result = await QueryAsync(
             RequestQuery.Create()
                 .WithTake(1)
-                .WithFilter(SquidexFilter.Eq(CityPaths.Title, title)),
+                .WithFilter(SquidexFilter.Eq(CityPaths.Title(locale), title)),
             ct: ct);
 
         return result.Items.FirstOrDefault();
