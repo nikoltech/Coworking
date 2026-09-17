@@ -70,7 +70,7 @@ internal sealed class GetDeskAvailabilityQueryHandler(
             .Where(c => c.Desks.Any(d => d.Id == deskId))
             .Select(c => new { c.Name, c.TimeZoneId, c.SlotSize, c.IsNonStop, c.OpenTime, c.CloseTime })
             .FirstOrDefaultAsync(ct)
-            ?? throw new NotFoundException($"Coworking for desk {deskId} not found.");
+            ?? throw new NotFoundException($"Desk {deskId} not found.");
 
         return WorkingSchedule.For(new Domain.Entities.Coworking
         {

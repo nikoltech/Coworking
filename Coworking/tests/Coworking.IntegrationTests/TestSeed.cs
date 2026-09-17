@@ -14,7 +14,8 @@ namespace Coworking.IntegrationTests;
 /// </summary>
 internal static class TestSeed
 {
-    public static async Task<int> DeskAsync(TestApiFactory factory, string label)
+    /// Seeds a 24/7 UTC coworking with one desk; configure overrides its schedule or zone.
+    public static async Task<int> DeskAsync(TestApiFactory factory, string label, Action<CoworkingEntity>? configure = null)
     {
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -22,6 +23,7 @@ internal static class TestSeed
         await TestDatabase.EnsureFreshAsync(db);
 
         var coworking = NewCoworking(label);
+        configure?.Invoke(coworking);
 
         db.Set<CoworkingEntity>().Add(coworking);
         await db.SaveChangesAsync();
