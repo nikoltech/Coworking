@@ -1,5 +1,5 @@
-using Coworking.Domain.Common;
 using Coworking.Domain.Specifications;
+using Coworking.Domain.ValueObjects;
 
 namespace Coworking.Domain.Services.Availability;
 
@@ -10,8 +10,7 @@ public sealed class AvailabilityCalculator : IAvailabilityCalculator
 {
     public IReadOnlyList<AvailabilityInterval> Calculate(
         DateOnly from, DateOnly to,
-        TimeOnly openTime, TimeOnly closeTime,
-        TimeZoneInfo timeZone,
+        WorkingSchedule schedule,
         IReadOnlyList<(DateTimeOffset Start, DateTimeOffset End)> busy)
     {
         // sorted once: SubtractBusy relies on the order, and sorting per day was the hot spot
@@ -19,13 +18,8 @@ public sealed class AvailabilityCalculator : IAvailabilityCalculator
 
         var result = new List<AvailabilityInterval>();
 
-        for (var date = from; date <= to; date = date.AddDays(1))
-        {
-            var (start, end) = ResolveDayWindow(date, openTime, closeTime, timeZone);
-
-            if (start < end)
-                result.AddRange(SubtractBusy(start, end, ordered, timeZone));
-        }
+        foreach (var window in schedule.WindowsBetween(from, to))
+            result.AddRange(SubtractBusy(window.Start, window.End, ordered, schedule));
 
         return result;
     }
@@ -40,39 +34,17 @@ public sealed class AvailabilityCalculator : IAvailabilityCalculator
         return ordered;
     }
 
-    /// <summary>
-    /// The working period as a moment range. DST changes its real length —
-    /// 23 hours on spring forward, 25 on fall back — but never breaks it apart.
-    /// </summary>
-    private static (DateTimeOffset Start, DateTimeOffset End) ResolveDayWindow(
-        DateOnly date, TimeOnly openTime, TimeOnly closeTime, TimeZoneInfo timeZone) =>
-        (ZonedTime.FromWallClock(date.ToDateTime(openTime), timeZone),
-         ZonedTime.FromWallClock(ResolveLocalEnd(date, openTime, closeTime), timeZone));
-
-    private static DateTime ResolveLocalEnd(DateOnly date, TimeOnly openTime, TimeOnly closeTime)
-    {
-        // 24/7
-        if (openTime == closeTime)
-            return date.ToDateTime(openTime).AddDays(1);
-
-        // midnight crossing (22:00 – 06:00)
-        if (closeTime < openTime)
-            return date.AddDays(1).ToDateTime(closeTime);
-
-        return date.ToDateTime(closeTime);
-    }
-
     private static IEnumerable<AvailabilityInterval> SubtractBusy(
         DateTimeOffset windowStart,
         DateTimeOffset windowEnd,
         (DateTimeOffset Start, DateTimeOffset End)[] ordered,
-        TimeZoneInfo timeZone)
+        WorkingSchedule schedule)
     {
         // on a normal day every moment shares the window's offset; only a transition needs a lookup
         var sameOffsetAllDay = windowStart.Offset == windowEnd.Offset;
 
         DateTimeOffset Label(DateTimeOffset moment) =>
-            sameOffsetAllDay ? moment.ToOffset(windowStart.Offset) : TimeZoneInfo.ConvertTime(moment, timeZone);
+            sameOffsetAllDay ? moment.ToOffset(windowStart.Offset) : schedule.ToLocal(moment);
 
         // clip to the window and collapse touching bookings into busy runs
         var merged = new List<(DateTimeOffset Start, DateTimeOffset End)>();

@@ -62,6 +62,7 @@ internal static class DevDataSeeder
         {
             Name = "Central Hub",
             Address = "12 Khreshchatyk St, Kyiv",
+            Description = "Regular day hours with a whole-hour offset.",
             TimeZoneId = "Europe/Kyiv",
             SlotSize = SlotSize.ThirtyMinutes,
             OpenTime = new TimeOnly(8, 0),
@@ -78,6 +79,7 @@ internal static class DevDataSeeder
         {
             Name = "Riverside Space",
             Address = "5 Thames Walk, London",
+            Description = "Regular day hours with a one-hour slot.",
             TimeZoneId = "Europe/London",
             SlotSize = SlotSize.SixtyMinutes,
             OpenTime = new TimeOnly(9, 0),
@@ -89,15 +91,14 @@ internal static class DevDataSeeder
             ]
         };
 
-        // 24/7: OpenTime == CloseTime marks non-stop working hours (see BookingSpecifications.IsNonStopWorkingHours).
         var nightOwl = new Coworking.Domain.Entities.Coworking
         {
             Name = "Night Owl 24/7",
             Address = "8 Lukyanivska St, Kyiv",
+            Description = "Non-stop; the booking on the nearest DST day lasts 1 or 3 real hours.",
             TimeZoneId = "Europe/Kyiv",
             SlotSize = SlotSize.SixtyMinutes,
-            OpenTime = new TimeOnly(0, 0),
-            CloseTime = new TimeOnly(0, 0),
+            IsNonStop = true,
             Desks =
             [
                 new Desk { Name = "C1", Description = "Pod #1", Coworking = null! },
@@ -105,11 +106,11 @@ internal static class DevDataSeeder
             ]
         };
 
-        // Window crosses midnight and is not a whole number of slots (8h30 / 60min).
         var nightShift = new Coworking.Domain.Entities.Coworking
         {
             Name = "Night Shift",
             Address = "3 Politekhnichna St, Kyiv",
+            Description = "Night window across midnight, not a whole number of slots (8h30 / 60 min).",
             TimeZoneId = "Europe/Kyiv",
             SlotSize = SlotSize.SixtyMinutes,
             OpenTime = new TimeOnly(22, 0),
@@ -121,33 +122,120 @@ internal static class DevDataSeeder
             ]
         };
 
-        // 24/7 anchored away from midnight — its window ends on the next calendar day.
         var roundClock = new Coworking.Domain.Entities.Coworking
         {
             Name = "Round Clock",
             Address = "17 Vasylkivska St, Kyiv",
+            Description = "Non-stop; was 08:00–08:00 before the non-stop flag, now starts its day at midnight.",
             TimeZoneId = "Europe/Kyiv",
             SlotSize = SlotSize.SixtyMinutes,
-            OpenTime = new TimeOnly(8, 0),
-            CloseTime = new TimeOnly(8, 0),
+            IsNonStop = true,
             Desks =
             [
                 new Desk { Name = "E1", Description = "Always open", Coworking = null! }
             ]
         };
 
-        // Havana switches DST at 00:00, so local midnight does not exist on transition days.
         var havana = new Coworking.Domain.Entities.Coworking
         {
             Name = "Havana Patio",
             Address = "220 Calle Obispo, Havana",
+            Description = "Non-stop; DST switches at 00:00, so local midnight is missing on transition days.",
             TimeZoneId = "America/Havana",
             SlotSize = SlotSize.SixtyMinutes,
-            OpenTime = new TimeOnly(0, 0),
-            CloseTime = new TimeOnly(0, 0),
+            IsNonStop = true,
             Desks =
             [
                 new Desk { Name = "F1", Description = "Courtyard", Coworking = null! }
+            ]
+        };
+
+        var kathmandu = new Coworking.Domain.Entities.Coworking
+        {
+            Name = "Kathmandu Loft",
+            Address = "14 Thamel Marg, Kathmandu",
+            Description = "Slot grid under a +05:45 offset.",
+            TimeZoneId = "Asia/Kathmandu",
+            SlotSize = SlotSize.ThirtyMinutes,
+            OpenTime = new TimeOnly(9, 0),
+            CloseTime = new TimeOnly(18, 0),
+            Desks =
+            [
+                new Desk { Name = "G1", Description = "Mountain view", Coworking = null! }
+            ]
+        };
+
+        var mumbai = new Coworking.Domain.Entities.Coworking
+        {
+            Name = "Mumbai Desk",
+            Address = "21 Marine Drive, Mumbai",
+            Description = "Slot grid under a +05:30 offset with a one-hour slot.",
+            TimeZoneId = "Asia/Kolkata",
+            SlotSize = SlotSize.SixtyMinutes,
+            OpenTime = new TimeOnly(9, 0),
+            CloseTime = new TimeOnly(18, 0),
+            Desks =
+            [
+                new Desk { Name = "H1", Description = "Sea breeze", Coworking = null! }
+            ]
+        };
+
+        var bangalore = new Coworking.Domain.Entities.Coworking
+        {
+            Name = "Bangalore Flex",
+            Address = "7 MG Road, Bengaluru",
+            Description = "Grid anchored at 09:30; the last 25-minute slot is clipped at closing.",
+            TimeZoneId = "Asia/Kolkata",
+            SlotSize = SlotSize.From(25),
+            OpenTime = new TimeOnly(9, 30),
+            CloseTime = new TimeOnly(18, 0),
+            Desks =
+            [
+                new Desk { Name = "I1", Description = "Hot desk", Coworking = null! }
+            ]
+        };
+
+        var lordHowe = new Coworking.Domain.Entities.Coworking
+        {
+            Name = "Lord Howe Hut",
+            Address = "1 Lagoon Rd, Lord Howe Island",
+            Description = "Non-stop; DST shifts the clock by only 30 minutes.",
+            TimeZoneId = "Australia/Lord_Howe",
+            SlotSize = SlotSize.ThirtyMinutes,
+            IsNonStop = true,
+            Desks =
+            [
+                new Desk { Name = "J1", Description = "Beach hut", Coworking = null! }
+            ]
+        };
+
+        var stJohns = new Coworking.Domain.Entities.Coworking
+        {
+            Name = "St. John's Harbour",
+            Address = "40 Water St, St. John's",
+            Description = "Negative half-hour offset (-03:30) with DST.",
+            TimeZoneId = "America/St_Johns",
+            SlotSize = SlotSize.SixtyMinutes,
+            OpenTime = new TimeOnly(8, 0),
+            CloseTime = new TimeOnly(20, 0),
+            Desks =
+            [
+                new Desk { Name = "K1", Description = "Harbour window", Coworking = null! }
+            ]
+        };
+
+        var chatham = new Coworking.Domain.Entities.Coworking
+        {
+            Name = "Chatham Point",
+            Address = "3 Waitangi Wharf Rd, Chatham Islands",
+            Description = "Night hours under a +12:45/+13:45 offset with DST, next to the date line.",
+            TimeZoneId = "Pacific/Chatham",
+            SlotSize = SlotSize.ThirtyMinutes,
+            OpenTime = new TimeOnly(22, 0),
+            CloseTime = new TimeOnly(6, 0),
+            Desks =
+            [
+                new Desk { Name = "L1", Description = "Night watch", Coworking = null! }
             ]
         };
 
@@ -203,7 +291,30 @@ internal static class DevDataSeeder
                 BookingStatus.Confirmed, "Europe/Kyiv")
         ];
 
-        return [central, riverside, nightOwl, nightShift, roundClock, havana];
+        // 02:00–04:00 local spans the switch: 1 real hour in spring, 3 in autumn
+        if (NextTransitionDay(kyiv, tomorrowInKyiv) is { } transitionDay)
+        {
+            nightOwlDesk2.Bookings.Add(BuildBooking("Oleh Hrytsenko", "oleh@example.com",
+                LocalTime(transitionDay, new TimeOnly(2, 0), kyiv),
+                LocalTime(transitionDay, new TimeOnly(4, 0), kyiv),
+                BookingStatus.Confirmed, "Europe/Kyiv"));
+        }
+
+        return [central, riverside, nightOwl, nightShift, roundClock, havana, kathmandu, mumbai, bangalore, lordHowe, stJohns, chatham];
+    }
+
+    private static DateOnly? NextTransitionDay(TimeZoneInfo timeZone, DateOnly from)
+    {
+        for (var day = from; day < from.AddYears(1); day = day.AddDays(1))
+        {
+            var offsetToday = timeZone.GetUtcOffset(day.ToDateTime(TimeOnly.MinValue));
+            var offsetTomorrow = timeZone.GetUtcOffset(day.AddDays(1).ToDateTime(TimeOnly.MinValue));
+
+            if (offsetToday != offsetTomorrow)
+                return day;
+        }
+
+        return null;
     }
 
     /// <summary>

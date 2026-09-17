@@ -1,6 +1,5 @@
-﻿using Coworking.Domain.Entities;
+using Coworking.Domain.Entities;
 using Coworking.Domain.Enums;
-using Coworking.Domain.Exceptions;
 using System.Linq.Expressions;
 
 namespace Coworking.Domain.Specifications;
@@ -23,68 +22,4 @@ public static class BookingSpecifications
     public static Expression<Func<Booking, bool>> IsActive() =>
         booking => booking.Status != BookingStatus.Cancelled &&
                    booking.Status != BookingStatus.Expired;
-
-    public static void ValidateAccessPeriod(DateTimeOffset start,
-        DateTimeOffset end,
-        Domain.Entities.Coworking coworking)
-    {
-        if (start >= end)
-        {
-            throw new DomainException(
-                "Booking start time must be earlier than end time.");
-        }
-
-        if (IsNonStopWorkingHours(coworking))
-        {
-            return;
-        }
-
-        var startTime = TimeOnly.FromDateTime(start.DateTime);
-        var endTime = TimeOnly.FromDateTime(end.DateTime);
-
-        if (IsWithinWorkingWindow(
-                startTime,
-                coworking.OpenTime,
-                coworking.CloseTime) is false)
-        {
-            throw new DomainException(
-                "Booking start time is outside working hours.");
-        }
-
-        if (IsWithinWorkingWindow(
-                endTime,
-                coworking.OpenTime,
-                coworking.CloseTime) is false)
-        {
-            throw new DomainException(
-                "Booking end time is outside working hours.");
-        }
-    }
-
-    public static bool IsWithinWorkingWindow(TimeOnly time,
-        TimeOnly openTime,
-        TimeOnly closeTime)
-    {
-        if (openTime == closeTime)
-        {
-            return true;
-        }
-
-        var isDaySchedule = openTime < closeTime;
-
-        if (isDaySchedule)
-        {
-            return time >= openTime &&
-                   time <= closeTime;
-        }
-
-        return time >= openTime ||
-               time <= closeTime;
-    }
-
-    public static bool IsNonStopWorkingHours(Domain.Entities.Coworking coworking)
-    {
-        return coworking.OpenTime == coworking.CloseTime;
-    }
-
 }

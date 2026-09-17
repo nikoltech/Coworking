@@ -1,36 +1,28 @@
-﻿using Coworking.Domain.ValueObjects;
-
 namespace Coworking.Domain.Policies.Rounding;
 
 /// <summary>
-/// Rounds on UtcTicks so the result is independent of the input offset.
+/// Rounds to a grid of equal real-time steps from an anchor, so the result does not depend
+/// on UTC alignment or on DST changes after the anchor. The result keeps the anchor's offset.
 /// </summary>
 public static class DateTimeRounding
 {
-    public static DateTimeOffset FloorToSlot(DateTimeOffset value, SlotSize slotSize)
+    public static DateTimeOffset FloorToGrid(DateTimeOffset value, DateTimeOffset anchor, TimeSpan step)
     {
-        long ticks = value.UtcTicks;
-        long slotTicks = slotSize.Value.Ticks;
+        var steps = Math.DivRem((value - anchor).Ticks, step.Ticks, out var remainder);
 
-        if (ticks % slotTicks == 0)
-            return value;
+        if (remainder < 0)
+            steps--;
 
-        long roundedTicks = (ticks / slotTicks) * slotTicks;
-
-        return new DateTimeOffset(roundedTicks, TimeSpan.Zero).ToOffset(value.Offset);
+        return anchor + TimeSpan.FromTicks(steps * step.Ticks);
     }
 
-    public static DateTimeOffset CeilToSlot(DateTimeOffset value, SlotSize slotSize)
+    public static DateTimeOffset CeilToGrid(DateTimeOffset value, DateTimeOffset anchor, TimeSpan step)
     {
-        long ticks = value.UtcTicks;
-        long slotTicks = slotSize.Value.Ticks;
+        var steps = Math.DivRem((value - anchor).Ticks, step.Ticks, out var remainder);
 
-        if (ticks % slotTicks == 0)
-            return value;
+        if (remainder > 0)
+            steps++;
 
-        // round up without a branch: (x + n - 1) / n * n
-        long roundedTicks = ((ticks + slotTicks - 1) / slotTicks) * slotTicks;
-
-        return new DateTimeOffset(roundedTicks, TimeSpan.Zero).ToOffset(value.Offset);
+        return anchor + TimeSpan.FromTicks(steps * step.Ticks);
     }
 }

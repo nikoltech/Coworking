@@ -12,11 +12,18 @@ public class Coworking : ITrackEntity, ICanBeDisabled
 
     public string Address { get; set; } = string.Empty;
 
+    public string? Description { get; set; }
+
     public SlotSize SlotSize { get; set; } = SlotSize.ThirtyMinutes;
 
-    public TimeOnly OpenTime { get; set; }
+    /// <summary>
+    /// IsNonStop marks a coworking that never closes; OpenTime and CloseTime are ignored then.
+    /// </summary>
+    public bool IsNonStop { get; set; }
 
-    public TimeOnly CloseTime { get; set; }
+    public TimeOnly? OpenTime { get; set; }
+
+    public TimeOnly? CloseTime { get; set; }
 
     /// <summary>
     /// IANA ID

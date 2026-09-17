@@ -1,5 +1,4 @@
 using Coworking.Application.Ports;
-using Coworking.Domain.Common;
 using Coworking.Application.Common.Exceptions;
 using Coworking.Application.Features.Bookings.Queries.GetDeskAvailability.Dtos;
 using Coworking.Application.Features.Bookings.Queries.GetDeskAvailability.Responses;
@@ -18,10 +17,9 @@ internal sealed class GetDeskAvailabilityQueryHandler(
 {
     public async Task<DeskAvailabilityResponse> Handle(GetDeskAvailabilityQuery request, CancellationToken ct)
     {
-        var coworking = await GetCoworkingMetaAsync(request.DeskId, ct);
+        var schedule = await GetScheduleAsync(request.DeskId, ct);
 
-        // assumes user timezone is the same as coworking timezone
-        var (startUtc, endUtc) = ToUtcBoundaries(request.DateFrom, request.DateTo, coworking.TimeZone);
+        var (startUtc, endUtc) = schedule.QueryBoundaries(request.DateFrom, request.DateTo);
 
         var desk = await repository.FetchDeskWithBookingsAsync(request.DeskId, startUtc, endUtc, ct)
             ?? throw new NotFoundException($"Desk {request.DeskId} not found.");
@@ -30,20 +28,14 @@ internal sealed class GetDeskAvailabilityQueryHandler(
             .Select(b => (b.StartTime, b.EndTime))
             .ToList();
 
-        var intervals = availabilityCalculator.Calculate(
-            request.DateFrom,
-            request.DateTo,
-            coworking.OpenTime,
-            coworking.CloseTime,
-            coworking.TimeZone,
-            busy);
+        var intervals = availabilityCalculator.Calculate(request.DateFrom, request.DateTo, schedule, busy);
 
-        var (totalSlots, availableSlots) = CountSlots(intervals, coworking.SlotSize.Minutes);
+        var (totalSlots, availableSlots) = CountSlots(intervals, schedule.SlotSize.Minutes);
 
         return new DeskAvailabilityResponse
         {
             DeskId = desk.Id,
-            SlotSizeMinutes = coworking.SlotSize.Minutes,
+            SlotSizeMinutes = schedule.SlotSize.Minutes,
             TotalSlots = totalSlots,
             AvailableSlots = availableSlots,
             Intervals = intervals
@@ -71,34 +63,23 @@ internal sealed class GetDeskAvailabilityQueryHandler(
         return (total, available);
     }
 
-    private async Task<CoworkingMeta> GetCoworkingMetaAsync(int deskId, CancellationToken ct)
+    private async Task<WorkingSchedule> GetScheduleAsync(int deskId, CancellationToken ct)
     {
         var raw = await context.Set<Domain.Entities.Coworking>()
             .AsNoTracking()
             .Where(c => c.Desks.Any(d => d.Id == deskId))
-            .Select(c => new { c.TimeZoneId, c.OpenTime, c.CloseTime, c.SlotSize })
+            .Select(c => new { c.Name, c.TimeZoneId, c.SlotSize, c.IsNonStop, c.OpenTime, c.CloseTime })
             .FirstOrDefaultAsync(ct)
             ?? throw new NotFoundException($"Coworking for desk {deskId} not found.");
 
-        return new CoworkingMeta(
-            TimeZoneInfo.FindSystemTimeZoneById(raw.TimeZoneId),
-            raw.OpenTime,
-            raw.CloseTime,
-            raw.SlotSize);
+        return WorkingSchedule.For(new Domain.Entities.Coworking
+        {
+            Name = raw.Name,
+            TimeZoneId = raw.TimeZoneId,
+            SlotSize = raw.SlotSize,
+            IsNonStop = raw.IsNonStop,
+            OpenTime = raw.OpenTime,
+            CloseTime = raw.CloseTime
+        });
     }
-
-    private static (DateTimeOffset Start, DateTimeOffset End) ToUtcBoundaries(
-        DateOnly dateFrom, DateOnly dateTo, TimeZoneInfo timeZone)
-    {
-        // +2 days: a working window may run past midnight into the next day
-        return (
-            ZonedTime.FromWallClock(dateFrom.ToDateTime(TimeOnly.MinValue), timeZone),
-            ZonedTime.FromWallClock(dateTo.AddDays(2).ToDateTime(TimeOnly.MinValue), timeZone));
-    }
-
-    private sealed record CoworkingMeta(
-        TimeZoneInfo TimeZone,
-        TimeOnly OpenTime,
-        TimeOnly CloseTime,
-        SlotSize SlotSize);
 }

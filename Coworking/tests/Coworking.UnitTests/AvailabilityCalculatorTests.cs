@@ -1,4 +1,5 @@
 using Coworking.Domain.Services.Availability;
+using Coworking.Domain.ValueObjects;
 
 namespace Coworking.UnitTests;
 
@@ -40,13 +41,21 @@ public class AvailabilityCalculatorTests
     }
 
     [Fact]
-    public void NonStopScheduleAnchoredAwayFromMidnight_EndsOnTheNextDay()
+    public void NonStopSchedule_IgnoresHoursAndStartsAtMidnight()
     {
-        var result = Calculate(Day, Day, Open, Open, Utc, []);
+        var schedule = WorkingSchedule.For(new()
+        {
+            Name = "Test",
+            TimeZoneId = "UTC",
+            IsNonStop = true,
+            OpenTime = Open,
+            CloseTime = Close
+        });
 
-        var interval = Assert.Single(result);
-        Assert.Equal(At(Day, 8, 0), interval.Start);
-        Assert.Equal(At(Day.AddDays(1), 8, 0), interval.End);
+        var interval = Assert.Single(Calculator.Calculate(Day, Day, schedule, []));
+
+        Assert.Equal(At(Day, 0, 0), interval.Start);
+        Assert.Equal(At(Day.AddDays(1), 0, 0), interval.End);
     }
 
     [Fact]
@@ -446,7 +455,13 @@ public class AvailabilityCalculatorTests
         TimeOnly openTime, TimeOnly closeTime,
         TimeZoneInfo timeZone,
         IReadOnlyList<(DateTimeOffset Start, DateTimeOffset End)> busy) =>
-        Calculator.Calculate(from, to, openTime, closeTime, timeZone, busy);
+        Calculator.Calculate(from, to, Schedule(openTime, closeTime, timeZone), busy);
+
+    // equal hours stand for non-stop here, to keep the cases short
+    private static WorkingSchedule Schedule(TimeOnly openTime, TimeOnly closeTime, TimeZoneInfo timeZone) =>
+        WorkingSchedule.For(openTime == closeTime
+            ? new() { Name = "Test", TimeZoneId = timeZone.Id, IsNonStop = true }
+            : new() { Name = "Test", TimeZoneId = timeZone.Id, OpenTime = openTime, CloseTime = closeTime });
 
     private static DateTimeOffset At(DateOnly date, int hour, int minute) =>
         new(date.ToDateTime(new TimeOnly(hour, minute)), TimeSpan.Zero);

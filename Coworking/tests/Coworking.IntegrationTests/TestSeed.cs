@@ -1,4 +1,4 @@
-﻿using Coworking.Domain.Entities;
+using Coworking.Domain.Entities;
 using Coworking.Domain.Enums;
 using Coworking.Domain.ValueObjects;
 using Coworking.Infrastructure.Persistence.Contexts;
@@ -84,8 +84,7 @@ internal static class TestSeed
             Address = "Test",
             TimeZoneId = "UTC",
             SlotSize = SlotSize.ThirtyMinutes,
-            OpenTime = new TimeOnly(0, 0),
-            CloseTime = new TimeOnly(0, 0),
+            IsNonStop = true,
             Desks = [new Desk { Name = "T1", Description = "Test", Coworking = null! }]
         };
 }

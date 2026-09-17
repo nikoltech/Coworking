@@ -8,7 +8,9 @@ public class CoworkingConfiguration : IEntityTypeConfiguration<Domain.Entities.C
 {
     public void Configure(EntityTypeBuilder<Domain.Entities.Coworking> builder)
     {
-        builder.ToTable("Coworkings");
+        builder.ToTable("Coworkings", t => t.HasCheckConstraint(
+            "ck_coworkings_working_hours",
+            "is_non_stop OR (open_time IS NOT NULL AND close_time IS NOT NULL AND open_time <> close_time)"));
 
         builder.HasKey(c => c.Id);
 
@@ -18,17 +20,14 @@ public class CoworkingConfiguration : IEntityTypeConfiguration<Domain.Entities.C
             .IsRequired()
             .HasMaxLength(200);
 
+        builder.Property(c => c.Description)
+            .HasMaxLength(500);
+
         builder.OwnsOne(x => x.SlotSize, SlotSizeEfMapping.Map);
 
         builder.Property(c => c.TimeZoneId)
             .IsRequired()
             .HasMaxLength(100);
-
-        builder.Property(c => c.OpenTime)
-            .IsRequired();
-
-        builder.Property(c => c.CloseTime)
-            .IsRequired();
 
         builder.HasMany(x => x.Desks)
             .WithOne(c => c.Coworking)

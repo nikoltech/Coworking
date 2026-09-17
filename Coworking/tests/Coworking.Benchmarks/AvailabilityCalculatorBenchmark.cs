@@ -1,5 +1,6 @@
 using BenchmarkDotNet.Attributes;
 using Coworking.Domain.Services.Availability;
+using Coworking.Domain.ValueObjects;
 
 namespace Coworking.Benchmarks;
 
@@ -11,7 +12,11 @@ namespace Coworking.Benchmarks;
 public class AvailabilityCalculatorBenchmark
 {
     private readonly IAvailabilityCalculator _calculator = new AvailabilityCalculator();
-    private static readonly TimeZoneInfo Kyiv = TimeZoneInfo.FindSystemTimeZoneById("Europe/Kyiv");
+    private static readonly WorkingSchedule NonStopSchedule = WorkingSchedule.For(
+        new() { Name = "Bench", TimeZoneId = "Europe/Kyiv", IsNonStop = true });
+
+    private static readonly WorkingSchedule DayHoursSchedule = WorkingSchedule.For(
+        new() { Name = "Bench", TimeZoneId = "Europe/Kyiv", OpenTime = new TimeOnly(8, 0), CloseTime = new TimeOnly(20, 0) });
 
     private DateOnly _from;
     private DateOnly _to;
@@ -47,9 +52,9 @@ public class AvailabilityCalculatorBenchmark
 
     [Benchmark(Description = "24/7 schedule")]
     public int NonStop() =>
-        _calculator.Calculate(_from, _to, new TimeOnly(0, 0), new TimeOnly(0, 0), Kyiv, _busy).Count;
+        _calculator.Calculate(_from, _to, NonStopSchedule, _busy).Count;
 
     [Benchmark(Description = "08:00-20:00 schedule")]
     public int DaySchedule() =>
-        _calculator.Calculate(_from, _to, new TimeOnly(8, 0), new TimeOnly(20, 0), Kyiv, _busy).Count;
+        _calculator.Calculate(_from, _to, DayHoursSchedule, _busy).Count;
 }

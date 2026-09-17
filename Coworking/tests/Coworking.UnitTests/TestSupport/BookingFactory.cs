@@ -23,8 +23,7 @@ internal static class BookingFactory
             Name = CoworkingName,
             Address = "Test",
             TimeZoneId = TimeZoneId,
-            OpenTime = new TimeOnly(0, 0),
-            CloseTime = new TimeOnly(0, 0),
+            IsNonStop = true,
             Desks = [new Desk { Name = DeskName, Description = "Test", Coworking = null! }]
         };
 

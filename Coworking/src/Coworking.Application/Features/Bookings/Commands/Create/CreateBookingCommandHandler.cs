@@ -7,7 +7,7 @@ using Coworking.Application.Features.Bookings.Commands.Create.Responces;
 using Coworking.Domain.Entities;
 using Coworking.Domain.Enums;
 using Coworking.Domain.Policies.Rounding;
-using Coworking.Domain.Specifications;
+using Coworking.Domain.ValueObjects;
 using MediatR;
 
 namespace Coworking.Application.Features.Bookings.Commands.Create;
@@ -29,8 +29,9 @@ internal class CreateBookingCommandHandler(
         var coworking = desk.Coworking
             ?? throw new NotFoundException($"Coworking for desk {request.DeskId} not found.");
 
-        var (start, end) = LocalizeAndRoundInterval(request, coworking);
-        ValidateWithinWorkingHours(start, end, coworking);
+        var schedule = WorkingSchedule.For(coworking);
+        var (start, end) = roundingPolicy.RoundInterval(request.StartTime, request.EndTime, schedule);
+        schedule.EnsureWithinWorkingHours(start, end);
 
         await using var lease =
             await bookingAccessCoordinator.WaitIfOverlappingAsync(
@@ -79,19 +80,6 @@ internal class CreateBookingCommandHandler(
     }
 
 
-    private (DateTimeOffset Start, DateTimeOffset End) LocalizeAndRoundInterval(
-        CreateBookingCommand request,
-        Domain.Entities.Coworking coworking)
-    {
-        // Note: think about user time zone. Now it supposing that user books time in coworking local time zone.
-        var zone = TimeZoneInfo.FindSystemTimeZoneById(coworking.TimeZoneId);
-
-        var startLocal = TimeZoneInfo.ConvertTime(request.StartTime, zone);
-        var endLocal = TimeZoneInfo.ConvertTime(request.EndTime, zone);
-
-        return roundingPolicy.RoundInterval(startLocal, endLocal, coworking.SlotSize);
-    }
-
     private static Booking CreateAndInitializeBooking(CreateBookingCommand request,
         DateTimeOffset start,
         DateTimeOffset end)
@@ -105,12 +93,5 @@ internal class CreateBookingCommandHandler(
         booking.SetStatus(BookingStatus.PendingPayment);
 
         return booking;
-    }
-
-    private static void ValidateWithinWorkingHours(DateTimeOffset start,
-        DateTimeOffset end,
-        Domain.Entities.Coworking coworking)
-    {
-        BookingSpecifications.ValidateAccessPeriod(start, end, coworking);
     }
 }

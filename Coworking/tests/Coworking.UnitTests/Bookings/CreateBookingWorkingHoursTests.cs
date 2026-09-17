@@ -53,7 +53,7 @@ public class CreateBookingWorkingHoursTests
     public async Task Kyiv_UtcRequestAfterLocalClosing_IsRejected()
     {
         // 18:30 in Kyiv; 15:30 UTC would pass a check made in UTC
-        var ex = await Assert.ThrowsAsync<DomainException>(() => Handle(Kyiv, Utc(15, 0), Utc(15, 30)));
+        var ex = await Assert.ThrowsAsync<DomainException>(() => Handle(Kyiv, Utc(14, 30), Utc(15, 30)));
 
         Assert.Contains("end time is outside", ex.Message);
     }
@@ -90,7 +90,7 @@ public class CreateBookingWorkingHoursTests
         Assert.Null(ex);
     }
 
-    [Fact(Skip = "Known gap: rounding on UTC ticks moves 09:00 local to 08:45 local, before opening")]
+    [Fact]
     public async Task Kathmandu_RequestAtOpening_IsAccepted()
     {
         await Handle(Kathmandu, Local(9, 0, KathmanduOffset), Local(10, 0, KathmanduOffset));
@@ -98,7 +98,7 @@ public class CreateBookingWorkingHoursTests
         AssertLockedInterval(Local(9, 0, KathmanduOffset), Local(10, 0, KathmanduOffset));
     }
 
-    [Fact(Skip = "Known gap: rounding on UTC ticks aligns slots to :15 and :45 local")]
+    [Fact]
     public async Task Kathmandu_LocalSlotBorders_AreKept()
     {
         await Handle(Kathmandu, Local(10, 0, KathmanduOffset), Local(10, 30, KathmanduOffset));
