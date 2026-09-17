@@ -39,6 +39,10 @@ public class CreateBookingValidator : AbstractValidator<CreateBookingCommand>
             .GreaterThan(x => x.StartTime)
             .WithMessage("End time must be after the start time.");
 
+        RuleFor(x => x.EndTime)
+            .Must((x, end) => end - x.StartTime <= BookingLimits.MaxDuration)
+            .WithMessage($"Booking cannot be longer than {BookingLimits.MaxDurationDays} days.");
+
         RuleFor(x => x.Metadata)
             .Must(HaveAnyValue!)
             .WithMessage("Metadata object cannot be empty if provided.")

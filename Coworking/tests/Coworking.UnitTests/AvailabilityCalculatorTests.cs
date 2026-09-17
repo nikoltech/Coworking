@@ -268,6 +268,41 @@ public class AvailabilityCalculatorTests
     }
 
     [Fact]
+    public void MultiDayBooking_IsClippedToEachDayWindow()
+    {
+        var busy = new[] { (At(Day, 12, 0), At(Day.AddDays(2), 14, 0)) };
+
+        var result = Calculate(Day, Day.AddDays(2), Open, Close, Utc, busy);
+
+        Assert.Equal(
+            [
+                (At(Day, 8, 0), At(Day, 12, 0), true),
+                (At(Day, 12, 0), At(Day, 20, 0), false),
+                (At(Day.AddDays(1), 8, 0), At(Day.AddDays(1), 20, 0), false),
+                (At(Day.AddDays(2), 8, 0), At(Day.AddDays(2), 14, 0), false),
+                (At(Day.AddDays(2), 14, 0), At(Day.AddDays(2), 20, 0), true)
+            ],
+            result.Select(i => (i.Start, i.End, i.IsAvailable)));
+    }
+
+    [Fact]
+    public void MultiDayBooking_InNightSchedule_IsClippedToEachNightWindow()
+    {
+        var busy = new[] { (At(Day, 23, 0), At(Day.AddDays(2), 2, 0)) };
+
+        var result = Calculate(Day, Day.AddDays(1), new TimeOnly(22, 0), new TimeOnly(6, 0), Utc, busy);
+
+        Assert.Equal(
+            [
+                (At(Day, 22, 0), At(Day, 23, 0), true),
+                (At(Day, 23, 0), At(Day.AddDays(1), 6, 0), false),
+                (At(Day.AddDays(1), 22, 0), At(Day.AddDays(2), 2, 0), false),
+                (At(Day.AddDays(2), 2, 0), At(Day.AddDays(2), 6, 0), true)
+            ],
+            result.Select(i => (i.Start, i.End, i.IsAvailable)));
+    }
+
+    [Fact]
     public void ResultingIntervals_AreContiguousWithinEachWindow()
     {
         var busy = new[]

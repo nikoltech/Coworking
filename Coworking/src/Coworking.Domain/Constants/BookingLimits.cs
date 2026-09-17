@@ -9,4 +9,9 @@ public static class BookingLimits
     public const int UserNameMaxLength = 200;
 
     public const int UserTimeZoneMaxLength = 100;
+
+    /// Rough global cap, also enforced by a database check constraint.
+    public const int MaxDurationDays = 90;
+
+    public static readonly TimeSpan MaxDuration = TimeSpan.FromDays(MaxDurationDays);
 }

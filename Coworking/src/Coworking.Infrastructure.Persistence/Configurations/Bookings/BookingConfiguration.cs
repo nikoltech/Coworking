@@ -12,6 +12,10 @@ public class BookingConfiguration : IEntityTypeConfiguration<Booking>
     {
         builder.HasKey(x => x.Id);
 
+        builder.ToTable(t => t.HasCheckConstraint(
+            "ck_bookings_max_duration",
+            $"end_time - start_time <= interval '{BookingLimits.MaxDurationDays * 24} hours'"));
+
         builder.HasStoreConcurrencyToken();
 
         builder.Property(x => x.StartTime)
