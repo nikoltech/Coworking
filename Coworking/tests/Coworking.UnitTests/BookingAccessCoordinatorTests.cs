@@ -13,7 +13,10 @@ public class BookingAccessCoordinatorTests
 
     private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(5);
 
-    [Fact]
+    // a broken coordinator must fail the test, not hang the run
+    private const int TestTimeout = 10_000;
+
+    [Fact(Timeout = TestTimeout)]
     public async Task DifferentDesks_DoNotWaitOnEachOther()
     {
         var coordinator = new InMemoryBookingAccessCoordinator();
@@ -29,7 +32,7 @@ public class BookingAccessCoordinatorTests
         await using var _ = await second;
     }
 
-    [Fact]
+    [Fact(Timeout = TestTimeout)]
     public async Task SameDeskOverlappingRange_WaitsForTheHolder()
     {
         var coordinator = new InMemoryBookingAccessCoordinator();
@@ -46,7 +49,7 @@ public class BookingAccessCoordinatorTests
         await using var _ = await second.WaitAsync(Timeout);
     }
 
-    [Fact]
+    [Fact(Timeout = TestTimeout)]
     public async Task SameDeskNonOverlappingRange_IsGrantedImmediately()
     {
         var coordinator = new InMemoryBookingAccessCoordinator();
@@ -61,7 +64,7 @@ public class BookingAccessCoordinatorTests
         await using var _ = await second;
     }
 
-    [Fact]
+    [Fact(Timeout = TestTimeout)]
     public async Task ManyDesks_AreAllGrantedConcurrently()
     {
         var coordinator = new InMemoryBookingAccessCoordinator();

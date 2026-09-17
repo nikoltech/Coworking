@@ -16,7 +16,8 @@ internal static class ExceptionStatusMap
 
             // DomainExceptionBehavior converts these on the MediatR path; this covers the rest
             [typeof(DomainException)] = (StatusCodes.Status422UnprocessableEntity, "Business Rule Violated"),
-            [typeof(TransactionConflictException)] = (StatusCodes.Status503ServiceUnavailable, "Service Busy")
+            [typeof(TransactionConflictException)] = (StatusCodes.Status503ServiceUnavailable, "Service Busy"),
+            [typeof(ServiceBusyException)] = (StatusCodes.Status503ServiceUnavailable, "Service Busy")
         };
 
     private static readonly (int Status, string Title) Unmapped =

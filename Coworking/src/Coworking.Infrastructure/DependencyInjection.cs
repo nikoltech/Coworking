@@ -20,6 +20,7 @@ using Coworking.Infrastructure.Synchronization.InMemory;
 using Coworking.Infrastructure.Synchronization.InMemory.Background;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 
 namespace Coworking.Infrastructure;
@@ -81,6 +82,7 @@ public static class DependencyInjection
 
     private static IServiceCollection AddSynchronization(this IServiceCollection services)
     {
+        services.TryAddSingleton(TimeProvider.System);
         services.AddSingleton<InMemoryBookingAccessCoordinator>();
         services.AddSingleton<IBookingAccessCoordinator>(sp =>
             sp.GetRequiredService<InMemoryBookingAccessCoordinator>());

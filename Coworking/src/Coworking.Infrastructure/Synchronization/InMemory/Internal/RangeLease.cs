@@ -1,28 +1,20 @@
-﻿using Nito.AsyncEx;
+using Nito.AsyncEx;
 
 namespace Coworking.Infrastructure.Synchronization.InMemory.Internal;
 
+/// <summary>
+/// Releasing twice, or after the cleaner reclaimed the range, is a no-op.
+/// </summary>
 internal sealed class RangeLease(
-    Dictionary<RangeKey, ActiveRange> active,
+    List<ActiveRange> held,
     AsyncLock lockObj,
-    RangeKey key) : IAsyncDisposable
+    ActiveRange range) : IAsyncDisposable
 {
-    private bool _disposed;
-
     public async ValueTask DisposeAsync()
     {
-        if (_disposed) return;
-        _disposed = true;
-
-        SemaphoreSlim? semaphore;
-
         using (await lockObj.LockAsync())
-        {
-            active.TryGetValue(key, out var range);
-            semaphore = range?.Semaphore;
-            active.Remove(key);
-        }
+            held.Remove(range);
 
-        semaphore?.Release();
+        range.Released.TrySetResult();
     }
 }

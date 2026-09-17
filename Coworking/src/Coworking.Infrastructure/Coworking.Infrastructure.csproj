@@ -40,8 +40,4 @@
     <ProjectReference Include="..\Coworking.Infrastructure.Persistence\Coworking.Infrastructure.Persistence.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Authentication\" />
-  </ItemGroup>
-
 </Project>
