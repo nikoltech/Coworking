@@ -9,7 +9,7 @@ using CoworkingEntity = Coworking.Domain.Entities.Coworking;
 namespace Coworking.IntegrationTests;
 
 /// <summary>
-/// Seeds straight into the database. There is no cleanup between runs, so every coworking
+/// Seeds straight into the database. Tests of a class share it within a run, so every coworking
 /// gets a unique name rather than relying on an empty table.
 /// </summary>
 internal static class TestSeed
@@ -19,7 +19,7 @@ internal static class TestSeed
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-        await db.Database.EnsureCreatedAsync();
+        await TestDatabase.EnsureFreshAsync(db);
 
         var coworking = NewCoworking(label);
 
@@ -34,7 +34,7 @@ internal static class TestSeed
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-        await db.Database.EnsureCreatedAsync();
+        await TestDatabase.EnsureFreshAsync(db);
 
         var coworking = NewCoworking(label);
 

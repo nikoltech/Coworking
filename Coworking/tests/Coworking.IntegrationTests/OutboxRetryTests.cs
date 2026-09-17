@@ -74,7 +74,7 @@ public class OutboxRetryTests
         var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-        await db.Database.EnsureCreatedAsync();
+        await TestDatabase.EnsureFreshAsync(db);
 
         return (scope, db, scope.ServiceProvider.GetRequiredService<IPublishEndpoint>());
     }

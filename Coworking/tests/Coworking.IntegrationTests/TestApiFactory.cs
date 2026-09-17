@@ -11,7 +11,7 @@ namespace Coworking.IntegrationTests;
 
 /// <summary>
 /// Boots the real API against a separate database on the dev Postgres instance. Test classes
-/// run in parallel and nothing is cleaned up between runs, so each one gets its own database.
+/// run in parallel, so each one gets its own database.
 /// </summary>
 public sealed class TestApiFactory(
     bool bypassCoordinator,
