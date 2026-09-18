@@ -8,7 +8,7 @@ public class CoworkingConfiguration : IEntityTypeConfiguration<Domain.Entities.C
 {
     public void Configure(EntityTypeBuilder<Domain.Entities.Coworking> builder)
     {
-        builder.ToTable("Coworkings", t => t.HasCheckConstraint(
+        builder.ToTable("coworkings", t => t.HasCheckConstraint(
             "ck_coworkings_working_hours",
             "is_non_stop OR (open_time IS NOT NULL AND close_time IS NOT NULL AND open_time <> close_time)"));
 

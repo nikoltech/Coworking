@@ -9,7 +9,7 @@ public class DeskConfiguration : IEntityTypeConfiguration<Desk>
 {
     public void Configure(EntityTypeBuilder<Desk> builder)
     {
-        builder.ToTable("Desks");
+        builder.ToTable("desks");
 
         builder.HasKey(x => x.Id);
 

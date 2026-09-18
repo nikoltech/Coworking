@@ -3,6 +3,7 @@ using System;
 using Coworking.Infrastructure.Persistence.Contexts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Coworking.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260918150213_ReplaceBookingCheckConstraints")]
+    partial class ReplaceBookingCheckConstraints
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -86,21 +89,21 @@ namespace Coworking.Infrastructure.Persistence.Migrations
                         .HasColumnName("xmin");
 
                     b.HasKey("Id")
-                        .HasName("pk_bookings");
+                        .HasName("pk_booking");
 
                     b.HasIndex("AccessCode")
                         .IsUnique()
-                        .HasDatabaseName("ix_bookings_access_code");
+                        .HasDatabaseName("ix_booking_access_code");
 
                     b.HasIndex("CreatedAt")
-                        .HasDatabaseName("ix_bookings_created_at");
+                        .HasDatabaseName("ix_booking_created_at");
 
                     b.HasIndex("DeskId", "StartTime")
                         .HasDatabaseName("ix_bookings_overlap_check");
 
                     NpgsqlIndexBuilderExtensions.IncludeProperties(b.HasIndex("DeskId", "StartTime"), new[] { "EndTime", "Status" });
 
-                    b.ToTable("bookings", null, t =>
+                    b.ToTable("booking", null, t =>
                         {
                             t.HasCheckConstraint("ck_bookings_access_code_v7", "get_byte(uuid_send(access_code), 6) >> 4 = 7");
                         });
@@ -170,7 +173,7 @@ namespace Coworking.Infrastructure.Persistence.Migrations
                     b.HasKey("Id")
                         .HasName("pk_coworkings");
 
-                    b.ToTable("coworkings", null, t =>
+                    b.ToTable("Coworkings", null, t =>
                         {
                             t.HasCheckConstraint("ck_coworkings_working_hours", "is_non_stop OR (open_time IS NOT NULL AND close_time IS NOT NULL AND open_time <> close_time)");
                         });
@@ -224,7 +227,7 @@ namespace Coworking.Infrastructure.Persistence.Migrations
                     b.HasIndex("CoworkingId")
                         .HasDatabaseName("ix_desks_coworking_id");
 
-                    b.ToTable("desks", (string)null);
+                    b.ToTable("Desks", (string)null);
                 });
 
             modelBuilder.Entity("MassTransit.EntityFrameworkCoreIntegration.InboxState", b =>
@@ -452,7 +455,7 @@ namespace Coworking.Infrastructure.Persistence.Migrations
                         .HasForeignKey("DeskId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
-                        .HasConstraintName("fk_bookings_desk_desk_id");
+                        .HasConstraintName("fk_booking_desk_desk_id");
 
                     b.Navigation("Desk");
                 });
@@ -471,7 +474,7 @@ namespace Coworking.Infrastructure.Persistence.Migrations
 
                             b1.HasKey("CoworkingId");
 
-                            b1.ToTable("coworkings");
+                            b1.ToTable("Coworkings");
 
                             b1.WithOwner()
                                 .HasForeignKey("CoworkingId")

@@ -9,7 +9,17 @@ public class Booking : ITrackEntity, IHasStateGraph<BookingStatus>
 {
     public long Id { get; set; }
 
-    public Guid AccessCode { get; set; } = Guid.CreateVersion7();
+    /// <summary>
+    /// AccessCode authorizes cancellation; persistence generates it on save.
+    /// </summary>
+    /// <exception cref="ArgumentException">The code is not a UUID v7.</exception>
+    public Guid AccessCode
+    {
+        get;
+        set => field = value.Version == 7
+            ? value
+            : throw new ArgumentException($"Access code must be a UUID v7, got v{value.Version}.", nameof(value));
+    }
 
     public DateTimeOffset StartTime { get; set; }
 

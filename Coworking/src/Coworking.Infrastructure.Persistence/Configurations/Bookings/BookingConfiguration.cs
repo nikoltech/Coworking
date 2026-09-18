@@ -3,18 +3,23 @@ using Coworking.Domain.Entities;
 using Coworking.Infrastructure.Persistence.Configurations.Common;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using Microsoft.EntityFrameworkCore.ValueGeneration;
 
 namespace Coworking.Infrastructure.Persistence.Configurations.Bookings;
 
 public class BookingConfiguration : IEntityTypeConfiguration<Booking>
 {
+    // the check constraint spells the column out, so both must come from here
+    private const string AccessCodeColumn = "access_code";
+
     public void Configure(EntityTypeBuilder<Booking> builder)
     {
         builder.HasKey(x => x.Id);
 
-        builder.ToTable(t => t.HasCheckConstraint(
-            "ck_bookings_max_duration",
-            $"end_time - start_time <= interval '{BookingLimits.MaxDurationDays * 24} hours'"));
+        // the UUID version sits in the high nibble of byte 6
+        builder.ToTable("bookings", t => t.HasCheckConstraint(
+            "ck_bookings_access_code_v7",
+            $"get_byte(uuid_send({AccessCodeColumn}), 6) >> 4 = 7"));
 
         builder.HasStoreConcurrencyToken();
 
@@ -39,6 +44,12 @@ public class BookingConfiguration : IEntityTypeConfiguration<Booking>
 
         builder.Property(x => x.UserTimeZoneId)
             .HasMaxLength(BookingLimits.UserTimeZoneMaxLength);
+
+        builder.Property(x => x.AccessCode)
+            .HasColumnName(AccessCodeColumn)
+            .IsRequired()
+            .ValueGeneratedOnAdd()
+            .HasValueGenerator<UUIDv7ValueGenerator>();
 
         builder.HasIndex(x => x.AccessCode)
                .IsUnique();
