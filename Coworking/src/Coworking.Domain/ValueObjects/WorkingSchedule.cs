@@ -1,5 +1,6 @@
 using Coworking.Domain.Common;
 using Coworking.Domain.Exceptions;
+using System.Globalization;
 
 namespace Coworking.Domain.ValueObjects;
 
@@ -24,20 +25,30 @@ public sealed class WorkingSchedule
 
     /// <summary>
     /// For builds the schedule of a coworking.
-    /// Throws DomainException when the time zone is unknown or the hours are invalid.
     /// </summary>
+    /// <exception cref="DomainInvariantException">Stored zone or hours are unusable.</exception>
     public static WorkingSchedule For(Entities.Coworking coworking)
     {
-        var timeZone = FindTimeZone(coworking.TimeZoneId);
+        TimeZoneInfo timeZone;
+
+        try
+        {
+            timeZone = ZonedTime.Find(coworking.TimeZoneId);
+        }
+        catch (ArgumentException ex)
+        {
+            throw new DomainInvariantException(
+                $"Coworking '{coworking.Name}' has an unusable time zone.", ex);
+        }
 
         if (coworking.IsNonStop)
             return new(timeZone, coworking.SlotSize, isNonStop: true, TimeOnly.MinValue, TimeOnly.MinValue);
 
         if (coworking.OpenTime is not { } open || coworking.CloseTime is not { } close)
-            throw new DomainException($"Coworking '{coworking.Name}' has no working hours.");
+            throw new DomainInvariantException($"Coworking '{coworking.Name}' has no working hours.");
 
         if (open == close)
-            throw new DomainException(
+            throw new DomainInvariantException(
                 $"Coworking '{coworking.Name}' opens and closes at the same time; mark it as non-stop instead.");
 
         return new(timeZone, coworking.SlotSize, isNonStop: false, open, close);
@@ -91,20 +102,34 @@ public sealed class WorkingSchedule
          ZonedTime.FromWallClock(to.AddDays(2).ToDateTime(TimeOnly.MinValue), _timeZone));
 
     /// <summary>
-    /// EnsureWithinWorkingHours throws DomainException unless both start and end fall inside
-    /// working windows. Closed hours between them are allowed: a booking may span several days.
+    /// EnsureBoundsInWorkingHours checks that both start and end fall inside working windows.
+    /// Closed hours between them are allowed: a booking may span several days.
     /// </summary>
-    public void EnsureWithinWorkingHours(DateTimeOffset start, DateTimeOffset end)
+    /// <exception cref="DomainException">Reversed period, or a bound outside working hours.</exception>
+    public void EnsureBoundsInWorkingHours(DateTimeOffset start, DateTimeOffset end)
     {
         if (start >= end)
-            throw new DomainException("Booking start time must be earlier than end time.");
+            throw new DomainException($"Booking start {Format(start)} must be earlier than end {Format(end)}.");
+
+        if (IsNonStop)
+            return;
 
         if (WindowForStart(start) is null)
-            throw new DomainException("Booking start time is outside working hours.");
+            throw new DomainException($"Booking cannot start at {Format(start)}: {WorkingHoursText}.");
 
         if (WindowForEnd(end) is null)
-            throw new DomainException("Booking end time is outside working hours.");
+            throw new DomainException($"Booking cannot end at {Format(end)}: {WorkingHoursText}.");
     }
+
+    // ISO 8601 in coworking time: unambiguous whatever the server locale
+    private string Format(DateTimeOffset moment) =>
+        ToLocal(moment).ToString("yyyy-MM-dd'T'HH:mm:ssK", CultureInfo.InvariantCulture);
+
+    private string WorkingHoursText =>
+        $"{_timeZone.Id} is open {Hhmm(_open)}-{Hhmm(_close)}";
+
+    private static string Hhmm(TimeOnly time) =>
+        time.ToString("HH\\:mm", CultureInfo.InvariantCulture);
 
     /// <summary>ToLocal labels the moment with the coworking's offset, for display.</summary>
     public DateTimeOffset ToLocal(DateTimeOffset moment) =>
@@ -112,8 +137,8 @@ public sealed class WorkingSchedule
 
     /// <summary>
     /// BillableTime returns the open time inside the period, which is what the customer pays for.
-    /// Not implemented until payments exist.
     /// </summary>
+    /// <exception cref="NotImplementedException">Always, until payments exist.</exception>
     public TimeSpan BillableTime(DateTimeOffset start, DateTimeOffset end) =>
         throw new NotImplementedException("Billing is not implemented yet.");
 
@@ -143,15 +168,4 @@ public sealed class WorkingSchedule
             ZonedTime.FromWallClock(closingDate.ToDateTime(_close), _timeZone));
     }
 
-    private static TimeZoneInfo FindTimeZone(string timeZoneId)
-    {
-        try
-        {
-            return TimeZoneInfo.FindSystemTimeZoneById(timeZoneId);
-        }
-        catch (Exception ex) when (ex is TimeZoneNotFoundException or InvalidTimeZoneException)
-        {
-            throw new DomainException($"Unknown time zone '{timeZoneId}'.", ex);
-        }
-    }
 }

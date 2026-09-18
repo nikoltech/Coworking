@@ -46,7 +46,7 @@ public class CreateBookingWorkingHoursTests
         // 08:30 in Kyiv, although 05:30 UTC
         var ex = await Assert.ThrowsAsync<DomainException>(() => Handle(Kyiv, Utc(5, 30), Utc(7, 0)));
 
-        Assert.Contains("start time is outside", ex.Message);
+        Assert.Contains("cannot start at", ex.Message);
     }
 
     [Fact]
@@ -55,7 +55,7 @@ public class CreateBookingWorkingHoursTests
         // 18:30 in Kyiv; 15:30 UTC would pass a check made in UTC
         var ex = await Assert.ThrowsAsync<DomainException>(() => Handle(Kyiv, Utc(14, 30), Utc(15, 30)));
 
-        Assert.Contains("end time is outside", ex.Message);
+        Assert.Contains("cannot end at", ex.Message);
     }
 
     [Fact]

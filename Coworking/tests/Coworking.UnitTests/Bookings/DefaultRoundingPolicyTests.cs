@@ -149,7 +149,7 @@ public class DefaultRoundingPolicyTests
         var transition = new DateOnly(2030, 10, 27);
         var schedule = NonStop("Europe/Kyiv", 30);
 
-        var (start, end) = Policy.RoundInterval(
+        var (start, end) = Policy.RoundToSlotGrid(
             Local(transition, 2, 30, TimeSpan.FromHours(3)),
             Local(transition, 4, 0, TimeSpan.FromHours(2)),
             schedule);
@@ -162,7 +162,7 @@ public class DefaultRoundingPolicyTests
         (DateTimeOffset Start, DateTimeOffset End) requested,
         (DateTimeOffset Start, DateTimeOffset End) expected)
     {
-        var (start, end) = Policy.RoundInterval(requested.Start, requested.End, schedule);
+        var (start, end) = Policy.RoundToSlotGrid(requested.Start, requested.End, schedule);
 
         Assert.Equal((expected.Start.DateTime, expected.Start.Offset), (start.DateTime, start.Offset));
         Assert.Equal((expected.End.DateTime, expected.End.Offset), (end.DateTime, end.Offset));

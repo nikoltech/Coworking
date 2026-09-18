@@ -8,9 +8,8 @@ using System.Collections.Concurrent;
 namespace Coworking.Infrastructure.Synchronization.InMemory;
 
 /// <summary>
-/// Serializes overlapping booking attempts for the same desk in-process, so the DB sees
-/// fewer conflicts. Advisory only — correctness rests on the Serializable transaction.
-/// A request is checked against held ranges only, never against other waiters.
+/// Serializes overlapping booking attempts for the same desk in-process, against held ranges
+/// only. Advisory — correctness rests on the Serializable transaction.
 /// </summary>
 public sealed class InMemoryBookingAccessCoordinator : IBookingAccessCoordinator
 {
@@ -20,12 +19,10 @@ public sealed class InMemoryBookingAccessCoordinator : IBookingAccessCoordinator
         public List<ActiveRange> Held { get; } = [];
     }
 
-    // lanes are never evicted: dropping an empty one races with acquiring it,
-    // and an idle lane costs less than that synchronization
+    // never evicted: dropping an empty lane races with acquiring it
     private readonly ConcurrentDictionary<int, DeskLane> _lanes = new();
     private readonly TimeProvider _timeProvider;
 
-    // only reclaims leases nobody released; a live holder never needs this long
     private static readonly TimeSpan LeaseLifetime = TimeSpan.FromMinutes(5);
 
     public InMemoryBookingAccessCoordinator(TimeProvider? timeProvider = null)
@@ -42,10 +39,7 @@ public sealed class InMemoryBookingAccessCoordinator : IBookingAccessCoordinator
         CancellationToken ct) =>
         await WaitIfOverlappingAsync(DefaultAcquireTimeout, deskId, start, end, ct);
 
-    /// <summary>
-    /// ttl is the whole waiting budget of this request, however many times it has to wait again.
-    /// Throws ServiceBusyException when the budget runs out.
-    /// </summary>
+    /// <inheritdoc/>
     public async Task<IAsyncDisposable> WaitIfOverlappingAsync(
         TimeSpan? ttl,
         int deskId,
@@ -75,7 +69,7 @@ public sealed class InMemoryBookingAccessCoordinator : IBookingAccessCoordinator
                 }
             }
 
-            // wait outside the lock; a new holder may appear meanwhile, hence the loop
+            // a new holder may appear while waiting, hence the loop
             var remaining = deadline - _timeProvider.GetUtcNow();
 
             try
@@ -94,7 +88,6 @@ public sealed class InMemoryBookingAccessCoordinator : IBookingAccessCoordinator
     {
         var now = _timeProvider.GetUtcNow();
 
-        // each lane is locked briefly and independently
         foreach (var lane in _lanes.Values)
         {
             // TODO: avoid unnecessary global locks and shutdown wait time. Ensure enter range stop_grace_period/SIGTERM !!
@@ -108,6 +101,6 @@ public sealed class InMemoryBookingAccessCoordinator : IBookingAccessCoordinator
         }
     }
 
-    // a negative timeout other than -1 ms is rejected, and -1 ms means "wait forever"
+    // -1 ms would mean waiting forever
     private static TimeSpan Max(TimeSpan left, TimeSpan right) => left > right ? left : right;
 }

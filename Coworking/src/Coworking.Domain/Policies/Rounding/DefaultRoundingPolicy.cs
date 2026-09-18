@@ -8,7 +8,7 @@ namespace Coworking.Domain.Policies.Rounding;
 /// </summary>
 public class DefaultRoundingPolicy : IBookingRoundingPolicy
 {
-    public (DateTimeOffset Start, DateTimeOffset End) RoundInterval(
+    public (DateTimeOffset Start, DateTimeOffset End) RoundToSlotGrid(
         DateTimeOffset start,
         DateTimeOffset end,
         WorkingSchedule schedule)

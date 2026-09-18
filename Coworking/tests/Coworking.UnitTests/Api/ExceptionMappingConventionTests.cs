@@ -2,6 +2,7 @@ using Coworking.API.Infrastructure.ExceptionHandlers;
 using Coworking.Application.Common.Exceptions;
 using Coworking.Application.Features.Bookings.Commands.Cancel;
 using Coworking.Domain.Entities;
+using Coworking.Domain.Exceptions;
 using Microsoft.AspNetCore.Http;
 using System.Reflection;
 
@@ -13,7 +14,7 @@ namespace Coworking.UnitTests.Api;
 /// </summary>
 public class ExceptionMappingConventionTests
 {
-    private static readonly Type[] DeliberateServerErrors = [];
+    private static readonly Type[] DeliberateServerErrors = [typeof(DomainInvariantException)];
 
     private static readonly Assembly[] Scanned =
     [

@@ -18,14 +18,16 @@ public class WorkingScheduleTests
     // factory
 
     [Fact]
-    public void For_UnknownTimeZone_ThrowsDomainExceptionWithTheCause()
+    public void For_UnknownTimeZone_ThrowsInvariantWithTheCause()
     {
         var coworking = Coworking(isNonStop: true);
         coworking.TimeZoneId = "Mars/Olympus_Mons";
 
-        var ex = Assert.Throws<DomainException>(() => WorkingSchedule.For(coworking));
+        // stored data, not a bad call: the schedule wraps the argument error it got
+        var ex = Assert.Throws<DomainInvariantException>(() => WorkingSchedule.For(coworking));
 
-        Assert.IsType<TimeZoneNotFoundException>(ex.InnerException);
+        Assert.IsType<ArgumentException>(ex.InnerException);
+        Assert.IsType<TimeZoneNotFoundException>(ex.GetBaseException());
     }
 
     [Theory]
@@ -36,13 +38,13 @@ public class WorkingScheduleTests
     {
         var coworking = Coworking(open: ToTime(openHour), close: ToTime(closeHour));
 
-        Assert.Throws<DomainException>(() => WorkingSchedule.For(coworking));
+        Assert.Throws<DomainInvariantException>(() => WorkingSchedule.For(coworking));
     }
 
     [Fact]
     public void For_EqualHoursWithoutNonStopFlag_Throws()
     {
-        var ex = Assert.Throws<DomainException>(() => WorkingSchedule.For(Coworking(open: Nine, close: Nine)));
+        var ex = Assert.Throws<DomainInvariantException>(() => WorkingSchedule.For(Coworking(open: Nine, close: Nine)));
 
         Assert.Contains("non-stop", ex.Message);
     }
@@ -61,7 +63,7 @@ public class WorkingScheduleTests
     public void StartAfterEnd_Throws()
     {
         var ex = Assert.Throws<DomainException>(() =>
-            DayHours.EnsureWithinWorkingHours(At(1, 12, 0), At(1, 11, 0)));
+            DayHours.EnsureBoundsInWorkingHours(At(1, 12, 0), At(1, 11, 0)));
 
         Assert.Contains("earlier than end", ex.Message);
     }
@@ -70,14 +72,14 @@ public class WorkingScheduleTests
     public void StartEqualToEnd_Throws()
     {
         Assert.Throws<DomainException>(() =>
-            DayHours.EnsureWithinWorkingHours(At(1, 12, 0), At(1, 12, 0)));
+            DayHours.EnsureBoundsInWorkingHours(At(1, 12, 0), At(1, 12, 0)));
     }
 
     [Fact]
     public void StartAfterEnd_ThrowsEvenForNonStopSchedule()
     {
         Assert.Throws<DomainException>(() =>
-            NonStop.EnsureWithinWorkingHours(At(1, 12, 0), At(1, 11, 0)));
+            NonStop.EnsureBoundsInWorkingHours(At(1, 12, 0), At(1, 11, 0)));
     }
 
     // working hours: day schedule
@@ -85,49 +87,49 @@ public class WorkingScheduleTests
     [Fact]
     public void DaySchedule_PeriodInsideHours_Passes()
     {
-        DayHours.EnsureWithinWorkingHours(At(1, 10, 0), At(1, 12, 0));
+        DayHours.EnsureBoundsInWorkingHours(At(1, 10, 0), At(1, 12, 0));
     }
 
     [Fact]
     public void DaySchedule_PeriodExactlyMatchingHours_Passes()
     {
-        DayHours.EnsureWithinWorkingHours(At(1, 9, 0), At(1, 18, 0));
+        DayHours.EnsureBoundsInWorkingHours(At(1, 9, 0), At(1, 18, 0));
     }
 
     [Fact]
     public void DaySchedule_StartBeforeOpening_Throws()
     {
         var ex = Assert.Throws<DomainException>(() =>
-            DayHours.EnsureWithinWorkingHours(At(1, 8, 30), At(1, 10, 0)));
+            DayHours.EnsureBoundsInWorkingHours(At(1, 8, 30), At(1, 10, 0)));
 
-        Assert.Contains("start time is outside", ex.Message);
+        Assert.Contains("cannot start at", ex.Message);
     }
 
     [Fact]
     public void DaySchedule_StartAtClosing_Throws()
     {
         var ex = Assert.Throws<DomainException>(() =>
-            DayHours.EnsureWithinWorkingHours(At(1, 18, 0), At(2, 10, 0)));
+            DayHours.EnsureBoundsInWorkingHours(At(1, 18, 0), At(2, 10, 0)));
 
-        Assert.Contains("start time is outside", ex.Message);
+        Assert.Contains("cannot start at", ex.Message);
     }
 
     [Fact]
     public void DaySchedule_EndAfterClosing_Throws()
     {
         var ex = Assert.Throws<DomainException>(() =>
-            DayHours.EnsureWithinWorkingHours(At(1, 17, 0), At(1, 18, 30)));
+            DayHours.EnsureBoundsInWorkingHours(At(1, 17, 0), At(1, 18, 30)));
 
-        Assert.Contains("end time is outside", ex.Message);
+        Assert.Contains("cannot end at", ex.Message);
     }
 
     [Fact]
     public void DaySchedule_EndAtOpening_Throws()
     {
         var ex = Assert.Throws<DomainException>(() =>
-            DayHours.EnsureWithinWorkingHours(At(1, 17, 0), At(2, 9, 0)));
+            DayHours.EnsureBoundsInWorkingHours(At(1, 17, 0), At(2, 9, 0)));
 
-        Assert.Contains("end time is outside", ex.Message);
+        Assert.Contains("cannot end at", ex.Message);
     }
 
     [Fact]
@@ -136,14 +138,28 @@ public class WorkingScheduleTests
         var kyiv = Hours(Nine, Eighteen, "Europe/Kyiv");
 
         // 06:00 UTC is 09:00 in Kyiv in summer
-        kyiv.EnsureWithinWorkingHours(At(1, 6, 0), At(1, 7, 0));
+        kyiv.EnsureBoundsInWorkingHours(At(1, 6, 0), At(1, 7, 0));
     }
 
     // a booking is one row over the whole period; closed hours inside it are not bookable anyway
     [Fact]
     public void DaySchedule_PeriodSpanningClosedNights_Passes()
     {
-        DayHours.EnsureWithinWorkingHours(At(1, 10, 0), At(3, 11, 0));
+        DayHours.EnsureBoundsInWorkingHours(At(1, 10, 0), At(3, 11, 0));
+    }
+
+    [Fact]
+    public void RejectionMessage_NamesTheMomentAndTheWorkingHours()
+    {
+        var kyiv = Hours(Nine, Eighteen, "Europe/Kyiv");
+
+        // 08:30 in Kyiv
+        var ex = Assert.Throws<DomainException>(() =>
+            kyiv.EnsureBoundsInWorkingHours(At(1, 5, 30), At(1, 7, 0)));
+
+        Assert.Equal(
+            "Booking cannot start at 2026-06-01T08:30:00+03:00: Europe/Kyiv is open 09:00-18:00.",
+            ex.Message);
     }
 
     // working hours: night schedule
@@ -151,22 +167,22 @@ public class WorkingScheduleTests
     [Fact]
     public void NightSchedule_PeriodCrossingMidnight_Passes()
     {
-        NightHours.EnsureWithinWorkingHours(At(1, 23, 0), At(2, 5, 0));
+        NightHours.EnsureBoundsInWorkingHours(At(1, 23, 0), At(2, 5, 0));
     }
 
     [Fact]
     public void NightSchedule_StartInsideDaytimeGap_Throws()
     {
         var ex = Assert.Throws<DomainException>(() =>
-            NightHours.EnsureWithinWorkingHours(At(1, 12, 0), At(2, 1, 0)));
+            NightHours.EnsureBoundsInWorkingHours(At(1, 12, 0), At(2, 1, 0)));
 
-        Assert.Contains("start time is outside", ex.Message);
+        Assert.Contains("cannot start at", ex.Message);
     }
 
     [Fact]
     public void NightSchedule_PeriodSpanningClosedDaytime_Passes()
     {
-        NightHours.EnsureWithinWorkingHours(At(1, 5, 0), At(1, 23, 0));
+        NightHours.EnsureBoundsInWorkingHours(At(1, 5, 0), At(1, 23, 0));
     }
 
     // working hours: non-stop
@@ -174,7 +190,7 @@ public class WorkingScheduleTests
     [Fact]
     public void NonStopSchedule_AnyPeriod_Passes()
     {
-        NonStop.EnsureWithinWorkingHours(At(1, 3, 0), At(4, 21, 0));
+        NonStop.EnsureBoundsInWorkingHours(At(1, 3, 0), At(4, 21, 0));
     }
 
     // windows

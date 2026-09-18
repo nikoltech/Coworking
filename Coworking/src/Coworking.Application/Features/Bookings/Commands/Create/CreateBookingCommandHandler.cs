@@ -30,8 +30,8 @@ internal class CreateBookingCommandHandler(
             ?? throw new NotFoundException($"Coworking for desk {request.DeskId} not found.");
 
         var schedule = WorkingSchedule.For(coworking);
-        var (start, end) = roundingPolicy.RoundInterval(request.StartTime, request.EndTime, schedule);
-        schedule.EnsureWithinWorkingHours(start, end);
+        var (start, end) = roundingPolicy.RoundToSlotGrid(request.StartTime, request.EndTime, schedule);
+        schedule.EnsureBoundsInWorkingHours(start, end);
 
         await using var lease =
             await bookingAccessCoordinator.WaitIfOverlappingAsync(

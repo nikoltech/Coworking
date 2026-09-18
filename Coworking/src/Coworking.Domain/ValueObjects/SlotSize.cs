@@ -1,4 +1,4 @@
-﻿using Coworking.Domain.Exceptions;
+using Coworking.Domain.Exceptions;
 
 namespace Coworking.Domain.ValueObjects;
 
@@ -20,13 +20,14 @@ public sealed record SlotSize
     private SlotSize(int minutes) => Minutes = minutes;
 
 
+    /// <exception cref="ArgumentOutOfRangeException">The size is zero or negative.</exception>
+    /// <exception cref="ArgumentException">The size is not a multiple of the base step.</exception>
     public static SlotSize From(int minutes)
     {
-        if (minutes <= 0)
-            throw new DomainException("Slot size must be positive.");
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(minutes);
 
         if (minutes % BaseStepInMinutes != 0)
-            throw new DomainException($"Slot size must be a multiple of {BaseStepInMinutes}");
+            throw new ArgumentException($"Slot size must be a multiple of {BaseStepInMinutes}.", nameof(minutes));
 
         return new SlotSize(minutes);
     }
