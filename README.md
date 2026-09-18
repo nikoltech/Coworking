@@ -32,3 +32,9 @@ This project explores backend architecture and concurrency handling in booking s
 
 This project is experimental and focuses on architectural patterns and concurrency strategies.  
 In a production system, design decisions would be driven by specific business requirements and scale.
+
+## Licensing watch
+
+AutoMapper, MediatR and MassTransit moved to commercial licensing for their newer major versions,
+and FluentAssertions did the same from version 8. Check the current terms on each package page
+before upgrading, and budget for a migration if the license does not fit.
