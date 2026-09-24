@@ -1,5 +1,6 @@
 using Coworking.Infrastructure.Persistence.Contexts;
 using Coworking.Messaging.Consumers;
+using Coworking.Messaging.Definitions;
 using Coworking.Messaging.Options;
 using MassTransit;
 using Microsoft.Extensions.Configuration;
@@ -32,7 +33,6 @@ public static class DependencyInjection
                 o.UsePostgres();
 
                 // Routes all Publish/Send calls through the Outbox.
-                // Without this line, Outbox only applies to consumers (InboxState).
                 o.UseBusOutbox();
             });
 
@@ -63,7 +63,6 @@ public static class DependencyInjection
                 o.UsePostgres();
 
                 // Routes all Publish/Send calls through the Outbox.
-                // Without this line, Outbox only applies to consumers (InboxState).
                 o.UseBusOutbox();
             });
 
@@ -74,8 +73,9 @@ public static class DependencyInjection
     }
 
     /// <summary>
-    /// RabbitMQ consumers + per-consumer retry (no Outbox, no MediatR).
-    /// Use in a dedicated notification service.
+    /// RabbitMQ consumers + retry + Inbox (no bus Outbox, no MediatR).
+    /// Use in a dedicated notification service. The Inbox shares the host's AppDbContext,
+    /// so the service must also call AddPersistence.
     /// </summary>
     public static IServiceCollection AddMessagingConsumers(this IServiceCollection services,
         IConfiguration configuration)
@@ -85,6 +85,10 @@ public static class DependencyInjection
         services.AddMassTransit(x =>
         {
             x.ConfigureConsumers();
+
+            // Inbox only: this service consumes, it does not publish.
+            x.AddEntityFrameworkOutbox<AppDbContext>(o => o.UsePostgres());
+
             x.UsingRabbitMq(ConfigureRabbitMq);
         });
 
@@ -122,8 +126,8 @@ public static class DependencyInjection
 
     private static void ConfigureConsumers(this IBusRegistrationConfigurator x)
     {
-        x.AddConsumer<BookingCreatedConsumer>(c => ConsumerPipelines.Email(c));
-        x.AddConsumer<BookingCancelledConsumer>(c => ConsumerPipelines.Email(c));
+        x.AddConsumer<BookingCreatedConsumer, EmailConsumerDefinition<BookingCreatedConsumer>>();
+        x.AddConsumer<BookingCancelledConsumer, EmailConsumerDefinition<BookingCancelledConsumer>>();
 
         x.AddConsumer<BrokerTestConsumerA>();
         x.AddConsumer<BrokerTestConsumerB>();

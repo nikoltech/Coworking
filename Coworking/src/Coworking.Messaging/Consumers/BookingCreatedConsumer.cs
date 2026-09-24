@@ -6,7 +6,6 @@ using MassTransit;
 
 namespace Coworking.Messaging.Consumers;
 
-// TODO: not idempotent yet: needs a processed-MessageId store keyed on context.Message.MessageId
 internal sealed class BookingCreatedConsumer(IEmailNotificationService emailService)
     : IConsumer<BookingCreatedMessage>
 {

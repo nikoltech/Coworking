@@ -35,17 +35,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             .HaveConversion<DateTimeOffsetUtcConverter>();
     }
 
-
-    public override Task<int> SaveChangesAsync(CancellationToken ct = default)
-    {
-        return base.SaveChangesAsync(ct);
-    }
-
-    public override int SaveChanges()
-    {
-        return base.SaveChanges();
-    }
-
     public async Task<ITransaction> BeginTransactionAsync(CancellationToken ct = default)
     {
         var efTransaction = await Database.BeginTransactionAsync(ct);
