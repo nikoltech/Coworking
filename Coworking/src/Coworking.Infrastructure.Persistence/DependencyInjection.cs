@@ -8,7 +8,6 @@ using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 
 namespace Coworking.Infrastructure.Persistence;
 
@@ -25,15 +24,13 @@ public static class DependencyInjection
         services.AddDbContext<AppDbContext>((sp, options) =>
         {
             options
-                .UseNpgsql(configuration.GetConnectionString("DefaultConnection"))
-                .UseSnakeCaseNamingConvention()
+                .UseAppDatabase(configuration.GetConnectionString("DefaultConnection"))
                 .AddInterceptors(sp.GetServices<IInterceptor>());
 
             var env = sp.GetRequiredService<IHostEnvironment>();
             if (env.IsDevelopment())
             {
                 options
-                    .LogTo(Console.WriteLine, new[] { DbLoggerCategory.Database.Command.Name }, LogLevel.Information)
                     .EnableSensitiveDataLogging()
                     .EnableDetailedErrors();
             }

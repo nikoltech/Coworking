@@ -1,4 +1,4 @@
-﻿using Coworking.Infrastructure.Persistence.Contexts;
+using Coworking.Infrastructure.Persistence.Contexts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 using Microsoft.Extensions.Configuration;
@@ -13,12 +13,7 @@ namespace Coworking.Infrastructure.Persistence.Factories
 
             var optionsBuilder = new DbContextOptionsBuilder<AppDbContext>();
 
-            // Must match the runtime configuration in Persistence/DependencyInjection.cs,
-            // otherwise the design-time model (migrations/snapshot) diverges from the
-            // runtime model and triggers PendingModelChangesWarning.
-            optionsBuilder
-                .UseNpgsql(connectionString)
-                .UseSnakeCaseNamingConvention();
+            optionsBuilder.UseAppDatabase(connectionString);
 
             return new AppDbContext(optionsBuilder.Options);
         }
