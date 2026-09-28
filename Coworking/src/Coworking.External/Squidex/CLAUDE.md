@@ -14,6 +14,12 @@ A generic, reusable Squidex Headless CMS client — not booking-domain code. Per
 - **`Coworking.External.Squidex`** — the client (HTTP, auth, context, DI). References `.Abstractions` only.
 - **`.UnitTests`** — `InternalsVisibleTo` from the main project, so it can test `internal` classes (e.g. `SquidexApiClient`) directly.
 
+## Open: the ETag reaches the caller from one method only
+
+`GetByIdIfChangedAsync` returns the `ETag` header in a tuple. Every other read — `CreateAsync`, `GetByIdAsync`, the query methods — returns `ContentDto<T>`, which carries `version` and no ETag. So an ordinary read-then-write has nothing to hand to `knownETag` except a hand-formatted `$"\"{dto.Version}\""`; Squidex accepts both forms in `If-Match`, but nothing in the API says so.
+
+Settling it most likely means putting the ETag on `ContentDto<T>`, filled from the response header, which also removes the tuple. It touches every read path — decide before adding further conditional methods.
+
 ## Testing
 
 `RichardSzalay.MockHttp` mocks `HttpClient` at the handler level (`Helpers/MockHttpExtensions.cs`). **`FluentAssertions` is pinned to `6.12.*` here** — the root README's "Licensing watch" flags that v8+ moved to commercial licensing; don't bump past v7 without checking the license (this is the only project in the solution using FluentAssertions — others use plain xunit asserts).
