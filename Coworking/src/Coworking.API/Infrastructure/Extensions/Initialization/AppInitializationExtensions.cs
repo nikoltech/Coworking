@@ -1,5 +1,4 @@
-﻿using Coworking.External.Squidex.Localization;
-using Coworking.Infrastructure.Persistence.Contexts;
+﻿using Coworking.Infrastructure.Persistence.Contexts;
 using Microsoft.EntityFrameworkCore;
 
 namespace Coworking.API.Infrastructure.Extensions.Initialization;
@@ -12,15 +11,11 @@ public static class AppInitializationExtensions
         var services = scope.ServiceProvider;
         var logger = services.GetRequiredService<ILogger<WebApplication>>();
 
-        logger.LogInformation("Starting application initialization (Squidex, Global Configs)...");
+        logger.LogInformation("Starting application initialization...");
 
         try
         {
             await InitDatabase(config, app);
-
-            // stays off until AddSquidex() is wired into Infrastructure DI;
-            // throws if Squidex is unreachable or its master locale contradicts appsettings
-            // await SquidexLocaleSync.ValidateAllAsync(services, app.Lifetime.ApplicationStopping);
         }
         catch (Exception ex)
         {

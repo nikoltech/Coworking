@@ -2,7 +2,6 @@
 using Coworking.External.Squidex.Abstractions.Models;
 using Coworking.External.Squidex.Abstractions.Options;
 using Coworking.External.Squidex.Exceptions;
-using Coworking.External.Squidex.Localization;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -13,8 +12,6 @@ namespace Coworking.External.Squidex.Client;
 
 internal sealed class SquidexApiClient : SquidexHttpClientBase, ISquidexApiClient
 {
-    private readonly SquidexLocaleProvider _locales;
-
     /// <summary>Safe batch size for IDs query — respects URL length limits.</summary>
     private const int IdsBatchSize = 80;
 
@@ -24,12 +21,9 @@ internal sealed class SquidexApiClient : SquidexHttpClientBase, ISquidexApiClien
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
     };
 
-    internal SquidexApiClient(HttpClient http, SquidexAppOptions appOptions,
-        string clientName,
-        SquidexLocaleProvider locales)
+    internal SquidexApiClient(HttpClient http, SquidexAppOptions appOptions, string clientName)
         : base(http, appOptions, clientName)
     {
-        _locales = locales;
     }
 
     // JSON query
@@ -155,7 +149,7 @@ internal sealed class SquidexApiClient : SquidexHttpClientBase, ISquidexApiClien
     /// Replaces the content item, with optimistic concurrency control using ETag.
     /// <para>
     /// Sends only the locales <paramref name="data"/> carries, and Squidex drops the rest.
-    /// Content read back under X-Flatten, QueryOptions.ForLocale or an explicit Languages list
+    /// Content read back under X-Flatten or an explicit Languages list
     /// holds only those locales, so writing it back this way erases the others — use
     /// <see cref="PatchAsync"/>, which merges per field and locale.
     /// </para>
@@ -275,17 +269,11 @@ internal sealed class SquidexApiClient : SquidexHttpClientBase, ISquidexApiClien
             request.Headers.Add(SquidexRequestHeaders.NoSlowTotal, "true");
 
         if (opts.Flatten)
-        {
             request.Headers.Add(SquidexRequestHeaders.Flatten, "true");
-            var languages = opts.Languages ?? [_locales.DefaultLocale];
-            request.Headers.Add(SquidexRequestHeaders.Languages, string.Join(",", languages));
-        }
-        else
-        {
-            var languages = opts.Languages ?? _locales.SupportedLocales;
-            if (languages.Count > 0)
-                request.Headers.Add(SquidexRequestHeaders.Languages, string.Join(",", languages));
-        }
+
+        // no header means every locale Squidex holds
+        if (opts.Languages is { Count: > 0 })
+            request.Headers.Add(SquidexRequestHeaders.Languages, string.Join(",", opts.Languages));
 
         return request;
     }

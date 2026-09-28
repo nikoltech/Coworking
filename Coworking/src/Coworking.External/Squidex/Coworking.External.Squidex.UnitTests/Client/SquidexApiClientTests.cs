@@ -2,10 +2,8 @@
 using Coworking.External.Squidex.Abstractions.Options;
 using Coworking.External.Squidex.Client;
 using Coworking.External.Squidex.Exceptions;
-using Coworking.External.Squidex.Localization;
 using Coworking.External.Squidex.UnitTests.Helpers;
 using FluentAssertions;
-using Microsoft.Extensions.Logging.Abstractions;
 using RichardSzalay.MockHttp;
 using System.Net;
 using System.Text;
@@ -17,15 +15,9 @@ public sealed class SquidexApiClientTests
 {
     private readonly MockHttpMessageHandler _mockHttp = new();
     private readonly SquidexAppOptions _options = SquidexFakes.DefaultAppOptions();
-    private readonly SquidexLocaleProvider _locales;
-
-    public SquidexApiClientTests()
-    {
-        _locales = new SquidexLocaleProvider(_options, NullLogger<SquidexLocaleProvider>.Instance);
-    }
 
     private SquidexApiClient CreateClient() =>
-        new(_mockHttp.ToHttpClient(), _options, TestClientNames.Default, _locales);
+        new(_mockHttp.ToHttpClient(), _options, TestClientNames.Default);
 
     private string ContentUrl(string schema) =>
         $"*/api/content/{_options.AppName}/{schema}*";
@@ -198,7 +190,22 @@ public sealed class SquidexApiClientTests
     // Headers
 
     [Fact]
-    public async Task QueryAsync_AddsXLanguagesHeader_WithSupportedLocales()
+    public async Task QueryAsync_OmitsXLanguagesHeader_ByDefault()
+    {
+        var sent = true;
+        _mockHttp.When(HttpMethod.Get, ContentUrl("cities")).Respond(req =>
+        {
+            sent = req.Headers.Contains(SquidexRequestHeaders.Languages);
+            return OkResponse(SquidexFakes.MakeResponse<SquidexFakes.TestSchema>());
+        });
+
+        await CreateClient().QueryAsync<SquidexFakes.TestSchema>("cities", RequestQuery.Create());
+
+        sent.Should().BeFalse("an absent header returns every locale Squidex holds");
+    }
+
+    [Fact]
+    public async Task QueryAsync_AddsXLanguagesHeader_WhenNarrowed()
     {
         string? capturedLanguages = null;
         _mockHttp.When(HttpMethod.Get, ContentUrl("cities")).Respond(req =>
@@ -209,7 +216,8 @@ public sealed class SquidexApiClientTests
         });
 
         await CreateClient().QueryAsync<SquidexFakes.TestSchema>(
-            "cities", RequestQuery.Create());
+            "cities", RequestQuery.Create(),
+            new QueryOptions { Languages = [TestLocales.UkUA, TestLocales.En] });
 
         capturedLanguages.Should().Be($"{TestLocales.UkUA},{TestLocales.En}");
     }

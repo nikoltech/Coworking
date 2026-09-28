@@ -3,7 +3,7 @@
 A typed client for the Squidex CMS built on a custom `HttpClient` transport, with no
 third-party Squidex SDK. Narrow by design: made for a known set of schemas.
 
-- **Covered** — multi-app, multi-client, retries, locale sync, components, assets, webhooks.
+- **Covered** — multi-app, multi-client, retries, components, assets, webhooks.
 - **Out of scope** — schema management, GraphQL, bulk operations, streaming.
 
 [Configuration](#configuration) · [Locales](#locales) · [Retries](#retries-and-deadlines) ·
@@ -20,8 +20,6 @@ third-party Squidex SDK. Narrow by design: made for a known set of schemas.
       "Main": {
         "BaseUrl": "https://fake.cloud.squidex.io",
         "AppName": "my-main-app",
-        "SupportedLocales": [ "uk-UA", "en" ],
-        "DefaultLocale": "en",
         "Retry": { "MaxAttempts": 3 },
         "Limits": { "MaxParallelRequests": 16 },
         "DefaultClient": "Default",
@@ -43,7 +41,6 @@ third-party Squidex SDK. Narrow by design: made for a known set of schemas.
 | `AppName` | The app's real name in Squidex — goes into the URL. |
 | `DefaultClient` | Which `Clients` entry to use when a call names none. |
 | `Clients` | Map of *your* client keys → credentials. Same idea as `Apps`: the key is yours, `ClientId` is Squidex's. |
-| `DefaultLocale`, `SupportedLocales` | Both optional — see [Locales](#locales). |
 | `MaxPageSize` | Page size `GetAllAsync` fetches with. Default 200. |
 | `Retry.MaxAttempts` | Cap on sends for one call: `3` means at most three. Applies only to the statuses in [Retries](#retries-and-deadlines). |
 | `Limits.MaxParallelRequests` | Cap on parallel requests **inside one operation**. It does not limit how many operations you start — total load stays yours to manage. |
@@ -54,8 +51,21 @@ third-party Squidex SDK. Narrow by design: made for a known set of schemas.
 builder.Services.AddSquidex(builder.Configuration);
 ```
 
-That's the whole DI setup ✅ — locales are the one thing it leaves open, see
-[Locales](#locales).
+That's the whole DI setup ✅ — nothing to call afterwards.
+
+**The client needs permissions in Squidex**, granted through its role. No built-in role covers
+every case, so give the client a custom role with what you actually use:
+
+| Permission | Covers |
+|---|---|
+| `contents.*.read` | reading: `QueryAsync`, `GetByIdAsync`, `GetAllAsync`, `ExistsAsync` |
+| `contents.*` | the above plus `CreateAsync`, `UpdateAsync`, `PatchAsync`, `DeleteAsync`, `ChangeStatusAsync` |
+| `assets` | everything on `ISquidexAssetClient` |
+| `languages.read` | `GetAppLocalesAsync` only |
+
+Permissions in a role are relative to the app, so write `contents.*`, not
+`squidex.apps.{app}.contents.*`. `languages.read` is the one no built-in role grants — Developer,
+Editor and Reader all get `403` on it.
 
 How `ISquidexContext` is registered follows from the number of apps:
 
@@ -68,31 +78,30 @@ per call by `SquidexClientFactory` — see [Assets](#assets).
 
 ### Locales
 
-Every query needs a locale: it sends `SupportedLocales` as `X-Languages`, or `DefaultLocale`
-alone when `X-Flatten` is on — unless that call passes its own `QueryOptions.Languages`. Both
-config keys are optional, so there are two ways to supply them:
+The client asks for no particular locale, so a read returns **every locale Squidex holds** for
+the item. Nothing is configured, nothing is synchronised, and a language added in the CMS shows
+up on the next read.
 
-- **Put them in config** and the client never asks Squidex for them. `DefaultLocale` alone is
-  enough; `SupportedLocales` alone is not, since the default cannot be guessed.
-- **Leave them out** and call `SquidexLocaleSync.SyncAllAsync` at startup — it reads the app's
-  real languages and fills in whichever key you left blank.
+Narrow a single call when the payload is worth trimming — three locales out of twenty, for a
+screen that only renders those:
 
-`AddSquidex` calls neither: both are opt-in, and where to run them is yours to decide. Locales
-the config did not supply stay unresolved until a sync succeeds, and reading them throws rather
-than guessing a locale.
+```csharp
+await set.QueryAsync(query, new QueryOptions { Languages = ["uk-UA", "en"] }, ct);
+```
 
-`SquidexLocaleSync.ValidateAllAsync` is the other half: it checks a configured `DefaultLocale`
-against the app's master locale and changes nothing. Use it when the config owns the locales
-and you want drift to surface at startup.
+> Narrowing is for reading. Writing a narrowed item back with `UpdateAsync` drops the locales
+> that were left out — see [Writing](#usage).
 
-Both throw — on an unreachable app as much as on a contradiction — and neither touches state
-that is already resolved. A sync may be called again at runtime to pick up a language added in
-the CMS; if that call fails, the previous locales keep serving.
+`X-Flatten` is the other half of `QueryOptions`: it strips the partition wrapper so fields
+arrive as plain values. Squidex only flattens when **exactly one** locale is asked for, and the
+DTO has to match that shape — `string` instead of `LocalizedField<string>`, `bool` instead of
+`IvField<bool>`. Deserialising the wrong shape throws and names the field.
 
-Both read `/apps/{app}/languages`, which is app management rather than content. Of the built-in
-roles only **Owner** may call it — Developer, Editor and Reader all get `403`. Either give the
-client **Owner**, or add `languages.read` to a custom role, or keep the locales in config, where
-no such call is made.
+```csharp
+await set.QueryAsync(query, new QueryOptions { Languages = ["en"], Flatten = true }, ct);
+```
+
+`GetAppLocalesAsync` reports the app's languages and which one is master, if you need the list.
 
 ### Retries and deadlines
 
@@ -212,7 +221,7 @@ Squidex matches on a content hash, never on `ContentDto.Version`, and the hash c
 representation: the same item read under different `Languages` has a different ETag.
 
 > `UpdateAsync` sends only the locales the object carries, and Squidex drops the rest. Content
-> read under `X-Flatten`, `QueryOptions.ForLocale` or an explicit `Languages` list holds just
+> read under `X-Flatten` or an explicit `Languages` list holds just
 > those locales — writing it back erases the others. Use `PatchAsync` there: it merges per
 > field and locale.
 

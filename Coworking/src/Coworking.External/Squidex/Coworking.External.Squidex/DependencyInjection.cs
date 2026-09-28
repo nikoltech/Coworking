@@ -4,7 +4,6 @@ using Coworking.External.Squidex.Abstractions.Pagination;
 using Coworking.External.Squidex.Auth;
 using Coworking.External.Squidex.Client;
 using Coworking.External.Squidex.Context;
-using Coworking.External.Squidex.Localization;
 using Coworking.External.Squidex.Pagination;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -13,8 +12,12 @@ namespace Coworking.External.Squidex;
 
 public static class DependencyInjection
 {
+    private static readonly string[] RemovedLocaleKeys = ["DefaultLocale", "SupportedLocales"];
+
     public static IServiceCollection AddSquidex(this IServiceCollection services, IConfiguration configuration)
     {
+        EnsureNoLegacyLocaleKeys(configuration);
+
         services
             .AddOptions<SquidexGlobalOptions>()
             .Bind(configuration.GetSection(SquidexGlobalOptions.SectionName))
@@ -23,17 +26,11 @@ public static class DependencyInjection
                 "Squidex: DefaultApp must be one of the configured Apps.")
             .Validate(o => o.Apps.Values.All(a => a.Clients.ContainsKey(a.DefaultClient)),
                 "Squidex: DefaultClient must be one of the app's configured Clients.")
-            .Validate(o => o.Apps.Values.All(a =>
-                    a.SupportedLocales.Count == 0
-                    || string.IsNullOrEmpty(a.DefaultLocale)
-                    || a.SupportedLocales.Contains(a.DefaultLocale)),
-                "Squidex: DefaultLocale must be one of the app's SupportedLocales.")
             .ValidateOnStart();
 
         services.AddMemoryCache();
 
         services.AddSingleton<SquidexTokenService>();
-        services.AddSingleton<SquidexLocaleProviderCache>();
         services.AddSingleton<SquidexPaginator>();
         services.AddSingleton<ISquidexPaginator>(sp =>
             sp.GetRequiredService<SquidexPaginator>());
@@ -51,6 +48,25 @@ public static class DependencyInjection
         RegisterContexts(services, configuration);
 
         return services;
+    }
+
+    // the binder ignores unknown keys, so a leftover key would look configured and do nothing
+    private static void EnsureNoLegacyLocaleKeys(IConfiguration configuration)
+    {
+        var apps = configuration
+            .GetSection($"{SquidexGlobalOptions.SectionName}:Apps")
+            .GetChildren();
+
+        var stale = apps
+            .SelectMany(app => RemovedLocaleKeys
+                .Where(key => app.GetSection(key).Exists())
+                .Select(key => $"{app.Key}:{key}"))
+            .ToList();
+
+        if (stale.Count > 0)
+            throw new InvalidOperationException(
+                $"Squidex: locales are no longer configured — remove {string.Join(", ", stale)}. " +
+                "Reads return every locale; narrow a single call with QueryOptions.Languages.");
     }
 
     private static void RegisterContexts(IServiceCollection services, IConfiguration configuration)

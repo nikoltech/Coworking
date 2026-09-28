@@ -5,7 +5,8 @@ namespace Coworking.Application.Ports.Squidex.Schemas.City;
 
 /// <summary>
 /// Squidex "city" schema DTO.
-/// Localized fields use LocalizedField — returned locales controlled by X-Languages.
+/// Localized fields use LocalizedField — every locale Squidex holds is returned
+/// unless the call narrows them.
 /// </summary>
 public sealed class CitySchema : ISquidexSchema
 {

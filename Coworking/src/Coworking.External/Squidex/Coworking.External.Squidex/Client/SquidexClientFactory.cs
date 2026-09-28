@@ -1,6 +1,5 @@
 ﻿using Coworking.External.Squidex.Abstractions.Options;
 using Coworking.External.Squidex.Abstractions.Client;
-using Coworking.External.Squidex.Localization;
 using Microsoft.Extensions.Options;
 
 namespace Coworking.External.Squidex.Client;
@@ -11,8 +10,7 @@ namespace Coworking.External.Squidex.Client;
 /// </summary>
 public sealed class SquidexClientFactory(
     IHttpClientFactory httpClientFactory,
-    IOptions<SquidexGlobalOptions> globalOptions,
-    SquidexLocaleProviderCache localeCache)
+    IOptions<SquidexGlobalOptions> globalOptions)
 {
     private readonly SquidexGlobalOptions _options = globalOptions.Value;
 
@@ -20,10 +18,9 @@ public sealed class SquidexClientFactory(
     {
         var appOptions = GetAppOptions(appName);
         var client = clientName ?? appOptions.DefaultClient;
-        var locales = localeCache.GetOrCreate(appName, appOptions);
         var http = httpClientFactory.CreateClient(SquidexHttpClientNames.Api);
 
-        return new SquidexApiClient(http, appOptions, client, locales);
+        return new SquidexApiClient(http, appOptions, client);
     }
 
     /// <summary>

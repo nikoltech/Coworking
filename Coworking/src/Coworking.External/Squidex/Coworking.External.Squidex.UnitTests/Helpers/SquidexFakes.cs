@@ -18,19 +18,12 @@ internal static class SquidexFakes
 			BaseUrl = baseUrl,
 			AppName = appName,
 			MaxPageSize = 3,
-			DefaultLocale = TestLocales.UkUA,
-			SupportedLocales = [TestLocales.UkUA, TestLocales.En],
 			Clients = new Dictionary<string, SquidexClientCredentials>
 			{
 				[TestClientNames.Default] = new() { ClientId = "app:default", ClientSecret = "secret-1" },
 				[TestClientNames.Frontend] = new() { ClientId = "app:frontend", ClientSecret = "secret-2" }
 			}
 		};
-
-	public static SquidexAppOptions AppOptionsWithoutLocales(
-		string baseUrl = TestUrls.BaseUrl,
-		string appName = TestApps.Default) =>
-		DefaultAppOptions(baseUrl, appName) with { SupportedLocales = [] };
 
 	public static IOptions<SquidexGlobalOptions> GlobalOptionsMock(SquidexAppOptions? appOptions = null)
 	{

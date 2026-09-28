@@ -9,8 +9,8 @@ public sealed record QueryOptions
     public static readonly QueryOptions Default = new();
 
     /// <summary>
-    /// Locales to return via X-Languages header.
-    /// Null = use SquidexLocaleProvider.SupportedLocales (configured in appsettings or fetched from Squidex app).
+    /// Locales to return via X-Languages header. Null or empty returns every locale.
+    /// Narrowing is a read optimisation: writing a narrowed item back drops the locales left out.
     /// </summary>
     public List<string>? Languages { get; init; }
 
@@ -30,7 +30,4 @@ public sealed record QueryOptions
     /// </summary>
     public bool Flatten { get; init; }
 
-    /// <summary>Shortcut: single locale + flatten. Requires a flat DTO.</summary>
-    public static QueryOptions ForLocale(string locale) =>
-        new() { Languages = [locale], Flatten = true };
 }
