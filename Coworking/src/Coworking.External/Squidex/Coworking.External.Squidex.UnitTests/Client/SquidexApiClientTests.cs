@@ -270,6 +270,21 @@ public sealed class SquidexApiClientTests
         capturedNoSlowTotal.Should().Be("true");
     }
 
+    [Fact]
+    public async Task QueryAsync_OmitsXNoSlowTotalHeader_WhenNotRequested()
+    {
+        var sent = true;
+        _mockHttp.When(HttpMethod.Get, ContentUrl("cities")).Respond(req =>
+        {
+            sent = req.Headers.Contains(SquidexRequestHeaders.NoSlowTotal);
+            return OkResponse(SquidexFakes.MakeResponse<SquidexFakes.TestSchema>());
+        });
+
+        await CreateClient().QueryAsync<SquidexFakes.TestSchema>("cities", RequestQuery.Create());
+
+        sent.Should().BeFalse();
+    }
+
     // GetById
 
     [Fact]

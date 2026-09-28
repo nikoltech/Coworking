@@ -1,4 +1,4 @@
-using Coworking.External.Squidex.Abstractions.Client;
+﻿using Coworking.External.Squidex.Abstractions.Client;
 using Coworking.External.Squidex.Abstractions.Models;
 using Coworking.External.Squidex.Abstractions.Options;
 using Coworking.External.Squidex.Exceptions;
@@ -265,7 +265,7 @@ internal sealed class SquidexApiClient : SquidexHttpClientBase, ISquidexApiClien
         if (opts.IncludeUnpublished)
             request.Headers.Add(SquidexRequestHeaders.Unpublished, "true");
 
-        if (opts.NoSlowTotal is { } isSet)
+        if (opts.NoSlowTotal)
             request.Headers.Add(SquidexRequestHeaders.NoSlowTotal, "true");
 
         if (opts.Flatten)
