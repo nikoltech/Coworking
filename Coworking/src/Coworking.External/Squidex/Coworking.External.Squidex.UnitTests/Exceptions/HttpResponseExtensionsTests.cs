@@ -55,6 +55,21 @@ public sealed class HttpResponseExtensionsTests
     }
 
     [Fact]
+    public async Task EnsureSquidexSuccessAsync_ThrowsConcurrency_CatchableAsApiException()
+    {
+        // Arrange
+        var response = new HttpResponseMessage(HttpStatusCode.PreconditionFailed);
+
+        // Act
+        var act = () => response.EnsureSquidexSuccessAsync(CancellationToken.None);
+
+        // Assert
+        var ex = await act.Should().ThrowAsync<SquidexApiException>();
+        ex.Which.Should().BeOfType<SquidexConcurrencyException>();
+        ex.Which.StatusCode.Should().Be(HttpStatusCode.PreconditionFailed);
+    }
+
+    [Fact]
     public async Task EnsureSquidexSuccessAsync_UsesReasonPhrase_WhenBodyIsNotJson()
     {
         // Arrange

@@ -1,4 +1,6 @@
-﻿namespace Coworking.External.Squidex.Exceptions;
+﻿using System.Net;
+
+namespace Coworking.External.Squidex.Exceptions;
 
 public sealed class SquidexConcurrencyException(string message)
-    : Exception(message);
+    : SquidexApiException(HttpStatusCode.PreconditionFailed, message);
