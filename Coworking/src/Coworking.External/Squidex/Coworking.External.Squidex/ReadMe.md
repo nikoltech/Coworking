@@ -1,7 +1,5 @@
 ﻿# Coworking.External.Squidex
 
-Status: unit-tested (159 tests green).
-
 A typed client for the Squidex CMS built on a custom `HttpClient` transport, with no
 third-party Squidex SDK. Narrow by design: made for a known set of schemas.
 
@@ -46,6 +44,7 @@ third-party Squidex SDK. Narrow by design: made for a known set of schemas.
 | `DefaultClient` | Which `Clients` entry to use when a call names none. |
 | `Clients` | Map of *your* client keys → credentials. Same idea as `Apps`: the key is yours, `ClientId` is Squidex's. |
 | `DefaultLocale`, `SupportedLocales` | Both optional — see [Locales](#locales). |
+| `MaxPageSize` | Page size `GetAllAsync` fetches with. Default 200. |
 | `Retry.MaxAttempts` | Cap on sends for one call: `3` means at most three. Applies only to the statuses in [Retries](#retries-and-deadlines). |
 | `Limits.MaxParallelRequests` | Cap on parallel requests **inside one operation**. It does not limit how many operations you start — total load stays yours to manage. |
 
@@ -184,22 +183,33 @@ var exists = await set.ExistsAsync(
     ct: ct);
 ```
 
-**Writing.** `UpdateAsync` and `PatchAsync` take an optional `expectedVersion` — the ETag, for
-optimistic concurrency:
+**Writing.**
 
 ```csharp
 var created = await set.CreateAsync(
     new CitySchema { IsRegionCity = new IvField<bool?>(true) },
     ct: ct);
 
-await set.UpdateAsync(
-    created.Id,
-    created.Data,
-    expectedVersion: created.Version,
-    ct: ct);
+await set.UpdateAsync(created.Id, created.Data, ct: ct);
 
 await set.DeleteAsync(created.Id, ct: ct);
 ```
+
+`UpdateAsync` and `PatchAsync` take an optional `knownETag` for optimistic concurrency, and
+`GetByIdIfChangedAsync` is the read side of the same mechanism — it skips the body when nothing
+changed and hands back the ETag to write with:
+
+```csharp
+var (content, etag, notModified) = await set.GetByIdIfChangedAsync(id, lastSeenETag, ct: ct);
+if (notModified)
+    return;                                    // the copy in hand is still current
+
+await set.UpdateAsync(id, Edited(content!.Data), knownETag: etag, ct: ct);
+```
+
+A stale ETag on the way out is refused with `412`, surfaced as `SquidexConcurrencyException`.
+Squidex matches on a content hash, never on `ContentDto.Version`, and the hash covers one
+representation: the same item read under different `Languages` has a different ETag.
 
 > `UpdateAsync` sends only the locales the object carries, and Squidex drops the rest. Content
 > read under `X-Flatten`, `QueryOptions.ForLocale` or an explicit `Languages` list holds just
