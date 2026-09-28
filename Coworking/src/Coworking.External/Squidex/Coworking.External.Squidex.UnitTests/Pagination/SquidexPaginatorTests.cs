@@ -1,4 +1,4 @@
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using Coworking.External.Squidex.Abstractions.Filters;
 using Coworking.External.Squidex.Abstractions.Models;
 using Coworking.External.Squidex.Abstractions.Client;
@@ -31,6 +31,24 @@ public sealed class SquidexPaginatorTests
         // Assert
         result.Total.Should().Be(2);
         result.Items.Should().HaveCount(2);
+
+        await _client.Received(1).QueryAsync<SquidexFakes.TestSchema>(
+            Arg.Any<string>(), Arg.Any<RequestQuery>(),
+            Arg.Any<QueryOptions?>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task FetchAllAsync_StopsAfterOneCall_WhenNothingMatches()
+    {
+        // Arrange — an empty result still has to end the walk
+        ServePages(itemCount: 0, reportedTotal: 0);
+
+        // Act
+        var result = await FetchAllAsync();
+
+        // Assert
+        result.Total.Should().Be(0);
+        result.Items.Should().BeEmpty();
 
         await _client.Received(1).QueryAsync<SquidexFakes.TestSchema>(
             Arg.Any<string>(), Arg.Any<RequestQuery>(),

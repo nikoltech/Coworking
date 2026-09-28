@@ -566,14 +566,20 @@ public sealed class SquidexApiClientTests
         ex.Which.Message.Should().Be("Server blew up");
     }
 
-    [Fact]
-    public async Task QueryAsync_DoesNotRetry_OnClientError()
+    [Theory]
+    [InlineData(HttpStatusCode.BadRequest)]
+    [InlineData(HttpStatusCode.Unauthorized)]
+    [InlineData(HttpStatusCode.Forbidden)]
+    [InlineData(HttpStatusCode.NotFound)]
+    [InlineData(HttpStatusCode.Conflict)]
+    [InlineData(HttpStatusCode.UnprocessableEntity)]
+    public async Task QueryAsync_DoesNotRetry_OnClientError(HttpStatusCode clientError)
     {
         var callCount = 0;
         _mockHttp.When(HttpMethod.Get, ContentUrl("cities")).Respond(_ =>
         {
             callCount++;
-            return new HttpResponseMessage(HttpStatusCode.BadRequest);
+            return new HttpResponseMessage(clientError);
         });
 
         var act = () => CreateClient().QueryAsync<SquidexFakes.TestSchema>(
