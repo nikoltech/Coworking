@@ -1,4 +1,4 @@
-using Coworking.External.Squidex.Abstractions.Client;
+﻿using Coworking.External.Squidex.Abstractions.Client;
 using Coworking.External.Squidex.Abstractions.Filters;
 using Coworking.External.Squidex.Abstractions.Models;
 using Coworking.External.Squidex.Abstractions.Pagination;
@@ -61,31 +61,31 @@ public sealed class SquidexSetTests
     }
 
     [Fact]
-    public async Task UpdateAsync_PassesExpectedVersion_ForOptimisticConcurrency()
+    public async Task UpdateAsync_PassesKnownETag_ForOptimisticConcurrency()
     {
         var schema = SquidexFakes.MakeTestSchema("updated");
 
-        _client.UpdateAsync("test-schema", "upd-id", schema, 7, Arg.Any<CancellationToken>())
+        _client.UpdateAsync("test-schema", "upd-id", schema, "W/\"tag\"", Arg.Any<CancellationToken>())
                .Returns(SquidexFakes.MakeContent(schema, "upd-id"));
 
-        await CreateRepo().UpdateAsync("upd-id", schema, expectedVersion: 7);
+        await CreateRepo().UpdateAsync("upd-id", schema, knownETag: "W/\"tag\"");
 
         await _client.Received(1).UpdateAsync(
-            "test-schema", "upd-id", schema, 7, Arg.Any<CancellationToken>());
+            "test-schema", "upd-id", schema, "W/\"tag\"", Arg.Any<CancellationToken>());
     }
 
     [Fact]
-    public async Task PatchAsync_PassesExpectedVersion_ForOptimisticConcurrency()
+    public async Task PatchAsync_PassesKnownETag_ForOptimisticConcurrency()
     {
         var schema = SquidexFakes.MakeTestSchema("patched");
 
-        _client.PatchAsync("test-schema", "patch-id", schema, 7, Arg.Any<CancellationToken>())
+        _client.PatchAsync("test-schema", "patch-id", schema, "W/\"tag\"", Arg.Any<CancellationToken>())
                .Returns(SquidexFakes.MakeContent(schema, "patch-id"));
 
-        await CreateRepo().PatchAsync("patch-id", schema, expectedVersion: 7);
+        await CreateRepo().PatchAsync("patch-id", schema, knownETag: "W/\"tag\"");
 
         await _client.Received(1).PatchAsync(
-            "test-schema", "patch-id", schema, 7, Arg.Any<CancellationToken>());
+            "test-schema", "patch-id", schema, "W/\"tag\"", Arg.Any<CancellationToken>());
     }
 
     [Fact]

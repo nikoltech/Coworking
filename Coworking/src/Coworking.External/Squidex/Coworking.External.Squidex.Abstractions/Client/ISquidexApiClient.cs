@@ -1,4 +1,4 @@
-using Coworking.External.Squidex.Abstractions.Models;
+﻿using Coworking.External.Squidex.Abstractions.Models;
 using Coworking.External.Squidex.Abstractions.Options;
 
 namespace Coworking.External.Squidex.Abstractions.Client;
@@ -30,7 +30,7 @@ public interface ISquidexApiClient
     /// returned here for the next. Squidex matches on a content hash, not on the item's version.
     /// </summary>
     /// <returns>NotModified=true with null content when unchanged; otherwise the content and its ETag.</returns>
-    Task<(ContentDto<T>? Content, string? ETag, bool NotModified)> GetByIdConditionalAsync<T>(
+    Task<(ContentDto<T>? Content, string? ETag, bool NotModified)> GetByIdIfChangedAsync<T>(
         string schema, string id,
         string? knownETag = null,
         QueryOptions? queryOptions = null,
@@ -41,12 +41,12 @@ public interface ISquidexApiClient
         CancellationToken ct = default);
 
     Task<ContentDto<T>> UpdateAsync<T>(string schema, string id, T data,
-        int? expectedVersion = null,
+        string? knownETag = null,
         CancellationToken ct = default);
 
     Task<ContentDto<T>> PatchAsync<T>(
         string schema, string id, T data,
-        int? expectedVersion = null,
+        string? knownETag = null,
         CancellationToken ct = default);
 
     Task DeleteAsync(string schema, string id,

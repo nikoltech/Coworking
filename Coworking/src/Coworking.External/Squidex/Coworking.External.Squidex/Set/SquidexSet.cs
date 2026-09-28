@@ -58,30 +58,28 @@ public class SquidexSet<T> : ISquidexSet<T> where T : class
         Client.GetByIdAsync<T>(Schema, id, queryOptions, ct);
 
     /// <inheritdoc/>
-    public Task<(ContentDto<T>? Content, string? ETag, bool NotModified)> GetByIdConditionalAsync(string id,
+    public Task<(ContentDto<T>? Content, string? ETag, bool NotModified)> GetByIdIfChangedAsync(string id,
         string? knownETag = null,
         QueryOptions? queryOptions = null,
         CancellationToken ct = default) =>
-        Client.GetByIdConditionalAsync<T>(Schema, id, knownETag, queryOptions, ct);
+        Client.GetByIdIfChangedAsync<T>(Schema, id, knownETag, queryOptions, ct);
 
     public Task<ContentDto<T>> CreateAsync(T data,
         bool publish = true,
         CancellationToken ct = default) =>
         Client.CreateAsync(Schema, data, publish, ct);
 
-    /// <summary>
-    /// Updates content with optimistic concurrency control using ETag.
-    /// </summary>
-    /// <param name="expectedVersion">optional ETag for concurrency control</param>
+    /// <inheritdoc/>
     public Task<ContentDto<T>> UpdateAsync(string id, T data,
-        int? expectedVersion = null,
+        string? knownETag = null,
         CancellationToken ct = default) =>
-        Client.UpdateAsync(Schema, id, data, expectedVersion, ct);
+        Client.UpdateAsync(Schema, id, data, knownETag, ct);
 
+    /// <inheritdoc/>
     public Task<ContentDto<T>> PatchAsync(string id, T data,
-        int? expectedVersion = null,
+        string? knownETag = null,
         CancellationToken ct = default) =>
-        Client.PatchAsync(Schema, id, data, expectedVersion, ct);
+        Client.PatchAsync(Schema, id, data, knownETag, ct);
 
     public Task DeleteAsync(string id,
         bool permanent = false,

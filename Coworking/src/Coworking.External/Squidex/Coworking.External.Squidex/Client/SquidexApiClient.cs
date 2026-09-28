@@ -118,7 +118,7 @@ internal sealed class SquidexApiClient : SquidexHttpClientBase, ISquidexApiClien
     }
 
     /// <inheritdoc/>
-    public async Task<(ContentDto<T>? Content, string? ETag, bool NotModified)> GetByIdConditionalAsync<T>(
+    public async Task<(ContentDto<T>? Content, string? ETag, bool NotModified)> GetByIdIfChangedAsync<T>(
         string schema, string id,
         string? knownETag = null,
         QueryOptions? queryOptions = null,
@@ -126,9 +126,7 @@ internal sealed class SquidexApiClient : SquidexHttpClientBase, ISquidexApiClien
     {
         var request = BuildRequest(HttpMethod.Get, $"{ContentUrl(schema)}/{id}", queryOptions);
 
-        if (!string.IsNullOrEmpty(knownETag) &&
-            EntityTagHeaderValue.TryParse(knownETag, out var tag))
-            request.Headers.IfNoneMatch.Add(tag);
+        ApplyIfNoneMatch(request, knownETag);
 
         var response = await SendWithRetryAsync(request, ct);
 
@@ -162,36 +160,30 @@ internal sealed class SquidexApiClient : SquidexHttpClientBase, ISquidexApiClien
     /// <see cref="PatchAsync"/>, which merges per field and locale.
     /// </para>
     /// </summary>
-    /// <param name="expectedVersion">Optional ETag for concurrency control</param>
+    /// <param name="knownETag">ETag or version from a previous response; both guard the write.</param>
     public Task<ContentDto<T>> UpdateAsync<T>(string schema, string id, T data,
-        int? expectedVersion = null,
+        string? knownETag = null,
         CancellationToken ct = default)
     {
         var request = BuildRequest(HttpMethod.Put, $"{ContentUrl(schema)}/{id}");
         request.Content = JsonContent.Create(data, options: Json);
 
-        if (expectedVersion.HasValue)
-            request.Headers.IfMatch.Add(
-                new EntityTagHeaderValue($"\"{expectedVersion}\""));
+        ApplyIfMatch(request, knownETag);
 
         return SendAndDeserializeAsync<ContentDto<T>>(request, ct);
     }
 
-    /// <summary>
-    /// Partially updates content item with optimistic concurrency control using ETag.
-    /// </summary>
-    /// <param name="expectedVersion">Optional ETag for concurrency control</param>
+    /// <summary>Partially updates a content item, merging per field and locale.</summary>
+    /// <param name="knownETag">ETag or version from a previous response; both guard the write.</param>
     public Task<ContentDto<T>> PatchAsync<T>(
         string schema, string id, T data,
-        int? expectedVersion = null,
+        string? knownETag = null,
         CancellationToken ct = default)
     {
         var request = BuildRequest(HttpMethod.Patch, $"{ContentUrl(schema)}/{id}");
         request.Content = JsonContent.Create(data, options: Json);
 
-        if (expectedVersion.HasValue)
-            request.Headers.IfMatch.Add(
-                new EntityTagHeaderValue($"\"{expectedVersion}\""));
+        ApplyIfMatch(request, knownETag);
 
         return SendAndDeserializeAsync<ContentDto<T>>(request, ct);
     }
@@ -247,6 +239,20 @@ internal sealed class SquidexApiClient : SquidexHttpClientBase, ISquidexApiClien
             queryOptions);
 
         return SendAndDeserializeAsync<ResponseSchema<T>>(request, ct);
+    }
+
+    // a malformed tag would silently drop the concurrency guard, so it throws
+    private static void ApplyIfMatch(HttpRequestMessage request, string? knownETag)
+    {
+        if (!string.IsNullOrEmpty(knownETag))
+            request.Headers.IfMatch.Add(EntityTagHeaderValue.Parse(knownETag));
+    }
+
+    // a malformed tag would silently fall back to an unconditional read, so it throws
+    private static void ApplyIfNoneMatch(HttpRequestMessage request, string? knownETag)
+    {
+        if (!string.IsNullOrEmpty(knownETag))
+            request.Headers.IfNoneMatch.Add(EntityTagHeaderValue.Parse(knownETag));
     }
 
     private HttpRequestMessage BuildRequest(HttpMethod method, string url,

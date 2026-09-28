@@ -319,7 +319,7 @@ public sealed class SquidexApiClientTests
     }
 
     [Fact]
-    public async Task GetByIdConditionalAsync_SendsKnownETag_AndReportsNotModified()
+    public async Task GetByIdIfChangedAsync_SendsKnownETag_AndReportsNotModified()
     {
         const string knownETag = "W/\"9f1c\"";
         string? sentIfNoneMatch = null;
@@ -333,7 +333,7 @@ public sealed class SquidexApiClientTests
             });
 
         var (content, etag, notModified) = await CreateClient()
-            .GetByIdConditionalAsync<SquidexFakes.TestSchema>("cities", "city-1", knownETag);
+            .GetByIdIfChangedAsync<SquidexFakes.TestSchema>("cities", "city-1", knownETag);
 
         sentIfNoneMatch.Should().Be(knownETag);
         notModified.Should().BeTrue();
@@ -372,7 +372,7 @@ public sealed class SquidexApiClientTests
     }
 
     [Fact]
-    public async Task UpdateAsync_AddsIfMatchHeader_WhenExpectedVersionProvided()
+    public async Task UpdateAsync_AddsIfMatchHeader_WhenKnownETagProvided()
     {
         var schema = SquidexFakes.MakeTestSchema("updated");
         var expected = SquidexFakes.MakeContent(schema, "upd-id");
@@ -386,13 +386,13 @@ public sealed class SquidexApiClientTests
                 return OkResponse(expected);
             });
 
-        await CreateClient().UpdateAsync("cities", "upd-id", schema, expectedVersion: 5);
+        await CreateClient().UpdateAsync("cities", "upd-id", schema, knownETag: "W/\"abc\"");
 
-        capturedIfMatch.Should().Be("\"5\"");
+        capturedIfMatch.Should().Be("\"abc\"");
     }
 
     [Fact]
-    public async Task UpdateAsync_OmitsIfMatchHeader_WhenExpectedVersionNotProvided()
+    public async Task UpdateAsync_OmitsIfMatchHeader_WhenKnownETagNotProvided()
     {
         var schema = SquidexFakes.MakeTestSchema("updated");
         var expected = SquidexFakes.MakeContent(schema, "upd-id");
@@ -411,8 +411,29 @@ public sealed class SquidexApiClientTests
         hadIfMatch.Should().BeFalse();
     }
 
+    [Theory]
+    [InlineData("not-a-tag")]
+    [InlineData("12")]
+    public async Task UpdateAsync_Throws_WhenKnownETagIsMalformed(string malformed)
+    {
+        var schema = SquidexFakes.MakeTestSchema("updated");
+
+        var act = () => CreateClient().UpdateAsync("cities", "upd-id", schema, knownETag: malformed);
+
+        await act.Should().ThrowAsync<FormatException>();
+    }
+
     [Fact]
-    public async Task PatchAsync_AddsIfMatchHeader_WhenExpectedVersionProvided()
+    public async Task GetByIdIfChangedAsync_Throws_WhenKnownETagIsMalformed()
+    {
+        var act = () => CreateClient()
+            .GetByIdIfChangedAsync<SquidexFakes.TestSchema>("cities", "city-1", "not-a-tag");
+
+        await act.Should().ThrowAsync<FormatException>();
+    }
+
+    [Fact]
+    public async Task PatchAsync_AddsIfMatchHeader_WhenKnownETagProvided()
     {
         var schema = SquidexFakes.MakeTestSchema("patched");
         var expected = SquidexFakes.MakeContent(schema, "patch-id");
@@ -426,13 +447,13 @@ public sealed class SquidexApiClientTests
                 return OkResponse(expected);
             });
 
-        await CreateClient().PatchAsync("cities", "patch-id", schema, expectedVersion: 7);
+        await CreateClient().PatchAsync("cities", "patch-id", schema, knownETag: "\"7\"");
 
         capturedIfMatch.Should().Be("\"7\"");
     }
 
     [Fact]
-    public async Task PatchAsync_OmitsIfMatchHeader_WhenExpectedVersionNotProvided()
+    public async Task PatchAsync_OmitsIfMatchHeader_WhenKnownETagNotProvided()
     {
         var schema = SquidexFakes.MakeTestSchema("patched");
         var expected = SquidexFakes.MakeContent(schema, "patch-id");

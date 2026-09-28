@@ -36,7 +36,7 @@ public interface ISquidexSet<T> where T : class
     /// returned here for the next. Squidex matches on a content hash, not on the item's version.
     /// </summary>
     /// <returns>NotModified=true with null content when unchanged; otherwise the content and its ETag.</returns>
-    Task<(ContentDto<T>? Content, string? ETag, bool NotModified)> GetByIdConditionalAsync(string id,
+    Task<(ContentDto<T>? Content, string? ETag, bool NotModified)> GetByIdIfChangedAsync(string id,
         string? knownETag = null,
         QueryOptions? queryOptions = null,
         CancellationToken ct = default);
@@ -46,11 +46,11 @@ public interface ISquidexSet<T> where T : class
         CancellationToken ct = default);
 
     Task<ContentDto<T>> UpdateAsync(string id, T data,
-        int? expectedVersion = null,
+        string? knownETag = null,
         CancellationToken ct = default);
 
     Task<ContentDto<T>> PatchAsync(string id, T data,
-        int? expectedVersion = null,
+        string? knownETag = null,
         CancellationToken ct = default);
 
     Task DeleteAsync(string id,
