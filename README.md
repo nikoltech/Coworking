@@ -16,6 +16,7 @@ This project explores backend architecture and concurrency handling in booking s
 - PostgreSQL integration via EF Core with transaction handling and per-provider conflict detection
 - Squidex Headless CMS client (not yet integrated)
 - Unit and integration test suites
+- AI harness for Claude Code (layered CLAUDE.md, design decision notes)
 
 ## Tech Stack
 
