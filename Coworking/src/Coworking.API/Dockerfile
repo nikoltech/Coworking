@@ -1,9 +1,6 @@
 # syntax=docker/dockerfile:1
-FROM mcr.microsoft.com/dotnet/aspnet:10.0-alpine AS base
-USER root
-RUN apk add --no-cache tzdata # Alpine has no tzdata by default; required for TimeZoneInfo IANA lookups
-RUN apk add --no-cache icu-libs icu-data-full # Alpine ships invariant-only globalization; required for Languages:Supported cultures
-ENV DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false
+# -extra ships ICU and tzdata; plain chiseled lacks both (Languages:Supported, TimeZoneInfo IANA lookups)
+FROM mcr.microsoft.com/dotnet/aspnet:10.0-noble-chiseled-extra AS base
 USER $APP_UID
 WORKDIR /app
 EXPOSE 8080
