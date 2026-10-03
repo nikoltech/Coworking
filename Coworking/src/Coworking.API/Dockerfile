@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1
 FROM mcr.microsoft.com/dotnet/aspnet:10.0-alpine AS base
 USER root
 RUN apk add --no-cache tzdata # Alpine has no tzdata by default; required for TimeZoneInfo IANA lookups
@@ -9,7 +10,6 @@ EXPOSE 8080
 EXPOSE 8081
 
 FROM mcr.microsoft.com/dotnet/sdk:10.0-alpine AS build
-ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 
 COPY ["Coworking/src/Coworking.API/Coworking.API.csproj", "Coworking/src/Coworking.API/"]
@@ -19,15 +19,18 @@ COPY ["Coworking/src/Coworking.External/Squidex/Coworking.External.Squidex.Abstr
 COPY ["Coworking/src/Coworking.Infrastructure.Persistence/Coworking.Infrastructure.Persistence.csproj", "Coworking/src/Coworking.Infrastructure.Persistence/"]
 COPY ["Coworking/src/Coworking.Infrastructure/Coworking.Infrastructure.csproj", "Coworking/src/Coworking.Infrastructure/"]
 COPY ["Coworking/src/Coworking.External/Squidex/Coworking.External.Squidex/Coworking.External.Squidex.csproj", "Coworking/src/Coworking.External/Squidex/Coworking.External.Squidex/"]
+COPY ["Coworking/src/Coworking.Messaging/Coworking.Messaging.csproj", "Coworking/src/Coworking.Messaging/"]
+COPY ["Coworking/src/Coworking.Messaging.Contracts/Coworking.Messaging.Contracts.csproj", "Coworking/src/Coworking.Messaging.Contracts/"]
 
-RUN dotnet restore "./Coworking/src/Coworking.API/Coworking.API.csproj"
-COPY . .
+RUN --mount=type=cache,id=nuget,target=/root/.nuget/packages,sharing=locked \
+    dotnet restore "./Coworking/src/Coworking.API/Coworking.API.csproj"
+COPY Coworking/src/ Coworking/src/
 WORKDIR "/src/Coworking/src/Coworking.API"
-RUN dotnet build "./Coworking.API.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "./Coworking.API.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+RUN --mount=type=cache,id=nuget,target=/root/.nuget/packages,sharing=locked \
+    dotnet publish "./Coworking.API.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
 
 FROM base AS final
 WORKDIR /app
