@@ -2,6 +2,10 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Further instructions
+
+Rules for comments and commit messages live in `.claude/rules/`. Sub-projects may carry their own `CLAUDE.md`.
+
 ## Layout
 
 The repo root (this directory) holds `Coworking.slnx`, Docker Compose files, and `.md` docs.
@@ -111,30 +115,3 @@ Application-layer exceptions (`Coworking.Application/Common/Exceptions/`: `NotFo
 | Squidex CMS client | `Coworking/src/Coworking.External/Squidex/` — has its own [CLAUDE.md](Coworking/src/Coworking.External/Squidex/CLAUDE.md) |
 | Docker Compose files | repo root: `docker-compose*.yml`, [DOCKER.md](DOCKER.md) |
 | Architecture decision write-ups | `docs/decisions/` |
-
-## Comments
-
-- Before writing one, try in order: rename, extract, restructure. Comment only if all three fail.
-- Delete any comment that restates adjacent code at the same level of abstraction. Keep it if it
-  adds a level: intent, contract, invariant above — or a non-obvious detail below.
-- Worth writing: why not the obvious approach, workarounds (link the issue), invariants the types
-  can't express, business rules, spec references, code that looks wrong but is correct.
-- Never: narrate the implementation, log changes ("was X, now Y"), leave commented-out code,
-  write TODO without a ticket, or add comments to code you didn't change.
-- Section markers: only in long functions with genuinely distinct phases. Name the phase
-  ("fast path: cached"), not the category ("Helpers"). No ====, no boxes, no ALL CAPS — a blank
-  line and one lowercase line is enough. If every block needs one, split the function instead.
-- Docstrings: public API only. One sentence starting with the name. Contract, not implementation.
-  No params that restate name and type.
-- Match the comment density of the file you are editing. Default is no comment.
-
-## Commit messages
-
-- Conventional Commits: `type(scope): summary`
-- Subject: lowercase, imperative, no period, under ~50 chars
-- Bullets: `- Thing: what changed` — 2-5 words after the colon
-- Cut filler: no "now", "so that", "in order to", "this allows",
-  "instead of X" unless X matters
-- One line per change, never wrap a bullet
-- Add a prose line only when the why cannot be recovered from the diff
-- No AI attribution
