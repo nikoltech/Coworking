@@ -23,4 +23,5 @@ paths:
   line and one lowercase line is enough. If every block needs one, split the function instead.
 - Docstrings: public API only. One sentence starting with the name. Contract, not implementation.
   No params that restate name and type.
-- Match the comment density of the file you are editing. Default is no comment.
+- Match the comment density of the file you are editing. Default is no comment, but never leave
+  non-trivial logic bare: one short line per key step.
