@@ -13,10 +13,8 @@ public static class TraceContextExtensions
         var listener = new ActivityListener
         {
             ShouldListenTo = source => source.Name == DiagnosticHeaders.DefaultListenerName,
-            Sample = (ref ActivityCreationOptions<ActivityContext> _) =>
-                ActivitySamplingResult.PropagationData,
-            SampleUsingParentId = (ref ActivityCreationOptions<string> _) =>
-                ActivitySamplingResult.PropagationData
+            Sample = PropagateOnly,
+            SampleUsingParentId = PropagateOnly
         };
 
         ActivitySource.AddActivityListener(listener);
@@ -24,4 +22,10 @@ public static class TraceContextExtensions
         // singleton only so the container disposes it
         return services.AddSingleton(listener);
     }
+
+    private static ActivitySamplingResult PropagateOnly(ref ActivityCreationOptions<ActivityContext> _) =>
+        ActivitySamplingResult.PropagationData;
+
+    private static ActivitySamplingResult PropagateOnly(ref ActivityCreationOptions<string> _) =>
+        ActivitySamplingResult.PropagationData;
 }
