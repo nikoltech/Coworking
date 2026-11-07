@@ -5,6 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Further instructions
 
 Rules for comments and commit messages live in `.claude/rules/`. Sub-projects may carry their own `CLAUDE.md`.
+Specifications live in `docs/specs/<NNN-name>/`: new features start with `spec.md`, and the relevant spec is read before changing its area.
 
 ## Layout
 
