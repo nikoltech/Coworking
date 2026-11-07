@@ -11,26 +11,29 @@ internal sealed class BookingLockExpiryCleaner(
 {
     private static readonly TimeSpan Interval = InMemoryBookingAccessCoordinator.DefaultAcquireTimeout * 2;
 
-    protected override async Task ExecuteAsync(CancellationToken ct)
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         try
         {
-            while (ct.IsCancellationRequested is false)
-            {
-                await Task.Delay(Interval, timeProvider, ct);
+            await Task.Delay(Interval, timeProvider, stoppingToken);
 
+            while (stoppingToken.IsCancellationRequested is false)
+            {
                 try
                 {
                     await synchronizer.CleanExpiredAsync();
                 }
+
                 // a rethrow would stop the whole host; the next pass retries anyway
                 catch (Exception ex)
                 {
                     logger.LogError(ex, "Booking lock cleanup failed; retrying on the next pass");
                 }
+
+                await Task.Delay(Interval, timeProvider, stoppingToken);
             }
         }
-        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
         { }
     }
 }
