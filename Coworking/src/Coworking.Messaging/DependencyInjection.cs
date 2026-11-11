@@ -27,6 +27,7 @@ public static class DependencyInjection
         services.AddMassTransit(x =>
         {
             x.ConfigureConsumers();
+            x.AddDelayedMessageScheduler();
 
             x.AddEntityFrameworkOutbox<AppDbContext>(o =>
             {
@@ -58,6 +59,8 @@ public static class DependencyInjection
 
         services.AddMassTransit(x =>
         {
+            x.AddDelayedMessageScheduler();
+
             x.AddEntityFrameworkOutbox<AppDbContext>(o =>
             {
                 o.UsePostgres();
@@ -85,6 +88,7 @@ public static class DependencyInjection
         services.AddMassTransit(x =>
         {
             x.ConfigureConsumers();
+            x.AddDelayedMessageScheduler();
 
             // Inbox only: this service consumes, it does not publish.
             x.AddEntityFrameworkOutbox<AppDbContext>(o => o.UsePostgres());
@@ -120,6 +124,9 @@ public static class DependencyInjection
             h.Username(options.Username);
             h.Password(options.Password);
         });
+
+        // Delayed messages wait inside the broker plugin; under high load, watch broker memory and keep delays short.
+        cfg.UseDelayedMessageScheduler();
 
         cfg.ConfigureEndpoints(ctx);
     }

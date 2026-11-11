@@ -3,8 +3,9 @@
 # Then start the app via the "LocalInfra" launch profile in IDE or dotnet run.
 
 services:
+  # Bundles rabbitmq_delayed_message_exchange; required by delayed redelivery.
   rabbitmq:
-    image: rabbitmq:3-management
+    image: masstransit/rabbitmq:3.13
     container_name: coworking_rabbitmq
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
