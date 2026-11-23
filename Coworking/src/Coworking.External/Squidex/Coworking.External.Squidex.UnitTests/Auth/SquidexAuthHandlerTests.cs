@@ -123,6 +123,51 @@ public sealed class SquidexAuthHandlerTests
     }
 
     [Fact]
+    public async Task SendAsync_RefreshesTokenOnce_WhenConcurrentRequestsGet401()
+    {
+        // Arrange
+        const int requestCount = 10;
+        var tokenCallCount = 0;
+        _tokenBackend
+            .When(HttpMethod.Post, "*/identity-server/connect/token")
+            .Respond(_ =>
+            {
+                var token = Interlocked.Increment(ref tokenCallCount) == 1 ? "stale-token" : "fresh-token";
+                return new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent(
+                        SquidexFakes.TokenJson(token), System.Text.Encoding.UTF8, "application/json")
+                };
+            });
+
+        // every stale request is held until all have arrived, so their 401s land together
+        var staleArrived = 0;
+        var allStaleArrived = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var mockBackend = new MockHttpMessageHandler();
+        mockBackend.When("*").Respond(async req =>
+        {
+            if (req.Headers.Authorization?.Parameter != "stale-token")
+                return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("{}") };
+
+            if (Interlocked.Increment(ref staleArrived) == requestCount)
+                allStaleArrived.SetResult();
+
+            await allStaleArrived.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            return new HttpResponseMessage(HttpStatusCode.Unauthorized) { Content = new StringContent("{}") };
+        });
+
+        var client = BuildClient(mockBackend);
+
+        // Act
+        var responses = await Task.WhenAll(Enumerable.Range(0, requestCount)
+            .Select(_ => client.SendAsync(MakeRequest())));
+
+        // Assert — one initial fetch plus one refresh, however the 401s interleave
+        responses.Should().OnlyContain(r => r.StatusCode == HttpStatusCode.OK);
+        tokenCallCount.Should().Be(2);
+    }
+
+    [Fact]
     public async Task SendAsync_DoesNotRetry_WhenResponseIsNot401()
     {
         // Arrange

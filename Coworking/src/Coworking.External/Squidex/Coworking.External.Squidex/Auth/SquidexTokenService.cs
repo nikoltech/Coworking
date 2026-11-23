@@ -53,8 +53,27 @@ public sealed class SquidexTokenService(
         }
     }
 
-    public void InvalidateToken(string appName, string clientName) =>
-        cache.Remove(CacheKey(appName, clientName));
+    public async Task InvalidateTokenAsync(
+        string appName, string clientName, string rejectedToken,
+        CancellationToken ct)
+    {
+        var cacheKey = CacheKey(appName, clientName);
+
+        // safe without the lock: the entry never returns to a rejected token
+        if (!IsCached(cacheKey, rejectedToken))
+            return;
+
+        await _gate.WaitAsync(ct);
+        try
+        {
+            if (IsCached(cacheKey, rejectedToken))
+                cache.Remove(cacheKey);
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
 
     // private
 
@@ -101,6 +120,11 @@ public sealed class SquidexTokenService(
     // capped at half the lifetime: a fixed buffer longer than a short-lived token would make the cache expiry non-positive
     private static TimeSpan CacheLifetime(TimeSpan tokenLifetime) =>
         tokenLifetime - TimeSpan.FromTicks(Math.Min(MaxExpiryBuffer.Ticks, tokenLifetime.Ticks / 2));
+
+    private bool IsCached(string cacheKey, string token) =>
+        cache.TryGetValue(cacheKey, out string? cached)
+        && cached is not null
+        && string.Equals(cached, token, StringComparison.Ordinal);
 
     private static string CacheKey(string appName, string clientName) =>
         $"squidex:token:{appName}:{clientName}";

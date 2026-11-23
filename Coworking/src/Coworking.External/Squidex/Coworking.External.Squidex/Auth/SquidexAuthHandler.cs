@@ -21,14 +21,15 @@ public sealed class SquidexAuthHandler(ISquidexTokenService tokenService) : Dele
         var appName = GetOption(request, AppNameKey) ?? string.Empty;
         var clientName = GetOption(request, ClientNameKey) ?? DefaultClient;
 
-        request.Headers.Authorization = await GetAuthHeaderAsync(appName, clientName, ct);
+        var authHeader = await GetAuthHeaderAsync(appName, clientName, ct);
+        request.Headers.Authorization = authHeader;
 
         var response = await base.SendAsync(request, ct);
 
         if (response.StatusCode != HttpStatusCode.Unauthorized)
             return response;
 
-        tokenService.InvalidateToken(appName, clientName);
+        await tokenService.InvalidateTokenAsync(appName, clientName, authHeader.Parameter!, ct);
         response.Dispose();
 
         var retryRequest = await request.CloneAsync(ct);

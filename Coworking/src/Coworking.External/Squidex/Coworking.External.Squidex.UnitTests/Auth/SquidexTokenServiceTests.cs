@@ -163,35 +163,60 @@ public sealed class SquidexTokenServiceTests
             .Where(e => e.StatusCode == HttpStatusCode.Unauthorized);
     }
 
-    [Fact]
-    public async Task InvalidateToken_ClearsCache_SoNextCallFetchesFresh()
+    private Func<int> SetupVersionedTokenEndpoint()
     {
-        // Arrange
         var callCount = 0;
         _mockHttp
             .When(HttpMethod.Post, "*/identity-server/connect/token")
             .Respond(_ =>
             {
-                callCount++;
-                var token = callCount == 1 ? "token-v1" : "token-v2";
+                var version = Interlocked.Increment(ref callCount);
                 return new HttpResponseMessage(HttpStatusCode.OK)
                 {
                     Content = new StringContent(
-                        SquidexFakes.TokenJson(token), Encoding.UTF8, "application/json")
+                        SquidexFakes.TokenJson($"token-v{version}"), Encoding.UTF8, "application/json")
                 };
             });
 
+        return () => Volatile.Read(ref callCount);
+    }
+
+    [Fact]
+    public async Task InvalidateTokenAsync_ClearsCache_SoNextCallFetchesFresh()
+    {
+        // Arrange
+        var callCount = SetupVersionedTokenEndpoint();
         var service = CreateService();
 
-        await service.GetTokenAsync(TestApps.Default, TestClientNames.Default, CancellationToken.None);
+        var rejectedToken = await service.GetTokenAsync(TestApps.Default, TestClientNames.Default, CancellationToken.None);
 
         // Act
-        service.InvalidateToken(TestApps.Default, TestClientNames.Default);
+        await service.InvalidateTokenAsync(TestApps.Default, TestClientNames.Default, rejectedToken, CancellationToken.None);
         var freshToken = await service.GetTokenAsync(TestApps.Default, TestClientNames.Default, CancellationToken.None);
 
         // Assert
         freshToken.Should().Be("token-v2");
-        callCount.Should().Be(2);
+        callCount().Should().Be(2);
+    }
+
+    [Fact]
+    public async Task InvalidateTokenAsync_KeepsRefreshedToken_WhenRejectedTokenIsStale()
+    {
+        // Arrange — a late 401 for v1 arrives after another request already refreshed to v2
+        var callCount = SetupVersionedTokenEndpoint();
+        var service = CreateService();
+
+        var staleToken = await service.GetTokenAsync(TestApps.Default, TestClientNames.Default, CancellationToken.None);
+        await service.InvalidateTokenAsync(TestApps.Default, TestClientNames.Default, staleToken, CancellationToken.None);
+        await service.GetTokenAsync(TestApps.Default, TestClientNames.Default, CancellationToken.None);
+
+        // Act
+        await service.InvalidateTokenAsync(TestApps.Default, TestClientNames.Default, staleToken, CancellationToken.None);
+        var token = await service.GetTokenAsync(TestApps.Default, TestClientNames.Default, CancellationToken.None);
+
+        // Assert
+        token.Should().Be("token-v2");
+        callCount().Should().Be(2);
     }
 
     [Fact]

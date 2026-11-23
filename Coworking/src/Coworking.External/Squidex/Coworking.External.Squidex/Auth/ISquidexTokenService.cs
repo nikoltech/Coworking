@@ -3,5 +3,5 @@
 public interface ISquidexTokenService
 {
     Task<string> GetTokenAsync(string appName, string clientName, CancellationToken ct);
-    void InvalidateToken(string appName, string clientName);
+    Task InvalidateTokenAsync(string appName, string clientName, string rejectedToken, CancellationToken ct);
 }
