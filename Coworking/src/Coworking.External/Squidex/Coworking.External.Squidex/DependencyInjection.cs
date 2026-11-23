@@ -30,7 +30,7 @@ public static class DependencyInjection
 
         services.AddMemoryCache();
 
-        services.AddSingleton<SquidexTokenService>();
+        services.AddSingleton<ISquidexTokenService, SquidexTokenService>();
         services.AddSingleton<SquidexPaginator>();
         services.AddSingleton<ISquidexPaginator>(sp =>
             sp.GetRequiredService<SquidexPaginator>());

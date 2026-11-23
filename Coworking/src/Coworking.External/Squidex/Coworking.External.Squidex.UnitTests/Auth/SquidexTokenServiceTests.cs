@@ -78,6 +78,45 @@ public sealed class SquidexTokenServiceTests
         callCount.Should().Be(1);
     }
 
+    [Theory]
+    [InlineData(1)]
+    [InlineData(300)]
+    public async Task GetTokenAsync_CachesToken_WhenLifetimeIsWithinExpiryBuffer(int expiresIn)
+    {
+        // Arrange
+        var request = SetupTokenEndpoint(expiresIn: expiresIn);
+        var service = CreateService();
+
+        // Act
+        await service.GetTokenAsync(TestApps.Default, TestClientNames.Default, CancellationToken.None);
+        await service.GetTokenAsync(TestApps.Default, TestClientNames.Default, CancellationToken.None);
+
+        // Assert
+        _mockHttp.GetMatchCount(request).Should().Be(1);
+    }
+
+    [Fact]
+    public async Task GetTokenAsync_DoesNotCacheToken_WhenAlreadyExpired()
+    {
+        // Arrange
+        var request = _mockHttp
+            .When(HttpMethod.Post, "*/identity-server/connect/token")
+            .Respond(_ => new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(
+                    SquidexFakes.TokenJson("expired-token", expiresIn: 0), Encoding.UTF8, "application/json")
+            });
+        var service = CreateService();
+
+        // Act
+        var token = await service.GetTokenAsync(TestApps.Default, TestClientNames.Default, CancellationToken.None);
+        await service.GetTokenAsync(TestApps.Default, TestClientNames.Default, CancellationToken.None);
+
+        // Assert
+        token.Should().Be("expired-token");
+        _mockHttp.GetMatchCount(request).Should().Be(2);
+    }
+
     [Fact]
     public async Task GetTokenAsync_Throws_WhenClientNotConfigured()
     {

@@ -16,9 +16,9 @@ namespace Coworking.External.Squidex.Auth;
 public sealed class SquidexTokenService(
     IHttpClientFactory httpClientFactory,
     IMemoryCache cache,
-    IOptions<SquidexGlobalOptions> options)
+    IOptions<SquidexGlobalOptions> options) : ISquidexTokenService
 {
-    private static readonly TimeSpan ExpiryBuffer = TimeSpan.FromMinutes(5);
+    private static readonly TimeSpan MaxExpiryBuffer = TimeSpan.FromMinutes(5);
     private readonly SemaphoreSlim _gate = new(1, 1);
     private readonly SquidexGlobalOptions _options = options.Value;
 
@@ -40,9 +40,11 @@ public sealed class SquidexTokenService(
             var credentials = GetCredentials(appName, clientName);
             var appOptions = GetAppOptions(appName);
             var result = await RequestTokenAsync(appOptions.BaseUrl, credentials, ct);
-            var expiry = TimeSpan.FromSeconds(result.ExpiresIn) - ExpiryBuffer;
+            var tokenLifetime = TimeSpan.FromSeconds(result.ExpiresIn);
 
-            cache.Set(cacheKey, result.AccessToken, expiry);
+            if (tokenLifetime > TimeSpan.Zero)
+                cache.Set(cacheKey, result.AccessToken, CacheLifetime(tokenLifetime));
+
             return result.AccessToken;
         }
         finally
@@ -95,6 +97,10 @@ public sealed class SquidexTokenService(
         return await response.Content.ReadFromJsonAsync<TokenResponse>(ct)
                ?? throw new InvalidOperationException("Empty token response from Squidex.");
     }
+
+    // capped at half the lifetime: a fixed buffer longer than a short-lived token would make the cache expiry non-positive
+    private static TimeSpan CacheLifetime(TimeSpan tokenLifetime) =>
+        tokenLifetime - TimeSpan.FromTicks(Math.Min(MaxExpiryBuffer.Ticks, tokenLifetime.Ticks / 2));
 
     private static string CacheKey(string appName, string clientName) =>
         $"squidex:token:{appName}:{clientName}";

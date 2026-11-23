@@ -9,8 +9,6 @@ using System.Net;
 
 namespace Coworking.External.Squidex.UnitTests.Auth;
 
-// SquidexTokenService is sealed, so it can't be mocked — a real instance is built
-// on top of a mocked identity-server token endpoint instead.
 public sealed class SquidexAuthHandlerTests
 {
     private readonly MockHttpMessageHandler _tokenBackend = new();
